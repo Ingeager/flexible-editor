@@ -1,0 +1,21 @@
+<drd>
+<item name="Track Count" type="int8" ptr="6" flag="DECIMAL" common="nsfstyle"/>
+<item name="Starting Track" type="int8" ptr="7" flag="DECIMAL" common="nsfstyle"/>
+<item name="Load Address" type="int16" ptr="8" common="nsfstyle"/>
+<item name="Init Address" type="int16" ptr="A" common="nsfstyle"/>
+<item name="Play Address" type="int16" ptr="C" common="nsfstyle"/>
+<item name="Title" type="string" endcode="0" len="20" ptr="E"/>
+<item name="Composer" type="string" endcode="0" len="20" ptr="2E"/>
+<item name="Copyright" type="string" endcode="0" len="20" ptr="4E"/>
+<item name="Play Speed (NTSC)" type="int16" flag="DECIMAL" ptr="6E" common="nsfstyle">(Default: 16666)</item>
+<item name="Play Speed (PAL)" type="int16" flag="DECIMAL" ptr="78" common="nsfstyle"/>
+<item name="Initial Bank Setup" type="hex" len="8" ptr="70"/>
+<item name="NTSC/PAL Bits" type="int8" ptr="7A" bit="......Dual PAL/NTSC System.PAL System" common="nsfstyle"/>
+<item name="Sound Chip Enable" type="int8" ptr="7B" bit=".VT02+.Sunsoft 5B.Namco 163.MMC5.FDS.VRC7.VRC6" common="nsfstyle"/>
+<item name="Version number" type="int8" ptr="5" common="nsfstyle"/>
+<item name="Other">
+	<item name="Identifier String" ptr="0" type="string" len="4">Should be NESM</item>
+	<item name="Identifier Value" ptr="4" type="int8">Should be 1A</item>
+</item>
+<common key="nsfstyle" stylesheet="font: 30px; color: #606060; background-color: #DFDEDE"/>
+</drd>
