@@ -1,0 +1,69 @@
+<drd>
+	<item name="-- Demonstration XML --"/>
+	<item name="Single values">
+		<item name="Byte" type="int8" ptr="8"/>
+		<item name="Word" type="int16" ptr="18"/>
+		<item name="24-bit Int" type="int24" ptr="28"/>
+		<item name="32-bit Int" type="int32" ptr="38"/>
+		<item name="64-bit Int" type="int64" ptr="48"/>
+		<item name="Byte + Bit toggle" type="int8" ptr="78" bit="Bit 7 (MSB).Bit 6.Bit 5.Bit 4.Bit 3.Bit 2.Bit 1.Bit 0 (LSB)"/>
+		<item name="Word + Limited Bit toggle" type="int16" ptr="88" bit="Bit 15 (MSB)...............Bit 0 (LSB)"/>
+		<item name="Word (Decimal)" type="int16" ptr="18" flag="DECIMAL"/>
+		<item name="Signed Int (Decimal, Word)" type="int16" ptr="58" flag="SIGNED.DECIMAL"/>
+		<item name="40-bit Int (intsize attribute)" type="int" intsize="40" ptr="68"/>
+		<item name="List value" type="int8" ptr="98" list="colors"/>
+	</item>
+	<item name="Hex String" type="hex" ptr="350" len="11"/>
+	<item name="Strings">
+		<item name="ANSI String (Fixed size)" type="string" len="37" ptr="660"/>
+		<item name="ANSI String (End-of-string code)" type="string" endcode="0" ptr="6B0"/>
+	</item>
+	<item name="General data">
+		<item name="24-bit Palette (RGB888)" type="pal_24" len="100" ptr="7C0">Age of Empires</item>
+		<item name="Y+X Coordinate" type="coordinate" y="0" x="1" ptr="B5E"/> 
+		<item name="Scanline" type="coordinate" y="0" ptr="B6E"/> 
+	</item>
+	<item name="NES data">
+		<item name="NES Palette" type="pal_nes" ptr="110" len="20">World 1-1</item>
+		<item name="NES NameTable Address" type="nes_nt_addr" ptr="3AE"/>
+	</item>
+	<item name="SNES data">
+		<item name="SNES Palette (pal_15)" type="pal_15" ptr="140" len="100">Yoshi's Island 1</item>
+		<item name="SNES NameTable Address" type="snes_nt_addr" ptr="33E" base="303"/>
+	</item>
+	<item name="GameBoy Color data">
+		<item name="GBC Palette (pal_15)" type="pal_15" ptr="5D0" len="40">Link's Awakening DX Overworld</item>
+	</item>
+	<item name="GameBoy Advance data">
+		<item name="GBA Palette (pal_15)" type="pal_15" ptr="3C0" len="100">Palm Tree Paradise</item>
+	</item>
+	<item name="Sega Mega Drive data">
+		<item name="SMD Palette" type="pal_smd" ptr="AD0" len="30">Angel Island Act 1</item>
+	</item>
+	<item name="Sega Master System data">
+		<item name="SMS Palette" type="pal_6" ptr="380" len="20">Green Hill Zone 1</item>
+	</item>
+	<item name="Common Element demo">
+		<item name="4 color palette 1" common="4color" ptr="144"/>
+		<item name="4 color palette 2" common="4color" ptr="3C4"/>
+	</item>
+	<item name="Misc.">
+		<item name="Nameless Item">
+			<item type="int16" ptr="18"/>
+			<item type="int24" ptr="28"/>
+		</item>
+		<item name="Insanely large integer" ptr="B80" type="int" intsize="512"/>
+		<item name="Under development">
+			<item name="Integer (Base 2)" ptr="8" type="int8" base="2"/>
+			<item name="Integer (Base 36)" ptr="38" type="int32" base="36"/>
+			<item name="Array of bytes" ptr="B80" type="byte" len="20"/>
+			<item name="Stylized control / Integer" type="int16" ptr="18" stylesheet="font: 30px; color: #F0F050; background-color: #006070"/>
+		</item>
+	</item>
+	<common key="4color" type="pal_15" len="4"/>
+	<list>
+		<item key="colors">"Red" "Orange" "Yellow" "Lime" "Green" "Cyan" "Blue" "Purple"</item>
+	</list>
+	<info/>
+</drd>
+
