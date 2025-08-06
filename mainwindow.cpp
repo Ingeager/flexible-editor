@@ -203,7 +203,7 @@ tCore::tCore() {
     
     mDRD_intSize = 16;
     
-    mVersionDate = 250804;
+    mVersionDate = 250806;
     
     mBinFileOpened = false;
     mBinFileName = "";
@@ -306,6 +306,7 @@ void tCore::scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElm
     
     vGlob.setProperty("QLabel", aEngine->scriptValueFromQMetaObject<QLabelSC>());
     vGlob.setProperty("QLineEdit", aEngine->scriptValueFromQMetaObject<QLineEditSC>());
+    vGlob.setProperty("QPlainTextEdit", aEngine->scriptValueFromQMetaObject<QPlainTextEditSC>());
     vGlob.setProperty("QComboBox", aEngine->scriptValueFromQMetaObject<QComboBoxSC>());
     vGlob.setProperty("QPushButton", aEngine->scriptValueFromQMetaObject<QPushButtonSC>());
     vGlob.setProperty("QFrame", aEngine->scriptValueFromQMetaObject<QFrameSC>());

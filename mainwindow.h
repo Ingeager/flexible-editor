@@ -7,6 +7,7 @@
 #include <QScriptEngine>
 
 #include <QLineEdit>
+#include <QPlainTextEdit>
 #include <QLabel>
 #include <QComboBox>
 #include <QPushButton>
@@ -100,6 +101,19 @@ public:
 };
 
 Q_SCRIPT_DECLARE_QMETAOBJECT(QLineEditSC, QWidget*)
+
+class QPlainTextEditSC : public QPlainTextEdit {
+    Q_OBJECT
+public:
+    QPlainTextEditSC(QWidget *parent) : QPlainTextEdit(parent) {}
+    QPlainTextEditSC(const QString &contents, QWidget *parent = 0) : QPlainTextEdit(contents, parent) {}
+    
+    Q_INVOKABLE void move(int x, int y) {QWidget::move(x, y);} 
+    Q_INVOKABLE void setGeometry ( int x, int y, int w, int h ) {QWidget::setGeometry(x, y, w, h);}
+    Q_INVOKABLE void resize(int w, int h) {QWidget::resize(w, h);}
+};
+
+Q_SCRIPT_DECLARE_QMETAOBJECT(QPlainTextEditSC, QWidget*)
 
 class QComboBoxSC : public QComboBox {
     Q_OBJECT
