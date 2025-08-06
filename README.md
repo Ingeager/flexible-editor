@@ -14,10 +14,6 @@ So, the XML files must be written by users themselves.
 The project is kind of a "reboot" of an old project/idea of mine
 from 2005/2006 named DRDHack.
 
-This is the first public release of Flexible Editor and it's
-only been in development for about a month, but it's already good
-for some fun.
-
 Check out "XML format.txt" for a guide on writing XML files
 that can be loaded with the editor.
 Note that documentation was written in a bit of a hurry in
