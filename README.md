@@ -28,3 +28,4 @@ it's shipped in a binary release.
 
 Flexible Editor is developed in C++ using Qt 4.8.0.
 
+![sample image](./sample.png)
