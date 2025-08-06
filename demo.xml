@@ -57,7 +57,7 @@
 			<item name="Integer (Base 2)" ptr="8" type="int8" base="2"/>
 			<item name="Integer (Base 36)" ptr="38" type="int32" base="36"/>
 			<item name="Array of bytes" ptr="B80" type="byte" len="20"/>
-			<item name="Stylized control / Integer" type="int16" ptr="18" stylesheet="font: 30px; color: #F0F050; background-color: #006070"/>
+			<item name="Stylized control / Integer" type="int16" ptr="18" stylesheet="font: 30px; color: #F0F050; background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0, 80, 90, 255), stop:1 rgba(0, 150, 160, 255))"/>
 		</item>
 	</item>
 	<common key="4color" type="pal_15" len="4"/>
