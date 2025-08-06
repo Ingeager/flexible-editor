@@ -110,10 +110,7 @@ CommonInt.prototype.init = function() {
 		this.usingList = true;
 	}
 
-	if (this.usingList == false) {
-		var Rawr = new QSpinBox(parentWnd);
-		Rawr.show();
-		
+	if (this.usingList == false) {		
 		this.editCtrl = new QLineEdit(parentWnd);
 		this.editCtrl.move(Core.base_x, Core.base_y);
 		var fontpx_table = [45, 40, 35, 20, 20, 20, 20, 20];
