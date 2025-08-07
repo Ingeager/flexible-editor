@@ -1,0 +1,260 @@
+
+Intro
+=====
+Flexible Editor is written in C++ using Qt 4.8.0.
+The scripts are written in JavaScript. The standard is restricted to
+ECMAScript 2009 (ES5), since newer standards is not supported by Qt 4.8.
+
+Currently, scripts are used to set up and handle all UI interaction in the
+editing window for data items selected from the database tree.
+Each script file in the Script/Type subfolder corresponds to a data type.
+
+This means it's possible to modify the scripts or create entirely new ones.
+So long as the editor finds a .js file corresponding to the TYPE attribute, it will load it.
+
+Inclusion
+=========
+To include another script file, place in a comment for every script you
+want to include:
+
+//FLEX_INCLUDE "filename.js".
+
+Paths are relative to the default script folder, but can also be absolute.
+This can be anywhere in the script file, inclusion is handled
+before the script is evaluated or run in any way.
+
+It is also possible to do it without using comments, for example:
+
+FLEX_INCLUDE = "file1.js"
+FLEX_INCLUDE = "file2.js"
+
+It needs to be within "" quotes.
+
+
+Data type scripts
+=================
+
+The script must contain the function init(), that is the only requirement.
+init() is called when an item's window is initialized. Everything happens from there.
+
+In order to display the default controls that's usually shown at the top,
+you can include "common_default.js" and call "DefaultControls.init()" in the init function:
+
+//FLEX_INCLUDE "common_default.js"
+
+function init() {
+
+	DefaultControls.init();
+
+}
+
+Instead of writing everything from scratch you may be able to use one of the scripts that already exists as template or example, if the core idea is similar.
+You can include scripts for some general handlers. These all start with "common_" in the filenames.
+For example, for palettes, Check out "common_palette.js" or the scripts that includes it.
+
+Creating Q widgets (controls)
+-----------------------------
+
+New-able objects are available that wraps the functionality of Qt widget classes.
+These can be added to the editing window by creating them with "new"
+and setting their properties, and so on.
+Here is a simple example on creating a widget for editing text:
+
+	ctrlEdit = new QLineEdit(Core.window);
+	ctrlEdit.setText("I can has cheezburger?");
+	ctrlEdit.move(10, 10);
+	ctrlEdit.show();
+
+Core.window is an object pointing the editing window,
+a parent object must be passed in the QLineEdit constructor
+(and in the constructor of any other control you wish to add).
+It is also possible to pass another control object as the parent in the constructor,
+but I'm not sure there's any use for that possibility.
+
+The following Qt Widgets can currently be created:
+
+QLabel()
+QLineEdit()
+QPlainTextEdit()
+QComboBox()
+QPushButton()
+QFrame()
+QSlider()
+QCheckBox()
+QSpinBox()
+
+These are all members of the global object.
+
+(Beware that it gets a bit technically steep from here.)
+Qt allows accessing all the properties, as well as "signals" and "slots" of these classes and its parent classes.
+However, regular *methods* is not available to scripts by default, which complicates things a lot
+as some of them are essential.
+To overcome that problem, some methods have been reimplemented in a subclass
+so that they can be called from the script after all. (using Q_INVOKABLE)
+
+Here is an overview of which methods/functions have been made invokable:
+
+Functions for classes that inherit QWidget (available for all widgets):
+
+void	move(int x, int y)
+void	setGeometry(int x, int y, int w, int h)
+void	resize(int w, int h)
+
+QLineEdit functions:
+
+void	setAlignment(int flag) <- Qt::Alignment value is set using an Int.
+
+QComboBox functions:
+
+void	addItem(const QString &text)
+
+QFrame functions:
+
+void	setFrameStyle(int style)
+
+QSlider functions:
+
+void	setRange(int min, int max)
+void	setSingleStep(int value)
+void	setPageStep(int value)
+void	setOrientation(int orientation) <- Qt::Orientation value is set using an Int.
+void	setValue(int value)
+
+Documentation for Qt classes, including for widgets, can be found here:
+https://doc.qt.io/archives/qt-4.8/classes.html
+
+Documentation for QWidget, base class for all Qt widgets:
+https://doc.qt.io/archives/qt-4.8/qwidget.html
+
+BitmapView object
+-----------------
+BitmapView is a new-able object for setting up a graphical UI or displaying graphics.
+In the C++ code, it is a subclass of QGraphicsView that additionally encapsules a QGraphicsScene, QImage, and QPixmap
+into the same object, handling them internally and simplifying drawing and displaying a single 24bpp bitmap of
+desired width and height.
+This means QGraphicsView properties, slots and signals are available.
+
+Essential QWidget methods like move(x, y) and resize(w, h) are also available here.
+
+In addition, BitmapView has these methods specific to it:
+
+void	init(aWidth, aHeight)		Use this to initialize the BitmapView after constructing it.
+void	refresh()				Use this whenever changes have been made to the bitmap.
+void	setPixel(y, x, rgb24)
+void	drawLineX(y, x1, x2, rgb24)
+void	drawLineY(y1, y2, x, rgb24)
+void	drawBox(y1, y2, x1, x2, rgb24)
+
+(rgb24 is an int containing all 24 bits of the RGB values combined.)
+
+The control has one specific Signal, emitted upon mouse clicks:
+
+void	mousePress(button, y, x)
+
+Connecting functions to signals
+-------------------------------
+
+Qt widgets will emit various "signals" upon events, like user interaction.
+You can set up functions to be called on those events.
+For example, this will set up a QLineEdit widget object, and a function
+that is called when text has been edited.
+
+myObject.prototype.createEdit = function() {
+	this.editCtrl = new QLineEdit(Core.window);
+	this.editCtrl.textEdited.connect(this, this.editTextFunc);
+	this.editCtrl.show();
+}
+	
+myObject.prototype.editTextFunc = function(a_newtext) {
+	//handle edit event
+}
+
+Global Objects
+==============
+
+Object Core
+
+	Various essential functions and variables.
+
+Core object members
+===================
+
+Number base_y
+Number base_x
+
+	Used to keep track of the next Y and X pixel locations to add a control.
+	This is reset when a new Item window is opened.
+	When adding controls, you probably want to use these when positioning the control.
+	Then you can add to these variables for your own purposes or to make things work
+	together with other script code.
+	base_y is the important one to consider.
+	(for example, add to base_y, the height of the control you just added, plus some empty space).
+
+Number defaultIntSize
+
+	Default Integer size. This is 16 unless the loaded XML changes it with the
+	INTSIZE attribute in INFO element.
+
+Array(192) NESPalette
+
+	Access a NES Palette. Each index is a Number that represents a byte in the palette file (3 bytes for each color).
+
+Number elmRefIndex
+
+	Internal variable used to keep track of which XML Element the current script environment is related to.
+
+Number versionDate
+
+	Date for the build of Flexbile Editor in the format YYMMDD as an Int.
+	The idea is that scripts can check this in order to skip code that makes use of API features not
+	supported by an earlier (or not yet released) build.
+	This number corresponds to the "build" number shown in the title bar.
+
+For use within Data Type scripts
+--------------------------------
+
+QWindow window
+
+	Object that wraps the QWindow of the current item.
+	Used when creating new controls, this is passed as argument in the constructor.
+
+Number winpal.bgcolor
+
+	Get the window (background) color of the editing window, represented as a 24 bit (8+8+8) value.
+	(You can't set it however)
+
+void setByte(Number index)
+
+	Write byte for the current Item, at active pointer + index.
+
+Number getByte(Number index)
+
+	Get byte for the current Item, at active pointer + index.
+
+Bool hasAttr(String name)
+
+	Check if the Item element contains attribute 'name'.
+
+String getAttr(String name)
+
+	Returns the value of Item element attribute 'name' as a string.
+
+Number getHexValueAttr(String name)
+
+	Returns the attribute 'name' as a value, assuming it is hexadecimal number in the XML.
+
+Bool getFlag(String flagname)
+
+	Checks FLAG attribute in the Item element and returns true if 'flagname' is found in it. 
+
+Bool hasText()
+
+	Check if the item element has text. (If anything is contained within <item> </item>)
+
+String getText()
+
+	Obtain the element's text.
+
+Array getList(String listname)
+
+	Retrieve LIST element with key "listname" as an array of strings.
