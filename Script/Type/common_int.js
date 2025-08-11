@@ -213,6 +213,9 @@ CommonInt.prototype.upDownFunc = function(a_value) {
 	this.addRelative(-1);
   }
   this.updateControl();
+	if (this.hasBitControls == true) {
+		this.bitClass.updateAll();
+	}
 }
 
 CommonInt.prototype.editTextFunc = function(a_text) {
