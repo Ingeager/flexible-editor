@@ -18,6 +18,7 @@ function init() {
 		intObj.arrayEnable = false;
 		
 		intObj.init();
+		intObj.editSpin.hide();
 		intObj.editCtrl.setAlignment(1);
 	}
 }
