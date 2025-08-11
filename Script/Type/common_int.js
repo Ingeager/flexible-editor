@@ -141,6 +141,16 @@ CommonInt.prototype.init = function() {
 		
 		this.editCtrl.show();
 
+		this.editSpin = new QSpinBox(parentWnd);
+		this.editSpin.move(Core.base_x+ctrlWidth, Core.base_y);
+		this.editSpin.resize(15, ctrlHeight);
+		this.editSpin.minimum = 0;
+		this.editSpin.maximum = 2;
+		this.editSpin.value = 1;
+		this.editSpin.singleStep = 1;
+		this.editSpin['valueChanged(int)'].connect(this, this.upDownFunc);
+		this.editSpin.show();
+
 		Core.base_y += ctrlHeight + 10;
 
 	} else {
@@ -191,6 +201,18 @@ CommonInt.prototype.eventFunc = function(a_event_bits) {
 	if (this.hasBitControls == true) {
 		this.bitClass.updateAll();
 	 }
+}
+
+CommonInt.prototype.upDownFunc = function(a_value) {
+  var v = a_value;
+  this.editSpin.value = 1;
+  if (v > 1) {
+	this.addRelative(1);
+  }
+  if (v < 1) {
+	this.addRelative(-1);
+  }
+  this.updateControl();
 }
 
 CommonInt.prototype.editTextFunc = function(a_text) {
@@ -474,49 +496,73 @@ CommonInt.prototype.charToValue = function(chara) {
 
 
 CommonInt.prototype.addRelative = function(a_addVal) {
-/*  var carry = 0;
+  var carry;
   var val;
   var index;
+  var negative = false;
+  var cap = 0;
 
-  val = Core.getByte(index);
-  if (this.signed) {
-    if (index == this.byteSize-1) {
-      val &= 0x7F;
-    }
+  if (this.signed == true) {
+    val = Core.getByte(this.byteSize-1);
+    negative = ((val & 0x80) > 0) ? true : false;
   }
-  val += a_addVal;
-  if (signedLast) {
-    carry = (val >> 7);
-    val &= 0x7F;
+  carry = a_addVal;
+  for (index = 0; index < this.byteSize-1; index++) {
+    val = Core.getByte(index);
+    val += carry;
+    carry = (val >> 8);
+    if (val < 0) {
+	val += 256;
+    }
+    val = val & 0xFF;
+    Core.setByte(index, val);
+  }
+  val = Core.getByte(this.byteSize-1);
+  if (this.signed == true) {
+	val &= 0x7F;
+  }
+  val += carry;
+  if (this.signed == true) {
+    carry = val >> 7;
     if (carry > 0) {
       if (negative == false) {
         cap = 1;
-        break;
       } else {
         negative = false;
       }
     } else if (carry < 0) {
       if (negative == true) {
         cap = -1;
-        break;
       } else {
-        positive = true;
+        negative = true;
       }
     }
+    if (val < 0) {
+	val += 128;
+    }
+    val = val & 0x7F;
+    val |= (negative == true) ? 0x80 : 0;
   } else {
     carry = (val >> 8);
-    val &= 0xFF;
+    if (carry > 0) {
+      cap = 1;
+    } else if (carry < 0) {
+      cap = -1;
+    }
+    val = val & 0xFF;
   }
+  Core.setByte(this.byteSize-1, val);
 
-  if (cap <> 0) {
+  if (cap != 0) {
     for (index = 0; index < this.byteSize; index++) {
+      val = Core.getByte(index);
       if ((index == this.byteSize-1) && (this.signed == true)) {
-        value = cap < 0 ? 0x80 : 0x7F;
+        val = cap < 0 ? 0x80 : 0x7F;
       } else {
-        value = cap < 0 ? 0 : 0xFF;
+        val = cap < 0 ? 0 : 0xFF;
       }
-      Core.setByte(index, value);
+      Core.setByte(index, val);
     }
   }
-*/
+
 }
