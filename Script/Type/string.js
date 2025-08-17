@@ -4,15 +4,17 @@ function init() {
 	DefaultControls.init();
 	
 	var parent = Core.window;
-	textEdit = new QLineEdit(parent);
+	textEdit = new QPlainTextEdit(parent);
 	textEdit.move(Core.base_x, Core.base_y);
-	textEdit.setStyleSheet("font-size: " + 14 + "px");
-	textEdit.resize(600, 20);
+	textEdit.setStyleSheet("font-size: " + 15 + "px");
+	textEdit.resize(600, 65);
 	textEdit.show();
 	
 	writeBtn = new QPushButton(parent);
 	writeBtn.text = "Write";
-	writeBtn.move(Core.base_x, Core.base_y+30);
+	writeBtn.resize(57, 32);
+	writeBtn.styleSheet = "font-size: 15px";
+	writeBtn.move(Core.base_x, Core.base_y+textEdit.height+10);
 	writeBtn.pressed.connect(writeString);
 	
 	writeBtn.show();
@@ -48,12 +50,12 @@ function readString() {
 		}
 	}
 	
-	textEdit.text = makeString;
+	textEdit.plainText = makeString;
 }
 
 function writeString() {
 	var targetLen = getLen();
-	var text = textEdit.text;
+	var text = textEdit.plainText;
 	var endCode = -1;
 	
 	if (targetLen == 0) {return;}
