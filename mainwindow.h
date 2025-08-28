@@ -209,14 +209,6 @@ public:
 
 Q_SCRIPT_DECLARE_QMETAOBJECT(QSpinBoxSC, QWidget*)
 
-struct XMLReadStatus {
-    int mItemCount;
-    QTreeWidgetItem *mParentTWIRef;
-    int mTreeLevel;
-    int mListFloorCounter;
-    int mCurrentSrcLine;
-    int mCharPos;
-};
 
 class tEventForScript : public QObject {
     Q_OBJECT
@@ -240,6 +232,26 @@ signals:
     void signal(int aEventCode);
 };
 
+struct XMLReadStatus {
+    int mItemCount;
+    QTreeWidgetItem *mParentTWIRef;
+    int mTreeLevel;
+    int mListFloorCounter;
+    int mCurrentSrcLine;
+    int mCharPos;
+    int mParentIndex;
+};
+
+struct tItemElmType {
+    QDomElement mElmRef;
+    ItemView *mItemViewRef;
+    int mParentIndex;
+    int mArrayIndex;
+    int mArrayByteSz;
+    quint32 mCharStart;
+    quint32 mCharEnd;
+};
+
 class tCore {
 public:
     tCore();
@@ -251,22 +263,16 @@ public:
     bool mBinFileOpened;
     QString mBinFileName;
     
-    QList<QDomNode> mItemElmRefTable;
-    QList<ItemView*> mItemWiewRefTable;
-    QList<QDomNode> mCommonElement;
-    QList<quint32> mElementCharStart;
-    QList<quint32> mElementCharEnd;
+    QList<int> mCommonElmIndexTable;
     QList<int> mListElmIndexTable;
-    QList<int> mElementArrayIndex;
+
+    QList<tItemElmType> mItemElmTable;
     
     QByteArray mEditFileFullBuffer;
     
     QByteArray mNESPal;
-    
-   // BitmapView *bbmmvv;
-    
+  
     tEventForScript *mEventForScript;
-
 
     
     QString mTypeScriptPath;
@@ -277,17 +283,18 @@ public:
     void error(QString aMessage, int aLevel);
     void scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElmRefIndex);
     void scriptLoad(QString aFileName, QScriptEngine *aEngine);
-    quint32 getItemByte(qint64 aPtr, QDomNode aElmRef);
-    qint64 calcItemPtr(qint64 aPtr, QDomNode aElmRef);
-    bool itemHasAttr(QString aName, QDomNode aElmRef, bool aCheckCommon = true, bool aCheckRegular = true);
-    QString getItemAttr(QString aName, QDomNode aElmRef);
-    bool getItemFlag(QString aFlagName, QDomNode aElmRef);
+    quint32 getItemByte(qint64 aPtr, QDomElement aElmRef, int aElmIndex = -1);
+    int setItemByte(qint64 aPtr, quint32 aValue, QDomElement aElmRef, int aElmIndex = -1);
+    qint64 calcItemPtr(qint64 aPtr, QDomElement aElmRef, int aElmIndex = -1);
+    bool itemHasAttr(QString aName, QDomElement aElmRef, bool aCheckCommon = true, bool aCheckRegular = true);
+    QString getItemAttr(QString aName, QDomElement aElmRef);
+    bool getItemFlag(QString aFlagName, QDomElement aElmRef);
     quint32 getFileByte(qint64 aPtr);
-    int setItemByte(qint64 aPtr, quint32 aValue, QDomNode aElmRef);
     int setFileByte(qint64 aPtr, quint32 aValue);
-    int getCommonElementIndex(QDomNode aElmRef);
-    
-    QDomNode getEngineElmRef(QScriptEngine *aEngine);
+    int getCommonElementIndex(QDomElement aElmRef);
+    QDomElement getEngineElmRef(QScriptEngine *aEngine);
+    int getEngineElmIndex(QScriptEngine *aEngine);
+    bool loadFileCommon(QString aFName, QByteArray *aByteArray);
 
 };
 
@@ -305,7 +312,7 @@ public:
     void dev_init_SRFX_();
     void loadXML();
     void loadXMLRecursive();
-    void loadXMLRecursive(QDomNode aNode, XMLReadStatus *aStatus);
+    void loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus);
 private slots:
     void on_wTree_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
     
@@ -328,7 +335,6 @@ public:
     void load_NES_Palette(QString aFName);
     void selectXMLfile();
     void selectBinFile();
-    bool loadFileCommon(QString aFName, QByteArray *aByteArray);
     void saveBinFile(QString aFName);
     void unloadXML();
     void init();

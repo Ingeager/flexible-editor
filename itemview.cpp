@@ -26,6 +26,7 @@ void ItemView::showEvent(QShowEvent *aEventData) {
 }
 
 void ItemView::closeEvent(QCloseEvent *aEventData) {
+    Core.mItemElmTable[mElementRef].mItemViewRef = 0;
     #ifdef SUBWINDOWTYPE
     #endif
     ItemViewWindow::closeEvent(aEventData);
@@ -35,8 +36,8 @@ void ItemView::initTypeScript() {
     
     QString vType;
     
-    if (Core.itemHasAttr("type", Core.mItemElmRefTable[mElementRef]) == true) {
-        vType = Core.getItemAttr("type", Core.mItemElmRefTable[mElementRef]);
+    if (Core.itemHasAttr("type", Core.mItemElmTable[mElementRef].mElmRef) == true) {
+        vType = Core.getItemAttr("type", Core.mItemElmTable[mElementRef].mElmRef);
     } else {
         vType = "blank";
     }
@@ -75,8 +76,8 @@ void ItemView::initTypeScript() {
     setLayout(ui->verticalLayout);
     
     QString vNiceText;
-    int vA = Core.mElementCharStart[mElementRef];
-    int vB = Core.mElementCharEnd[mElementRef];
+    int vA = Core.mItemElmTable[mElementRef].mCharStart;
+    int vB = Core.mItemElmTable[mElementRef].mCharEnd;
     vNiceText = Core.mXMLsource.mid(vA, vB-vA);
     ui->wXMLedit->setPlainText(vNiceText);
    
@@ -84,8 +85,7 @@ void ItemView::initTypeScript() {
 
 ItemView::~ItemView()
 {
-   // bool vTest = mScriptEngine.isEvaluating();
-   // mScriptEngine.abortEvaluation();
     delete ui;
-    Core.mItemWiewRefTable[mElementRef] = 0;
+
+
 }

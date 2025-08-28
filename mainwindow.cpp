@@ -20,7 +20,6 @@ void QSliderSC::setValue(int value) {
     programChanged = false;
 }
 
-
 static QScriptValue scriptF_hasText(QScriptContext *aContext, QScriptEngine *aEngine) {
     QString text = Core.getEngineElmRef(aEngine).toElement().text();
     if (text.length() > 0) {
@@ -57,8 +56,9 @@ static QScriptValue scriptF_getByte(QScriptContext *aContext, QScriptEngine *aEn
     QScriptValue vReturnVal;
     if (aContext->argumentCount() > 0) {
         quint64 vArgPointer = aContext->argument(0).toVariant().toULongLong();
+        int vIndex = Core.getEngineElmIndex(aEngine);
         
-        quint32 vV = Core.getItemByte(vArgPointer, Core.getEngineElmRef(aEngine));
+        quint32 vV = Core.getItemByte(vArgPointer, Core.mItemElmTable[vIndex].mElmRef, vIndex);
         vReturnVal = QScriptValue(int(vV));
     
     }
@@ -71,8 +71,9 @@ static QScriptValue scriptF_setByte(QScriptContext *aContext, QScriptEngine *aEn
     if (aContext->argumentCount() > 1) {
         quint64 vArgPointer = aContext->argument(0).toVariant().toULongLong();
         quint32 vValue = aContext->argument(1).toUInt32();
+        int vIndex = Core.getEngineElmIndex(aEngine);
         
-        Core.setItemByte(vArgPointer, vValue, Core.getEngineElmRef(aEngine));
+        Core.setItemByte(vArgPointer, vValue, Core.mItemElmTable[vIndex].mElmRef, vIndex);
     
     }
     return vReturnVal;
@@ -117,6 +118,38 @@ static QScriptValue scriptF_getFlag(QScriptContext *aContext, QScriptEngine *aEn
     return vDefaultReturnVal;
 }
 
+static QScriptValue scriptF_setArrayIndex(QScriptContext *aContext, QScriptEngine *aEngine) {
+
+    QScriptValue vReturnVal;
+    if (aContext->argumentCount() > 0) {
+        int vArrIndex = aContext->argument(0).toInt32();
+        int vElmIndex = Core.getEngineElmIndex(aEngine);
+        Core.mItemElmTable[vElmIndex].mArrayIndex = vArrIndex;
+    }
+    return vReturnVal;
+}
+
+static QScriptValue scriptF_getArrayIndex(QScriptContext *aContext, QScriptEngine *aEngine) {
+
+    QScriptValue vReturnVal;
+    int vElmIndex = Core.getEngineElmIndex(aEngine);
+    vReturnVal = Core.mItemElmTable[vElmIndex].mArrayIndex;
+    return vReturnVal;
+}
+
+
+static QScriptValue scriptF_setArrayByteSize(QScriptContext *aContext, QScriptEngine *aEngine) {
+
+    QScriptValue vReturnVal;
+    if (aContext->argumentCount() > 0) {
+        int vByteSize = aContext->argument(0).toInt32();
+        int vElmIndex = Core.getEngineElmIndex(aEngine);
+        Core.mItemElmTable[vElmIndex].mArrayByteSz = vByteSize;
+    }
+    return vReturnVal;
+}
+
+
 static QScriptValue scriptF_getElementIndex(QScriptContext *aContext, QScriptEngine *aEngine) {
 
     QScriptValue vReturnVal;
@@ -146,16 +179,15 @@ static QScriptValue scriptF_customize(QScriptContext *aContext, QScriptEngine *a
 
 static QScriptValue scriptF_getList(QScriptContext *aContext, QScriptEngine *aEngine) {
     QScriptValue vReturnVal;
-   // QStringList vReturnList;
     
     if (aContext->argumentCount() > 0) {
         QString vListKey = aContext->argument(0).toString();
         for (int vIndex = 0; vIndex < Core.mListElmIndexTable.count(); vIndex++) {
-            QDomNode vNode = Core.mItemElmRefTable[Core.mListElmIndexTable[vIndex]];
-            QString vThisKey = vNode.toElement().attribute("key");
+            QDomElement vElement = Core.mItemElmTable[Core.mListElmIndexTable[vIndex]].mElmRef;
+            QString vThisKey = vElement.attribute("key");
             if (vThisKey.compare(vListKey, Qt::CaseInsensitive) == 0) {
-                            QString vWholeList = vNode.toElement().text();
-                            QStringList vListList;
+                        QString vWholeList = vElement.text();
+                        QStringList vListList;
                         bool vLoopFlag = true;
                         int vCharPos = 0;
                         while (vLoopFlag == true) {
@@ -184,17 +216,21 @@ static QScriptValue scriptF_getList(QScriptContext *aContext, QScriptEngine *aEn
     return vReturnVal;
 }
 
-static QScriptValue scriptF_CreateHSlider(QScriptContext *aContext, QScriptEngine *aEngine) {
-/*    QWidget *vParent;
+static QScriptValue scriptF_loadTextFile(QScriptContext *aContext, QScriptEngine *aEngine) {
+
+    QScriptValue vReturnVal = "";
     if (aContext->argumentCount() > 0) {
-        vParent = (QWidget*) aContext->argument(0).toQObject();
+        QByteArray vFileData;
+        QString vFileName = aContext->argument(0).toString();
+        bool vResult = Core.loadFileCommon(vFileName, &vFileData);
+        if (vResult == true) {
+            vReturnVal = QScriptValue(vFileData.data()).toString();
+        }
     }
     
-    QScriptValue vReturnVal;
-    QSlider *vCtrl = new QSlider(Qt::Horizontal, vParent);
-    vReturnVal = aEngine->newQObject(vCtrl);
-    return vReturnVal;*/
+    return (vReturnVal);
 }
+
 
 tCore::tCore() {
     mEventForScript = new tEventForScript(0);
@@ -203,7 +239,7 @@ tCore::tCore() {
     
     mDRD_intSize = 16;
     
-    mVersionDate = 250806;
+    mVersionDate = 250827;
     
     mBinFileOpened = false;
     mBinFileName = "";
@@ -220,11 +256,17 @@ void tCore::error(QString aMessage, int aLevel) {
     }
 }
 
-QDomNode tCore::getEngineElmRef(QScriptEngine *aEngine) {
+int tCore::getEngineElmIndex(QScriptEngine *aEngine) {
+    QScriptValue vGlob = aEngine->globalObject();
+    QScriptValue vCore = vGlob.property("Core");
+    return(vCore.property("elmRefIndex").toInteger());
+}
+
+QDomElement tCore::getEngineElmRef(QScriptEngine *aEngine) {
     QScriptValue vGlob = aEngine->globalObject();
     QScriptValue vCore = vGlob.property("Core");
     int vIndex = vCore.property("elmRefIndex").toInteger();
-    return(Core.mItemElmRefTable[vIndex]);
+    return(Core.mItemElmTable[vIndex].mElmRef);
 }
 
 quint32 tCore::getFileByte(qint64 aPtr) {
@@ -246,15 +288,15 @@ int tCore::setFileByte(qint64 aPtr, quint32 aValue) {
     }
 }
 
-quint32 tCore::getItemByte(qint64 aPtr, QDomNode aElmRef) {
-    qint64 vPtr = calcItemPtr(aPtr, aElmRef);
+quint32 tCore::getItemByte(qint64 aPtr, QDomElement aElmRef, int aElmIndex) {
+    qint64 vPtr = calcItemPtr(aPtr, aElmRef, aElmIndex);
     
     int vV = getFileByte(vPtr);
     return (vV);
 }
 
-int tCore::setItemByte(qint64 aPtr, quint32 aValue, QDomNode aElmRef) {
-    qint64 vPtr = calcItemPtr(aPtr, aElmRef);
+int tCore::setItemByte(qint64 aPtr, quint32 aValue, QDomElement aElmRef, int aElmIndex) {
+    qint64 vPtr = calcItemPtr(aPtr, aElmRef, aElmIndex);
     
     setFileByte(vPtr, aValue);
     return (0);
@@ -286,6 +328,22 @@ void tCore::scriptLoad(QString aFileName, QScriptEngine *aEngine) {
 
 }
 
+bool tCore::loadFileCommon(QString aFName, QByteArray *aByteArray) {
+    QFile vFile;
+    vFile.setFileName(aFName);
+    bool vResult = vFile.open(QIODevice::ReadOnly);
+    if (vResult == true) {
+        vFile.seek(0);
+        *aByteArray = vFile.readAll();
+        vFile.close();
+        return true;
+    } else {
+        Core.error("Failed to load: " + aFName, 2);
+        return false;
+    }
+}
+
+
 /*tEventForScript::tEventForScript(QWidget *parent) {
     QWidget *par = parent;
     QObject::QObject(par);
@@ -302,7 +360,8 @@ void tCore::scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElm
     QScriptValue vEventBits = aEngine->newObject();
     vEventBits.setProperty("changeindex", 1);
     vEvent.setProperty("bit", vEventBits);
-    vGlob.setProperty("event", vEvent);
+    vGlob.setProperty("event", vEvent); //To be removed
+    vGlob.setProperty("Event", vEvent);
     
     vGlob.setProperty("QLabel", aEngine->scriptValueFromQMetaObject<QLabelSC>());
     vGlob.setProperty("QLineEdit", aEngine->scriptValueFromQMetaObject<QLineEditSC>());
@@ -329,8 +388,12 @@ void tCore::scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElm
     vCore.setProperty("getByte", aEngine->newFunction(&scriptF_getByte, 1));
     vCore.setProperty("setByte", aEngine->newFunction(&scriptF_setByte, 2));
     vCore.setProperty("getElementIndex", aEngine->newFunction(&scriptF_getElementIndex, 0));
+    vCore.setProperty("setArrayIndex", aEngine->newFunction(&scriptF_setArrayIndex, 1));
+    vCore.setProperty("getArrayIndex", aEngine->newFunction(&scriptF_getArrayIndex, 0));
+    vCore.setProperty("setArrayByteSize", aEngine->newFunction(&scriptF_setArrayByteSize, 1));
     vCore.setProperty("customize", aEngine->newFunction(&scriptF_customize, 2));
     vCore.setProperty("getList", aEngine->newFunction(&scriptF_getList, 1));
+    vCore.setProperty("loadTextFile", aEngine->newFunction(&scriptF_loadTextFile, 1)); //untested
     
     vCore.setProperty("window", aEngine->newQObject(aWindowVar));
     vCore.setProperty("elmRefIndex", aElmRefIndex);
@@ -363,14 +426,15 @@ void tCore::scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElm
     }
 }
 
-int tCore::getCommonElementIndex(QDomNode aElmRef) {
+int tCore::getCommonElementIndex(QDomElement aElmRef) {
     if (itemHasAttr("common", aElmRef) == true) {
-        int vCommonElementNum = Core.mCommonElement.count();
+        int vCommonElementNum = Core.mCommonElmIndexTable.count();
         if (vCommonElementNum > 0) {
             
             int vIx = 0;
             while(vIx < vCommonElementNum) {
-                QString vKey = Core.mCommonElement[vIx].attributes().namedItem("key").nodeValue();
+                int vElmIndex = Core.mCommonElmIndexTable[vIx];
+                QString vKey = Core.mItemElmTable[vElmIndex].mElmRef.attributes().namedItem("key").nodeValue();
                 if (vKey.compare(getItemAttr("common", aElmRef), Qt::CaseInsensitive) == 0) {
                     return vIx;
                 }
@@ -381,7 +445,7 @@ int tCore::getCommonElementIndex(QDomNode aElmRef) {
     return -1;
 }
 
-bool tCore::itemHasAttr(QString aName, QDomNode aElmRef, bool aCheckCommon, bool aCheckRegular) {
+bool tCore::itemHasAttr(QString aName, QDomElement aElmRef, bool aCheckCommon, bool aCheckRegular) {
     QDomNamedNodeMap vAttr = aElmRef.attributes();
     if (aCheckRegular == true) {
         if (vAttr.contains(aName.toUpper())) {return true;}
@@ -395,7 +459,8 @@ bool tCore::itemHasAttr(QString aName, QDomNode aElmRef, bool aCheckCommon, bool
         if (aElmRef.nodeName().compare("common") != 0) {
             int vIndex = getCommonElementIndex(aElmRef);
             if (vIndex >= 0) {
-                return itemHasAttr(aName, Core.mCommonElement[vIndex], false);
+                int vElmIndex = Core.mCommonElmIndexTable[vIndex];
+                return itemHasAttr(aName, Core.mItemElmTable[vElmIndex].mElmRef, false);
             }
         }
         }
@@ -404,9 +469,9 @@ bool tCore::itemHasAttr(QString aName, QDomNode aElmRef, bool aCheckCommon, bool
     return false;
 }
 
-QString tCore::getItemAttr(QString aName, QDomNode aElmRef) {
+QString tCore::getItemAttr(QString aName, QDomElement aElmRef) {
     
-    QDomNode vElmRef = aElmRef;
+    QDomElement vElmRef = aElmRef;
     bool vPass = false;
     if (itemHasAttr(aName, aElmRef, false, true) == true) {
         vPass = true;
@@ -415,7 +480,8 @@ QString tCore::getItemAttr(QString aName, QDomNode aElmRef) {
     
     if (itemHasAttr(aName, aElmRef, true, false) == true) {
         int vIndex = getCommonElementIndex(aElmRef);
-        vElmRef = mCommonElement[vIndex];
+        int vElmIndex = mCommonElmIndexTable[vIndex];
+        vElmRef = mItemElmTable[vElmIndex].mElmRef;
         vPass = true;
     }
  
@@ -432,7 +498,7 @@ QString tCore::getItemAttr(QString aName, QDomNode aElmRef) {
 
 }
 
-bool tCore::getItemFlag(QString aFlagName, QDomNode aElmRef) {
+bool tCore::getItemFlag(QString aFlagName, QDomElement aElmRef) {
     QString vFlagAttr = Core.getItemAttr("flag", aElmRef);
     if (vFlagAttr.size() > 0) {
         QStringList vFlags = vFlagAttr.split(".", QString::SkipEmptyParts);
@@ -447,7 +513,7 @@ bool tCore::getItemFlag(QString aFlagName, QDomNode aElmRef) {
     return false;
 }
 
-qint64 tCore::calcItemPtr(qint64 aPtr, QDomNode aElmRef) {
+qint64 tCore::calcItemPtr(qint64 aPtr, QDomElement aElmRef, int aElmIndex) {
 //    QDomNamedNodeMap vAttr = aElmRef.attributes();
     qint64 vWorkPtr = aPtr;
     
@@ -458,24 +524,25 @@ qint64 tCore::calcItemPtr(qint64 aPtr, QDomNode aElmRef) {
     }
     if (itemHasAttr("relptr", aElmRef)) {
         vWorkPtr += getItemAttr("relptr", aElmRef).toULongLong(0, 16);
-
     }
     
     {
-    QDomNode vParent = aElmRef.parentNode();
-    if (!vParent.isNull()) {
-        vWorkPtr += calcItemPtr(0, vParent);
+        QDomNode vParent = aElmRef.parentNode();
+        if (vParent.isNull() == false) {
+        if (vParent.isElement()) {
+            int vParentIndex = -1;
+            if (aElmIndex >= 0) {
+                vParentIndex = mItemElmTable[aElmIndex].mParentIndex;
+            }
+            vWorkPtr += calcItemPtr(0, vParent.toElement(), vParentIndex);
+        }
+        }
     }
-    }
-    
+
 ptrFinishCalcPhaseA:
-    #ifdef QT_DEBUG
-    /*if (itemHasAttr("internal_arrindex", aElmRef) == true) {
-        int vIndex = getItemAttr("internal_arrindex", aElmRef).toLong();
-        int vIndexSize = getItemAttr("internal_arrindex_size", aElmRef).toLong();
-        vWorkPtr += (vIndex*vIndexSize);
-    }*/
-    #endif
+    if (aElmIndex >= 0) {
+        vWorkPtr += (mItemElmTable[aElmIndex].mArrayIndex*mItemElmTable[aElmIndex].mArrayByteSz);
+    }
     return (vWorkPtr);
 }  
 
@@ -522,8 +589,8 @@ void MainWindow::updateWindowTitle() {
 }
 
 void MainWindow::closeEvent(QCloseEvent *aCEvent) {
-    unloadXML();
     QMainWindow::closeEvent(aCEvent);
+    unloadXML();
 }
 
 void MainWindow::init() {
@@ -554,7 +621,8 @@ void MainWindow::dev_init_() {
     dev_init_combo_("demo.xml", "demo.bin");
     Core.mBinFileName = "demo_save.bin";
     
-   // dev_init_combo_("C:/romhacking/tools/DRDHack/srfx.xml", "C:/romhacking/tools/DRDHack/stuntracefx.smc");
+   //dev_init_combo_("C:/romhacking/tools/DRDHack/srfx.xml", "C:/romhacking/tools/DRDHack/stuntracefx.smc");
+   // dev_init_combo_("C:/romhacking/tools/DRDHack/bc.xml", "C:/romhacking/tools/DRDHack/bc.nes");
    // dev_init_combo_("C:/work/mm4ex/megaman4.xml", "D:/roms/nes/Mega Man 4 (U).nes");
    // dev_init_combo_("C:/web/geocities/megaman5.xml", "D:/roms/nes/Mega Man 5 (U).nes");
 
@@ -567,28 +635,13 @@ void MainWindow::dev_init_combo_(QString aXML, QString aBIN) {
     loadBinFile(aBIN, 0);
 }
 
-bool MainWindow::loadFileCommon(QString aFName, QByteArray *aByteArray) {
-    QFile vFile;
-    vFile.setFileName(aFName);
-    bool vResult = vFile.open(QIODevice::ReadOnly);
-    if (vResult == true) {
-        vFile.seek(0);
-        *aByteArray = vFile.readAll();
-        vFile.close();
-        return true;
-    } else {
-        Core.error("Failed to load: " + aFName, 2);
-        return false;
-    }
-}
 
 void MainWindow::unloadXML() {
-    ui->mdiArea->closeAllSubWindows();
     ui->wTree->clear();
-    Core.mItemElmRefTable.clear();
-    Core.mCommonElement.clear();
-    Core.mElementCharStart.clear();
-    Core.mElementCharEnd.clear();
+    ui->mdiArea->closeAllSubWindows();
+    Core.mItemElmTable.clear();
+    Core.mCommonElmIndexTable.clear();
+    Core.mListElmIndexTable.clear();
     mainXML.setContent(QString(""));
 }
 
@@ -625,7 +678,7 @@ void MainWindow::loadXMLFile(QString aFName) {
         mainXML.setContent(Core.mXMLsource, &vWhat1, &vWhat2, &vWhat3);
     }*/
 
-     loadXML();
+    loadXML();
     updateWindowTitle();
 }
 
@@ -636,7 +689,7 @@ void MainWindow::loadBinFile(QString aFName, int aMode) {
     }
     Core.mBinFileOpened = false;
 
-    bool vResult = loadFileCommon(aFName, &Core.mEditFileFullBuffer);
+    bool vResult = Core.loadFileCommon(aFName, &Core.mEditFileFullBuffer);
     if (vResult == true) {
         Core.mBinFileOpened = true;
         Core.mBinFileName = aFName;
@@ -660,7 +713,7 @@ void MainWindow::saveBinFile(QString aFName) {
 }
 
 void MainWindow::load_NES_Palette(QString aFName) {
-    loadFileCommon(aFName, &Core.mNESPal);
+    Core.loadFileCommon(aFName, &Core.mNESPal);
 }
 
 void MainWindow::loadXML() {
@@ -669,19 +722,20 @@ void MainWindow::loadXML() {
     vStatus.mItemCount = 0;
     vStatus.mTreeLevel = 0;
     vStatus.mParentTWIRef = 0;
+    vStatus.mParentIndex = -1;
     vStatus.mListFloorCounter = 0;
     vStatus.mCurrentSrcLine = 1;
     vStatus.mCharPos = 0;
     
     if (mainXML.hasChildNodes() == false) {return;}
    
-    loadXMLRecursive((QDomNode) mainXML, &vStatus);
+    loadXMLRecursive(mainXML.documentElement(), &vStatus);
     
     ui->wTree->expandAll();
    
 }
 
-void MainWindow::loadXMLRecursive(QDomNode aNode, XMLReadStatus *aStatus) {
+void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus) {
 
     QTreeWidgetItem *vTreeItem = 0;
 
@@ -689,135 +743,131 @@ void MainWindow::loadXMLRecursive(QDomNode aNode, XMLReadStatus *aStatus) {
         aStatus->mListFloorCounter++;
     }
 
-    //QDomElement vElement = aNode;
-    if (aNode.isElement()) {
-        bool wAddToTables = false;
-        
-        QString vTagText;
-        vTagText = aNode.nodeName();
-        if ((vTagText.compare("item", Qt::CaseInsensitive) == 0) || 
-         (vTagText.compare("bra", Qt::CaseInsensitive) == 0)) {
-        
-            if (aStatus->mListFloorCounter == 0) {
-                QString vItemName = "Data Item " + QString::number(aStatus->mItemCount+1);
-                
-                if (aNode.hasAttributes()) {
-                    QDomNamedNodeMap vAttr = aNode.attributes();
-                    QDomNode vNode;
-                    QString vAttrName;
-                    for (int vAttrCount = 0; vAttrCount < vAttr.count(); vAttrCount++) {
-                        vNode = vAttr.item(vAttrCount);
-                        vAttrName = vNode.nodeName();
-                        if (vAttrName.compare("name", Qt::CaseInsensitive) == 0) {
-                            vItemName = vNode.nodeValue();
-                        }
-                    }
-                   
-                }
-                
-                //Use a table to connect Tree widget items to the DRD Item Element/QDomNode.
-                int RefIndex = Core.mItemElmRefTable.count();
-                wAddToTables = true;
+    bool wAddToTables = false;
     
-                if (aStatus->mParentTWIRef == 0) {
-                    //Add to the root of the tree
-                    vTreeItem = new QTreeWidgetItem(ui->wTree);
-                } else {
-                    if (aStatus->mParentTWIRef) {
-                        //Add to current parent
-                        vTreeItem = new QTreeWidgetItem(aStatus->mParentTWIRef);
-                    }
-                }
-                if (vTreeItem) {
-                    vTreeItem->setText(0, vItemName);
-                    vTreeItem->setData(0, eElmRefRole, RefIndex);
-                    vTreeItem->setData(0, eWindowRole, 0);
-                }
-                
-            } else {
-                wAddToTables = true;
-                Core.mListElmIndexTable.append(Core.mItemElmRefTable.count());
+    QString vTagText;
+    vTagText = aElement.nodeName();
+    if ((vTagText.compare("item", Qt::CaseInsensitive) == 0) || 
+     (vTagText.compare("bra", Qt::CaseInsensitive) == 0)) {
+    
+        if (aStatus->mListFloorCounter == 0) {
+            QString vItemName = "Data Item " + QString::number(aStatus->mItemCount+1);
             
+            if (aElement.hasAttributes()) {
+                if (aElement.hasAttribute("name")) {vItemName = aElement.attribute("name");}
+                if (aElement.hasAttribute("NAME")) {vItemName = aElement.attribute("NAME");}                   
             }
             
-            aStatus->mItemCount++;
-        } else if (vTagText.compare("list", Qt::CaseInsensitive) == 0) {
-            //Set list mode and keep track of floor levels.
-            aStatus->mListFloorCounter = 1;
-        } else if (vTagText.compare("common", Qt::CaseInsensitive) == 0) {
+            //Use a table to connect Tree widget items to the DRD Item Element/QDomElement.
+            int RefIndex = Core.mItemElmTable.count();
             wAddToTables = true;
-            Core.mCommonElement.append(aNode);
-        } else if (vTagText.compare("info", Qt::CaseInsensitive) == 0) {
-            QDomNamedNodeMap vAttr = aNode.attributes();
-            QDomNode vNode;
-            QString vAttrName;
-            for (int vAttrCount = 0; vAttrCount < vAttr.count(); vAttrCount++) {
-                vNode = vAttr.item(vAttrCount);
-                vAttrName = vNode.nodeName();
-                if (vAttrName.compare("intsize", Qt::CaseInsensitive) == 0) {
-                    Core.mDRD_intSize = vNode.nodeValue().toInt();
+
+            if (aStatus->mParentTWIRef == 0) {
+                //Add to the root of the tree
+                vTreeItem = new QTreeWidgetItem(ui->wTree);
+            } else {
+                if (aStatus->mParentTWIRef) {
+                    //Add to current parent
+                    vTreeItem = new QTreeWidgetItem(aStatus->mParentTWIRef);
                 }
             }
+            if (vTreeItem) {
+                vTreeItem->setText(0, vItemName);
+                vTreeItem->setData(0, eElmRefRole, RefIndex);
+                vTreeItem->setData(0, eWindowRole, 0);
+            }
+            
+        } else {
+            wAddToTables = true;
+            Core.mListElmIndexTable.append(Core.mItemElmTable.count());
+        
         }
         
-        if (wAddToTables == true) {
-            Core.mItemElmRefTable.append(aNode);
-            Core.mItemWiewRefTable.append(0);
-            Core.mElementArrayIndex.append(0);
-            
-            //Calculate first and last character positions in the source document for this Element.
-            int vLineNo = aNode.lineNumber();
-            int vLineNo2 = aNode.nextSibling().lineNumber();
-            if (aNode.nextSibling().isNull() == true) {vLineNo2 = vLineNo+1;}
-    
-            while (aStatus->mCurrentSrcLine < vLineNo) {
-                aStatus->mCharPos = Core.mXMLsource.indexOf(QString('\n'), aStatus->mCharPos)+1;
-                aStatus->mCurrentSrcLine++;
+        aStatus->mItemCount++;
+    } else if (vTagText.compare("list", Qt::CaseInsensitive) == 0) {
+        //Set list mode and keep track of floor levels.
+        aStatus->mListFloorCounter = 1;
+    } else if (vTagText.compare("common", Qt::CaseInsensitive) == 0) {
+        wAddToTables = true;
+        Core.mCommonElmIndexTable.append(Core.mItemElmTable.count());
+    } else if (vTagText.compare("info", Qt::CaseInsensitive) == 0) {
+        QDomNamedNodeMap vAttr = aElement.attributes();
+        QDomNode vNode;
+        QString vAttrName;
+        for (int vAttrCount = 0; vAttrCount < vAttr.count(); vAttrCount++) {
+            vNode = vAttr.item(vAttrCount);
+            vAttrName = vNode.nodeName();
+            if (vAttrName.compare("intsize", Qt::CaseInsensitive) == 0) {
+                Core.mDRD_intSize = vNode.nodeValue().toInt();
             }
-            if (aNode.hasChildNodes() == false) {
-                while (Core.mXMLsource[aStatus->mCharPos] == 9) {
-                    aStatus->mCharPos++;
-                }
-            }
-            int wSourceEndPos = aStatus->mCharPos;
-            int wSourceEndLine = aStatus->mCurrentSrcLine;
-            while (wSourceEndLine < vLineNo2) {
-                wSourceEndPos = Core.mXMLsource.indexOf(QString('\n'), wSourceEndPos)+1;
-                wSourceEndLine++;
-            }
-            wSourceEndPos -= 2;
-            Core.mElementCharStart.append(aStatus->mCharPos);
-            Core.mElementCharEnd.append(wSourceEndPos);
-    
-            #ifdef QT_DEBUG
-                QString vSec = Core.mXMLsource.mid(aStatus->mCharPos, wSourceEndPos-aStatus->mCharPos);
-                qDebug("new");
-                qDebug((char*)vSec.toUtf8().data());
-            #endif
         }
     }
     
-    //Core.mSourceCharPosTbl.append(vCpos);
-
-    QDomNode vNodeRef;
-    if (aNode.hasChildNodes()) {
-        vNodeRef = aNode.firstChild();
-        int vTest = aNode.childNodes().count();
+    int vTableIndex = -1;
+    if (wAddToTables == true) {
+        tItemElmType vNewItemElm;
+        vNewItemElm.mElmRef = aElement;
+        vNewItemElm.mItemViewRef = 0;
+        vNewItemElm.mArrayIndex = 0;
+        vNewItemElm.mArrayByteSz = 1;
+        vNewItemElm.mParentIndex = aStatus->mParentIndex;
         
+        //Calculate first and last character positions in the source document for this Element.
+        int vLineNo = aElement.lineNumber();
+        int vLineNo2 = aElement.nextSibling().lineNumber();
+        if (aElement.nextSibling().isNull() == true) {vLineNo2 = vLineNo+1;}
+
+        while (aStatus->mCurrentSrcLine < vLineNo) {
+            aStatus->mCharPos = Core.mXMLsource.indexOf(QString('\n'), aStatus->mCharPos)+1;
+            aStatus->mCurrentSrcLine++;
+        }
+        if (aElement.hasChildNodes() == false) {
+            while (Core.mXMLsource[aStatus->mCharPos] == 9) {
+                aStatus->mCharPos++;
+            }
+        }
+        int wSourceEndPos = aStatus->mCharPos;
+        int wSourceEndLine = aStatus->mCurrentSrcLine;
+        while (wSourceEndLine < vLineNo2) {
+            wSourceEndPos = Core.mXMLsource.indexOf(QString('\n'), wSourceEndPos)+1;
+            wSourceEndLine++;
+        }
+        wSourceEndPos -= 2;
+        vNewItemElm.mCharStart = aStatus->mCharPos;
+        vNewItemElm.mCharEnd = wSourceEndPos;
+        
+        vTableIndex = Core.mItemElmTable.size();
+        Core.mItemElmTable.append(vNewItemElm);
+
+        #ifdef QT_DEBUG
+        /*    QString vSec = Core.mXMLsource.mid(aStatus->mCharPos, wSourceEndPos-aStatus->mCharPos);
+            qDebug("new");
+            qDebug((char*)vSec.toUtf8().data());*/
+        #endif
+    }
+
+    QDomElement vChildRef;
+    if (aElement.firstChildElement().isNull() == false) {
+        vChildRef = aElement.firstChildElement();
+
         aStatus->mTreeLevel++;
         QTreeWidgetItem *mBackupParentTWI = aStatus->mParentTWIRef;
         aStatus->mParentTWIRef = vTreeItem;
+        int vBackupParentIndex = aStatus->mParentIndex;
+        aStatus->mParentIndex = vTableIndex;
         
         int vSafeCount = 0;
-        while ((vNodeRef.isNull() == false) && (vSafeCount < 10000)) {
+        while ((vChildRef.isNull() == false) && (vSafeCount < 10000)) {
             
-            loadXMLRecursive(vNodeRef, aStatus);
+            loadXMLRecursive(vChildRef, aStatus);
 
-            vNodeRef = vNodeRef.nextSibling();
+            vChildRef = vChildRef.nextSiblingElement();
             vSafeCount++;
         }
         aStatus->mTreeLevel--;
         aStatus->mParentTWIRef = mBackupParentTWI;
+        aStatus->mParentIndex = vBackupParentIndex;
+
     }
 
     if (aStatus->mListFloorCounter) {
@@ -835,7 +885,7 @@ void MainWindow::on_wTree_itemClicked(QTreeWidgetItem *item, int column)
    
     int vRefIndex = 0;
     vRefIndex = item->data(0, eElmRefRole).toInt();
-    ItemView *vOpenIW = Core.mItemWiewRefTable[vRefIndex];
+    ItemView *vOpenIW = Core.mItemElmTable[vRefIndex].mItemViewRef;
     
     //If a window for this item is already open, set focus to it.
     if (vOpenIW) {
@@ -859,7 +909,7 @@ void MainWindow::on_wTree_itemClicked(QTreeWidgetItem *item, int column)
    
     ui->mdiArea->addSubWindow(theItemView);
     //item->setData(0, eWindowRole, theItemView);
-    Core.mItemWiewRefTable[vRefIndex] = theItemView;
+    Core.mItemElmTable[vRefIndex].mItemViewRef = theItemView;
    
 
     theItemView->setWindowState(Qt::WindowMaximized|Qt::WindowActive);
@@ -875,8 +925,8 @@ void MainWindow::on_wTree_itemClicked(QTreeWidgetItem *item, int column)
     theItemView->setWindowTitle(vItemName);
 
     QString vSourceText;
-    int vA = Core.mElementCharStart[vRefIndex];
-    int vB = Core.mElementCharEnd[vRefIndex];
+    int vA = Core.mItemElmTable[vRefIndex].mCharStart;
+    int vB = Core.mItemElmTable[vRefIndex].mCharEnd;
     vSourceText = Core.mXMLsource.mid(vA, vB-vA);
     ui->wXMLEdit->setPlainText(vSourceText);
  
