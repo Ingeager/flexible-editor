@@ -252,6 +252,11 @@ struct tItemElmType {
     quint32 mCharEnd;
 };
 
+struct tIconTableItem {
+    QString mKey;
+    QIcon mIcon;
+};
+
 class tCore {
 public:
     tCore();
@@ -259,14 +264,17 @@ public:
     
     QString mXMLsource;
     QString mXMLFileName;
+    QString mXMLFileBasePath;
 
     bool mBinFileOpened;
     QString mBinFileName;
     
+    QList<tItemElmType> mItemElmTable;
+    
     QList<int> mCommonElmIndexTable;
     QList<int> mListElmIndexTable;
-
-    QList<tItemElmType> mItemElmTable;
+    
+    QList<tIconTableItem> mIconTable;
     
     QByteArray mEditFileFullBuffer;
     
@@ -283,6 +291,7 @@ public:
     void error(QString aMessage, int aLevel);
     void scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElmRefIndex);
     void scriptLoad(QString aFileName, QScriptEngine *aEngine);
+    bool qElementGetHasAttribute(QDomElement aElement, QString aName, QString *aReturnStr);
     quint32 getItemByte(qint64 aPtr, QDomElement aElmRef, int aElmIndex = -1);
     int setItemByte(qint64 aPtr, quint32 aValue, QDomElement aElmRef, int aElmIndex = -1);
     qint64 calcItemPtr(qint64 aPtr, QDomElement aElmRef, int aElmIndex = -1);
@@ -295,6 +304,7 @@ public:
     QDomElement getEngineElmRef(QScriptEngine *aEngine);
     int getEngineElmIndex(QScriptEngine *aEngine);
     bool loadFileCommon(QString aFName, QByteArray *aByteArray);
+    
 
 };
 

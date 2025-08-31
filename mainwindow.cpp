@@ -256,6 +256,12 @@ void tCore::error(QString aMessage, int aLevel) {
     }
 }
 
+bool tCore::qElementGetHasAttribute(QDomElement aElement, QString aName, QString *aReturnStr) {
+    if (aElement.hasAttribute(aName.toLower())) {*aReturnStr = aElement.attribute(aName.toLower()); return true;}
+    if (aElement.hasAttribute(aName.toUpper())) {*aReturnStr = aElement.attribute(aName.toUpper()); return true;}
+    return false;
+}
+
 int tCore::getEngineElmIndex(QScriptEngine *aEngine) {
     QScriptValue vGlob = aEngine->globalObject();
     QScriptValue vCore = vGlob.property("Core");
@@ -642,14 +648,12 @@ void MainWindow::unloadXML() {
     Core.mItemElmTable.clear();
     Core.mCommonElmIndexTable.clear();
     Core.mListElmIndexTable.clear();
+    Core.mIconTable.clear();
     mainXML.setContent(QString(""));
 }
 
 void MainWindow::loadXMLFile(QString aFName) {
     unloadXML();
-
-    /*loadFileCommon(aFName, &vByteArray);
-    mainXML.setContent(vByteArray);*/
 
     QFile vFile;
     vFile.setFileName(aFName);
@@ -657,26 +661,31 @@ void MainWindow::loadXMLFile(QString aFName) {
     Core.mXMLsource = vFile.readAll();
     vFile.close();
     
-    QString vWhat1;
-    int vWhat2;
-    int vWhat3;
-    bool vResult = mainXML.setContent(Core.mXMLsource, &vWhat1, &vWhat2, &vWhat3);
+    QString vError;
+    int vErrorLine;
+    int vErrorCol;
+    bool vResult = mainXML.setContent(Core.mXMLsource, &vError, &vErrorLine, &vErrorCol);
 
     if (vResult == false) {
         QString vErrMsg;
-        vErrMsg = "XML Parse error (Line " + QString::number(vWhat2) + ", Col " + QString::number(vWhat3) + "): " + vWhat1; 
+        vErrMsg = "XML Parse error (Line " + QString::number(vErrorLine) + ", Col " + QString::number(vErrorCol) + "): " + vError; 
         #ifdef QT_DEBUG
             qDebug(vErrMsg.toUtf8());
         #endif
         Core.error(vErrMsg, 2);
     }
     Core.mXMLFileName = aFName;
-
-    /*if (vResult == false) {
-        Core.mXMLsource.prepend("<dummy>");
-        Core.mXMLsource.append("</dummy>");
-        mainXML.setContent(Core.mXMLsource, &vWhat1, &vWhat2, &vWhat3);
-    }*/
+    int vPos1 = aFName.lastIndexOf('/');
+    int vPos2 = aFName.lastIndexOf('\\');
+    if (vPos1 >= 0) {
+        Core.mXMLFileBasePath = aFName;
+        Core.mXMLFileBasePath.truncate(vPos1+1);
+    } else if (vPos2 >= 0) {
+        Core.mXMLFileBasePath = aFName;
+        Core.mXMLFileBasePath.truncate(vPos2+1);    
+    } else {
+        Core.mXMLFileBasePath = "";
+    }
 
     loadXML();
     updateWindowTitle();
@@ -728,7 +737,41 @@ void MainWindow::loadXML() {
     vStatus.mCharPos = 0;
     
     if (mainXML.hasChildNodes() == false) {return;}
-   
+
+    //Find and load any icons before crawling the XML tree.
+    QDomNodeList vIcons = mainXML.elementsByTagName("icon");
+    if (vIcons.length() > 0) {
+        for (int vIx = 0; vIx < vIcons.length(); vIx++) {
+            QDomElement vElement = vIcons.at(vIx).toElement();
+            QString vKeyName = "";
+            QString vFileName = "";
+            QString vFileName2 = "";
+            Core.qElementGetHasAttribute(vElement, "key", &vKeyName);
+            Core.qElementGetHasAttribute(vElement, "filename", &vFileName);
+            if (vFileName.size() > 0) {
+                QFileInfo vFI;
+                QString vXMLrelativeFile = Core.mXMLFileBasePath + vFileName;
+                vFI.setFile(vXMLrelativeFile);
+                if (vFI.exists()) {
+                    //Relative to XML file path.
+                    vFileName2 = vXMLrelativeFile;
+                } else {
+                    vFI.setFile(vFileName);
+                    if (vFI.exists()) {
+                        //Relative to app path.
+                        vFileName2 = vFileName;
+                    }
+                }
+                if (vFileName2.size() > 0) {
+                    QIcon vQIcon(vFileName2);
+                    tIconTableItem vNewIcon;
+                    vNewIcon.mIcon = vQIcon;
+                    vNewIcon.mKey = vKeyName;
+                    Core.mIconTable.append(vNewIcon);
+                }
+            }
+        }
+    }
     loadXMLRecursive(mainXML.documentElement(), &vStatus);
     
     ui->wTree->expandAll();
@@ -752,10 +795,12 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus) 
     
         if (aStatus->mListFloorCounter == 0) {
             QString vItemName = "Data Item " + QString::number(aStatus->mItemCount+1);
+            QString vIconName = "";
+            bool vUsingIcon = false;
             
             if (aElement.hasAttributes()) {
-                if (aElement.hasAttribute("name")) {vItemName = aElement.attribute("name");}
-                if (aElement.hasAttribute("NAME")) {vItemName = aElement.attribute("NAME");}                   
+                Core.qElementGetHasAttribute(aElement, "name", &vItemName);
+                vUsingIcon = Core.qElementGetHasAttribute(aElement, "icon", &vIconName);
             }
             
             //Use a table to connect Tree widget items to the DRD Item Element/QDomElement.
@@ -775,6 +820,14 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus) 
                 vTreeItem->setText(0, vItemName);
                 vTreeItem->setData(0, eElmRefRole, RefIndex);
                 vTreeItem->setData(0, eWindowRole, 0);
+                if (vUsingIcon == true) {
+                    for (int vIx = 0; vIx < Core.mIconTable.size(); vIx++) {
+                        if (vIconName.compare(Core.mIconTable[vIx].mKey, Qt::CaseInsensitive) == 0) {
+                            QIcon vIconRef = Core.mIconTable[vIx].mIcon;
+                            vTreeItem->setIcon(0, vIconRef);
+                        }
+                    }
+                }
             }
             
         } else {
@@ -791,15 +844,9 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus) 
         wAddToTables = true;
         Core.mCommonElmIndexTable.append(Core.mItemElmTable.count());
     } else if (vTagText.compare("info", Qt::CaseInsensitive) == 0) {
-        QDomNamedNodeMap vAttr = aElement.attributes();
-        QDomNode vNode;
-        QString vAttrName;
-        for (int vAttrCount = 0; vAttrCount < vAttr.count(); vAttrCount++) {
-            vNode = vAttr.item(vAttrCount);
-            vAttrName = vNode.nodeName();
-            if (vAttrName.compare("intsize", Qt::CaseInsensitive) == 0) {
-                Core.mDRD_intSize = vNode.nodeValue().toInt();
-            }
+        QString vIntSizeAttr;
+        if (Core.qElementGetHasAttribute(aElement, "intsize", &vIntSizeAttr)) {
+            Core.mDRD_intSize = vIntSizeAttr.toInt();
         }
     }
     
