@@ -285,7 +285,7 @@ quint32 tCore::getFileByte(qint64 aPtr) {
     }
 }
 
-int tCore::setFileByte(qint64 aPtr, quint32 aValue) {
+void tCore::setFileByte(qint64 aPtr, quint32 aValue) {
     quint32 vPtr = aPtr;
     if (vPtr < mEditFileFullBuffer.size()) {
     mEditFileFullBuffer[vPtr] = aValue;
@@ -301,11 +301,10 @@ quint32 tCore::getItemByte(qint64 aPtr, QDomElement aElmRef, int aElmIndex) {
     return (vV);
 }
 
-int tCore::setItemByte(qint64 aPtr, quint32 aValue, QDomElement aElmRef, int aElmIndex) {
+void tCore::setItemByte(qint64 aPtr, quint32 aValue, QDomElement aElmRef, int aElmIndex) {
     qint64 vPtr = calcItemPtr(aPtr, aElmRef, aElmIndex);
     
     setFileByte(vPtr, aValue);
-    return (0);
 }
 
 void tCore::scriptLoad(QString aFileName, QScriptEngine *aEngine) {
@@ -331,7 +330,6 @@ void tCore::scriptLoad(QString aFileName, QScriptEngine *aEngine) {
     if (aEngine->hasUncaughtException()) {
         return;
     }
-
 }
 
 bool tCore::loadFileCommon(QString aFName, QByteArray *aByteArray) {
@@ -399,7 +397,7 @@ void tCore::scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElm
     vCore.setProperty("setArrayByteSize", aEngine->newFunction(&scriptF_setArrayByteSize, 1));
     vCore.setProperty("customize", aEngine->newFunction(&scriptF_customize, 2));
     vCore.setProperty("getList", aEngine->newFunction(&scriptF_getList, 1));
-    vCore.setProperty("loadTextFile", aEngine->newFunction(&scriptF_loadTextFile, 1)); //untested
+    vCore.setProperty("loadTextFile", aEngine->newFunction(&scriptF_loadTextFile, 1));
     
     vCore.setProperty("window", aEngine->newQObject(aWindowVar));
     vCore.setProperty("elmRefIndex", aElmRefIndex);
@@ -604,6 +602,9 @@ void MainWindow::init() {
   //mXMLmenu.addAction("Delete Item", this, SLOT(on_deleteItem());
   
     load_NES_Palette("fr_nesB.pal");
+    
+    Core.mDefaultIcon = QIcon("testlogo.bmp");
+    setWindowIcon(Core.mDefaultIcon);
 }
 
 void MainWindow::selectXMLfile() {
@@ -726,6 +727,8 @@ void MainWindow::load_NES_Palette(QString aFName) {
 }
 
 void MainWindow::loadXML() {
+
+    setWindowIcon(Core.mDefaultIcon);
     
     XMLReadStatus vStatus;
     vStatus.mItemCount = 0;
@@ -833,7 +836,6 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus) 
         } else {
             wAddToTables = true;
             Core.mListElmIndexTable.append(Core.mItemElmTable.count());
-        
         }
         
         aStatus->mItemCount++;
@@ -847,6 +849,15 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus) 
         QString vIntSizeAttr;
         if (Core.qElementGetHasAttribute(aElement, "intsize", &vIntSizeAttr)) {
             Core.mDRD_intSize = vIntSizeAttr.toInt();
+        }
+        QString vIconKey;
+        if (Core.qElementGetHasAttribute(aElement, "headicon", &vIconKey)) {
+            for (int vIx = 0; vIx < Core.mIconTable.size(); vIx++) {
+                if (vIconKey.compare(Core.mIconTable[vIx].mKey, Qt::CaseInsensitive) == 0) {
+                    QIcon vIconRef = Core.mIconTable[vIx].mIcon;
+                    setWindowIcon(vIconRef);
+                }
+            }
         }
     }
     

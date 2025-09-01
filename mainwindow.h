@@ -281,25 +281,26 @@ public:
     QByteArray mNESPal;
   
     tEventForScript *mEventForScript;
-
     
     QString mTypeScriptPath;
     
     int mDRD_intSize;
     int mVersionDate;
+    
+    QIcon mDefaultIcon;
 
     void error(QString aMessage, int aLevel);
     void scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElmRefIndex);
     void scriptLoad(QString aFileName, QScriptEngine *aEngine);
     bool qElementGetHasAttribute(QDomElement aElement, QString aName, QString *aReturnStr);
     quint32 getItemByte(qint64 aPtr, QDomElement aElmRef, int aElmIndex = -1);
-    int setItemByte(qint64 aPtr, quint32 aValue, QDomElement aElmRef, int aElmIndex = -1);
+    void setItemByte(qint64 aPtr, quint32 aValue, QDomElement aElmRef, int aElmIndex = -1);
     qint64 calcItemPtr(qint64 aPtr, QDomElement aElmRef, int aElmIndex = -1);
     bool itemHasAttr(QString aName, QDomElement aElmRef, bool aCheckCommon = true, bool aCheckRegular = true);
     QString getItemAttr(QString aName, QDomElement aElmRef);
     bool getItemFlag(QString aFlagName, QDomElement aElmRef);
     quint32 getFileByte(qint64 aPtr);
-    int setFileByte(qint64 aPtr, quint32 aValue);
+    void setFileByte(qint64 aPtr, quint32 aValue);
     int getCommonElementIndex(QDomElement aElmRef);
     QDomElement getEngineElmRef(QScriptEngine *aEngine);
     int getEngineElmIndex(QScriptEngine *aEngine);
@@ -318,11 +319,7 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
     
-    void dev_init_();
-    void dev_init_SRFX_();
-    void loadXML();
-    void loadXMLRecursive();
-    void loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus);
+
 private slots:
     void on_wTree_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
     
@@ -338,7 +335,12 @@ private slots:
     void on_mdiArea_subWindowActivated(QMdiSubWindow *arg1);
     
 public:
-    
+
+    void dev_init_();
+    void dev_init_SRFX_();
+    void loadXML();
+    void loadXMLRecursive();
+    void loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus);
     void loadBinFile(QString aFName, int aMode);
     void loadXMLFile(QString aFName);
     void dev_init_combo_(QString aXML, QString aBIN);

@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Thu 14. Aug 00:59:48 2025
+** Created: Mon 1. Sep 15:05:38 2025
 **      by: Qt User Interface Compiler version 4.8.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -60,9 +60,6 @@ public:
         if (MainWindow->objectName().isEmpty())
             MainWindow->setObjectName(QString::fromUtf8("MainWindow"));
         MainWindow->resize(1107, 758);
-        QIcon icon;
-        icon.addFile(QString::fromUtf8("testlogo.bmp"), QSize(), QIcon::Normal, QIcon::Off);
-        MainWindow->setWindowIcon(icon);
         actionOpenXML = new QAction(MainWindow);
         actionOpenXML->setObjectName(QString::fromUtf8("actionOpenXML"));
         actionOpenBinary = new QAction(MainWindow);

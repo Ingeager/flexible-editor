@@ -13,10 +13,6 @@
   <property name="windowTitle">
    <string>Flexible Editor (Build 1)</string>
   </property>
-  <property name="windowIcon">
-   <iconset>
-    <normaloff>testlogo.bmp</normaloff>testlogo.bmp</iconset>
-  </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QWidget" name="horizontalLayoutWidget">
     <property name="geometry">
