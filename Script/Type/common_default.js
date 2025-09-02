@@ -9,7 +9,9 @@ DefaultControls.ctrlPtrLabel = 0;
 DefaultControls.ctrlPtrEdit = 0;
 DefaultControls.ctrlRelPtrLabel = 0;
 DefaultControls.ctrlRelPtrEdit = 0;
-DefaultControls.ctrlSepLine = 0;
+DefaultControls.ctrlCommonEdit = 0;
+DefaultControls.ctrlArrayCombo = 0;
+DefaultControls.ctrlArraySpinBox = 0;
 DefaultControls.majorChangeFunc = 0;
 
 DefaultControls.init = function() {
@@ -17,16 +19,32 @@ DefaultControls.init = function() {
 }
 
 DefaultControls.addDefault = function() {
+
+	var back_y = Core.base_y;
+	var back_x = Core.base_x;
 	
-	DefaultControls.addTypeSelector();
+	DefaultControls.addType();
 	DefaultControls.addElementDefaults();
 	//DefaultControls.addActivePointer();
+	DefaultControls.addCommon();
 	DefaultControls.addText();
+	
+	var back_y2 = Core.base_y;
+	var back_x2 = Core.base_x;
+	Core.base_x += 220;
+	Core.base_y = back_y;
+	DefaultControls.addFlags();
+	Core.base_x = back_x2;
+	
+	if (Core.base_y < back_y2) {
+		Core.base_y = back_y2;
+	}
+	
 	DefaultControls.addLine();
 
 }
 
-DefaultControls.addTypeSelector = function() {
+DefaultControls.addType = function() {
 	var parentWnd = Core.window;
 	
 	var x = Core.base_x;
@@ -34,28 +52,23 @@ DefaultControls.addTypeSelector = function() {
 
 	var vTypeString = "BLANK";
 	
-	if (Core.hasAttr('type')) {
-		vTypeString = Core.getAttr('type');
+	if (Core.hasAttr("type")) {
+	 	vTypeString = Core.getAttr("type");
 	}
 
 	DefaultControls.ctrlTypeLabel = new QLabel(parentWnd);
 	DefaultControls.ctrlTypeLabel.text = "Data Type:";
-	DefaultControls.ctrlTypeLabel.move(x, y+4);
+	DefaultControls.ctrlTypeLabel.move(x, y+2);
 	DefaultControls.ctrlTypeLabel.show();
 
 	DefaultControls.typeEdit = new QLineEdit(parentWnd);
 	DefaultControls.typeEdit.setText(vTypeString);
 	DefaultControls.typeEdit.readOnly = true;
-	DefaultControls.typeEdit.move(x+55, y+2);
+	DefaultControls.typeEdit.move(x+55, y);
 	DefaultControls.typeEdit.resize(100, 20);
 	DefaultControls.typeEdit.show();
 	
-	/*ctrlTypeBtn = new QPushButton(parentWnd);
-	ctrlTypeBtn.text = 'Change';
-	ctrlTypeBtn.move(x+135, y);
-	ctrlTypeBtn.show();*/
-	
-	Core.base_y = y + 28;
+	Core.base_y = y + 26;
 }
 
 DefaultControls.addActivePointer = function() {
@@ -77,7 +90,7 @@ DefaultControls.addActivePointer = function() {
 	DefaultControls.ctrlPtrEdit.show();
 
 	Core.base_x = 15;
-	Core.base_y = y + 28;
+	Core.base_y = y + 26;
 }
 
 DefaultControls.addElementDefaults = function() {
@@ -90,11 +103,11 @@ DefaultControls.addElementDefaults = function() {
 	if (Core.hasAttr("ptr")) {
  
 		DefaultControls.ctrlPtrLabel = new QLabel(parentWnd);
-		DefaultControls.ctrlPtrLabel.text = 'Pointer:';
+		DefaultControls.ctrlPtrLabel.text = "Pointer:";
 		DefaultControls.ctrlPtrLabel.move(x, y+2);
 		DefaultControls.ctrlPtrLabel.show();
 	
-		var pointerString = Core.getAttr('ptr');
+		var pointerString = Core.getAttr("ptr");
 		DefaultControls.ctrlPtrEdit = new QLineEdit(parentWnd);
 		DefaultControls.ctrlPtrEdit.move(x+40, y);
 		DefaultControls.ctrlPtrEdit.text = "0x" + pointerString;
@@ -102,78 +115,213 @@ DefaultControls.addElementDefaults = function() {
 		DefaultControls.ctrlPtrEdit.readOnly = true;
 		DefaultControls.ctrlPtrEdit.show();
 
-		y = y + 28;
+		y = y + 26;
 	}
 	if (Core.hasAttr("relptr")) {
 		DefaultControls.ctrlRelPtrLabel = new QLabel(parentWnd);
-		DefaultControls.ctrlRelPtrLabel.text = 'Relative Pointer:';
+		DefaultControls.ctrlRelPtrLabel.text = "Relative Pointer:";
 		DefaultControls.ctrlRelPtrLabel.move(x, y+2);
 		DefaultControls.ctrlRelPtrLabel.show();
 		
-		var pointerString = Core.getAttr('relptr');
+		var pointerString = Core.getAttr("relptr");
 		DefaultControls.ctrlRelPtrEdit = new QLineEdit(parentWnd);
-		DefaultControls.ctrlRelPtrEdit.move(x+100, y);
+		DefaultControls.ctrlRelPtrEdit.move(x+85, y);
 		DefaultControls.ctrlRelPtrEdit.text = "0x" + pointerString;
 		DefaultControls.ctrlRelPtrEdit.resize(80, 20);
 		DefaultControls.ctrlRelPtrEdit.readOnly = true;
 		DefaultControls.ctrlRelPtrEdit.show();
 
-		y = y + 28;
+		y = y + 26;
 	}
 	Core.base_y = y;
 
 }
 
-/*
-DefaultControls.addEventCallback = function(a_callback_func, a_callback_obj, a_flag_filter) {
- if (a_flag_filter == undefined) {
-     a_flag_filter = 0xFFFFFF;
-   }
-   DefaultControls.callback = true;
-   DefaultControls.callbackObj = a_callback_obj;
-   DefaultControls.callback[ix].Func = a_callback_func;
-}*/
+DefaultControls.addFlags = function() {
+
+  if (Core.hasAttr("flag") == false) {
+    return;
+  }
+  var ctrl;
+  var parentWnd = Core.window;
+
+  ctrl = new QLabel(parentWnd);
+  ctrl.text = "Flags:";
+  ctrl.move(Core.base_x, Core.base_y);
+  ctrl.resize(80, 20);
+  
+  ctrl.show();
+
+  var flagStr = Core.getAttr("flag");
+
+  ctrl = new QPlainTextEdit(parentWnd);
+  DefaultControls.flagList = ctrl;
+  ctrl.move(Core.base_x+35, Core.base_y+0);
+  ctrl.resize(100, 55);
+
+
+  var showStr = flagStr.replace(".", "\n");
+  ctrl.setPlainText(showStr);
+  ctrl.show();
+  
+  Core.base_y += 65;
+}
+
 
 DefaultControls.addArrayTuner = function() {
 
    var parentWnd = Core.window;
+
+   var ctrl;
+   ctrl = new QLabel(parentWnd);
+   ctrl.text = "Index:";
+   ctrl.resize(45, 20);
+   ctrl.move(Core.base_x, Core.base_y);
+   ctrl.show();
+   var backupX = Core.base_x;
+   Core.base_x += ctrl.width;
+
    var arrayCombo = false;
    var arraySlider = true;
+   if ((Core.hasAttr("arrindex_lablist") == true) || (Core.hasAttr("arrindex_labdef") == true)) {
+       arrayCombo = true;
+       arraySlider = false;
+   }
+
+	var currentIndex = 0;
+	if (Core.versionDate >= 250823) {
+		currentIndex = Core.getArrayIndex();
+	}
+
+	var max = Core.getHexValueAttr("len")-1;
+
    if (arraySlider == true) {
 	DefaultControls.arrayTuner = new QSlider(parentWnd);
 	DefaultControls.arrayTuner.move(Core.base_x, Core.base_y);
 	DefaultControls.arrayTuner.setOrientation(1);
-	DefaultControls.arrayTuner.resize(250, 20);
-			
-	var max = Core.getHexValueAttr("len")-1;
+	DefaultControls.arrayTuner.resize(300, 20);
+
 	DefaultControls.arrayTuner.setRange(0, max);
 	DefaultControls.arrayTuner.setSingleStep(1);
 	DefaultControls.arrayTuner.setPageStep(1);
 	DefaultControls.arrayTuner.valueChanged.connect(this, this.arraySliderFunc);
-	DefaultControls.arrayTuner.show();
+	DefaultControls.arrayTuner.programChanged = true;
+	DefaultControls.arrayTuner.value = currentIndex;
+	DefaultControls.arrayTuner.programChanged = false;
+ 	DefaultControls.arrayTuner.show();
+
+	ctrl = new QSpinBox(parentWnd);
+	DefaultControls.ctrlArraySpinBox = ctrl;
+	ctrl.minimum = 0;
+	ctrl.maximum = max;
+	ctrl.value = currentIndex;
+	ctrl.programChanged = false;
+	ctrl.resize(55, 25);
+	ctrl.styleSheet = "font: 15px";
+	ctrl.move(Core.base_x+DefaultControls.arrayTuner.width + 15, Core.base_y);
+	ctrl['valueChanged(int)'].connect(this, this.arraySpinBoxFunc);
+	ctrl.show();
 	Core.base_y += 30;
    }
    if (arrayCombo == true) {
 	var ctrl = new QComboBox(parentWnd);
-	DefaultControls.arrayCombo = ctrl;
+	DefaultControls.ctrlArrayCombo = ctrl;
 	ctrl.move(Core.base_x, Core.base_y);
-	ctrl.resize(600, 40);
-	var listId = "???";
-	var listArray = Core.getList(listId);
-	var ix;
-	for (ix = 0; ix < listArray.length; ix++) {
-		ctrl.addItem(ix.toString(16).toUpperCase() + ": " + listArray[ix]);
+	ctrl.styleSheet = "font: 25px";
+	ctrl.resize(550, 40);
+	var listArray;
+	if (Core.hasAttr("arrindex_lablist") == true) {
+		var listId = Core.getAttr("arrindex_lablist");
+		listArray = Core.getList(listId);
+	} else {
+		//has ARRINDEX_LABDEF
+		var labdef = Core.getAttr("arrindex_labdef");
+		listArray = labdef.split(".");
 	}
+	var ix;
+	var itemStr = "";
+	for (ix = 0; ix <= max; ix++) {
+		if (ix < listArray.length) {
+			itemStr = listArray[ix];
+		} else {
+			itemStr = "?";
+		}
+		ctrl.addItem(ix.toString(16).toUpperCase() + ": " + itemStr);
+	}
+	ctrl.setCurrentIndex(currentIndex);
+	ctrl['currentIndexChanged(int)'].connect(DefaultControls.arrayComboFunc);
 	ctrl.show();
-	Core.base_y += 30;
+	
+	Core.base_y += 50;
    }
+
+	Core.base_x = backupX;
+	DefaultControls.addLine();
 }
 
 DefaultControls.arraySliderFunc = function() {
+	if (DefaultControls.arrayTuner.programChanged == true) {
+		return;
+	}
 
-    //Core.setArrayIndex(DefaultControls.arrayTuner.value);
-    //event.dispatch(event.bit.changeIndex|event.bit.changeMajor);
-    
+	if (Core.versionDate >= 250823) {
+		Core.setArrayIndex(DefaultControls.arrayTuner.value);
+		Event.dispatch(Event.bit.changeMajor);
+	} else {
+		Core.arrayIndex = DefaultControls.arrayTuner.value;
+		event.dispatch(event.bit.changeMajor);
+	}
+	DefaultControls.ctrlArraySpinBox.programChanged = true;
+	DefaultControls.ctrlArraySpinBox.value = DefaultControls.arrayTuner.value;
+	DefaultControls.ctrlArraySpinBox.programChanged = false;
+}
+
+DefaultControls.arraySpinBoxFunc = function(a_value) {
+	if (DefaultControls.ctrlArraySpinBox.programChanged == true) {
+		return;
+	}
+
+ 	if (Core.versionDate >= 250823) {
+	  	Core.setArrayIndex(a_value);
+	  	Event.dispatch(Event.bit.changeMajor);
+	 } else {
+		Core.arrayIndex = a_value;
+		event.dispatch(event.bit.changeMajor);
+	}
+	DefaultControls.arrayTuner.programChanged = true;
+	DefaultControls.arrayTuner.value = a_value;
+	DefaultControls.arrayTuner.programChanged = false;
+}
+
+DefaultControls.arrayComboFunc = function(a_value) {
+ 	if (Core.versionDate >= 250823) {
+	  	Core.setArrayIndex(a_value);
+	  	Event.dispatch(Event.bit.changeMajor);
+	 } else {
+		Core.arrayIndex = a_value;
+		event.dispatch(event.bit.changeMajor);
+	}
+}
+
+DefaultControls.addCommon = function() {
+  if (Core.hasAttr("common") == true) {
+    var parentWnd = Core.window;
+    var ctrl = new QLabel(parentWnd);
+    ctrl.text = "Common:";
+    ctrl.resize(90, 20);
+    ctrl.move(Core.base_x, Core.base_y);
+    ctrl.show();
+
+    ctrl = new QLineEdit(parentWnd);
+    DefaultControls.ctrlCommonEdit = ctrl;
+	ctrl.text = Core.getAttr("common");
+    ctrl.move(Core.base_x + 48, Core.base_y);
+    ctrl.resize(100, 20);
+    ctrl.readOnly = true;
+    ctrl.show();
+
+    Core.base_y += 26;
+  }
 }
 
 DefaultControls.addText = function() {
@@ -201,13 +349,13 @@ DefaultControls.addLine = function() {
 	var x = Core.base_x;
 	var y = Core.base_y;
 	
-	DefaultControls.ctrlSepLine = new QFrame(parentWnd);
-	DefaultControls.ctrlSepLine.move(x, y);
-	DefaultControls.ctrlSepLine.setFrameStyle(4);
-	DefaultControls.ctrlSepLine.resize(600, 2);
-	DefaultControls.ctrlSepLine.show();
+	ctrl = new QFrame(parentWnd);
+	ctrl.move(x, y);
+	ctrl.setFrameStyle(4);
+	ctrl.resize(600, 2);
+	ctrl.show();
 
-	Core.base_y = y + 14;
+	Core.base_y = y + 12;
 
 }
 

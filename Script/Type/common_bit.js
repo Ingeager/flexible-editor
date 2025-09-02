@@ -1,11 +1,20 @@
 
 CommonBit = function() {
-  this.ctrlCount = 0;
-  this.ctrl = [];
-  this.bit_ix = [];
-  this.v_spacing = 19;
-  this.ctrlRef = [];
-  this.changeFunc = function() {};
+	this.ctrlCount = 0;
+	this.ctrl = [];
+	this.bit_ix = [];
+	this.v_spacing = 19;
+	this.ctrlRef = [];
+	this.changeFunc = function() {};
+  
+	//Array support hack for v250813
+	if (Core.versionDate < 250823) {
+		Core.getByteWr = function(a_addr) {return(Core.getByte(a_addr+(Core.arrayIndex*Core.arrayByteSize)));}
+		Core.setByteWr = function(a_addr, a_val) {Core.setByte(a_addr+(Core.arrayIndex*Core.arrayByteSize), a_val);}
+	} else {
+		Core.getByteWr = function(a_addr) {return(Core.getByte(a_addr));}
+		Core.setByteWr = function(a_addr, a_val) {Core.setByte(a_addr, a_val);}
+	}
 }
 
 CommonBit.prototype.initBitAttr = function(a_bitCount) {
@@ -54,7 +63,7 @@ CommonBit.prototype.addControl = function(a_caption, a_LSBpos) {
 CommonBit.prototype.updateCtrl = function(a_ix) {
   var byte_ix = this.bit_ix[a_ix] >> 3;
   var sub_bit = this.bit_ix[a_ix] & 7;
-  var v = ((Core.getByte(byte_ix) & (1<<sub_bit)) > 0);
+  var v = ((Core.getByteWr(byte_ix) & (1<<sub_bit)) > 0);
   this.ctrl[a_ix].setChecked(v);
 }
 
@@ -70,9 +79,9 @@ CommonBit.prototype.setCheckFunc = function(a_state) {
   var bitv = (a_state > 0) ? 1 : 0;
   var byte_ix = thisRef.bit_ix[ix] >> 3;
   var sub_bit = thisRef.bit_ix[ix] & 7;
-  var bytev = Core.getByte(byte_ix);
+  var bytev = Core.getByteWr(byte_ix);
   bytev &= (0xFF ^ (1 << sub_bit));
   bytev |= (bitv << sub_bit);
-  Core.setByte(byte_ix, bytev);
+  Core.setByteWr(byte_ix, bytev);
   thisRef.changeFunc(sub_bit);
 }

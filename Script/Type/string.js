@@ -51,6 +51,8 @@ function readString() {
 	}
 	
 	textEdit.plainText = makeString;
+	
+
 }
 
 function writeString() {

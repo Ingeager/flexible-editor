@@ -1,6 +1,5 @@
 //FLEX_INCLUDE "common_bit.js"
 
-
 CommonInt = function(a_intSize) {
 	//Set up defaults. 
 	//Important settings can be changed before calling "init".
@@ -38,6 +37,17 @@ CommonInt = function(a_intSize) {
 	this.hasBitControls = false;
 	this.bitClass = {};
 
+	//Array support hack for v250813
+	if (Core.versionDate < 250823) {
+		Core.arrayIndex = 0;
+		Core.arrayByteSize = 2;
+		Core.getByteWr = function(a_addr) {return(Core.getByte(a_addr+(Core.arrayIndex*Core.arrayByteSize)));}
+		Core.setByteWr = function(a_addr, a_val) {Core.setByte(a_addr+(Core.arrayIndex*Core.arrayByteSize), a_val);}
+	} else {
+		Core.getByteWr = function(a_addr) {return(Core.getByte(a_addr));}
+		Core.setByteWr = function(a_addr, a_val) {Core.setByte(a_addr, a_val);}
+	}
+
 	//Core.addFlag('SIGNED');
 	
 }
@@ -52,14 +62,21 @@ CommonInt.prototype.init = function() {
 
 	this.byteSize = (this.bitSize >> 3);
 
-	//Arrays - WIP
+	//Arrays 
 	if (Core.hasAttr("len") == true) {
 		if (this.arrayEnable == true) {
 			DefaultControls.addArrayTuner();
+			if (Core.versionDate >= 250823) {
+				Core.setArrayByteSize(this.byteSize);
+			} else {
+				Core.arrayByteSize = this.byteSize;
+			}
 		}
 	}
-	//Core.arrayIndexByteSize = this.byteSize;
-	//Core.autoHandleArray = true;
+
+	if (Core.getFlag("DECIMAL") == true) {
+		this.base = 10;
+	}
 
 	// Experimental
 	if (Core.hasAttr("base")) {
@@ -67,10 +84,6 @@ CommonInt.prototype.init = function() {
 		if (this.base < 2) {
 			this.base = 16;
 		}
-	}
-
-	if (Core.getFlag("DECIMAL") == true) {
-		this.base = 10;
 	}
 
 	if (Core.getFlag("SIGNED") == true) {
@@ -162,13 +175,10 @@ CommonInt.prototype.init = function() {
 		var ix;
 		for (ix = 0; ix < listArray.length; ix++) {
 			this.listCtrl.addItem(ix.toString(16).toUpperCase() + ": " + listArray[ix]);
-			
-			//var color = (0xFF0000 >> (ix % 16));
-			//this.listCtrl.setItemFGColor(ix, color);
 		}
 
 		this.listCtrl.editable = false;
-		this.listCtrl.styleSheet = "font: 25px"
+		this.listCtrl.styleSheet = "font: 25px";
 		this.listCtrl['currentIndexChanged(int)'].connect(this, this.listChangeFunc);
 		this.listCtrl.show();
 
@@ -239,10 +249,10 @@ CommonInt.prototype.editTextFunc = function(a_text) {
 
 CommonInt.prototype.listChangeFunc = function(a_index) {
 	var low = a_index & 0xFF;
-	Core.setByte(0, low);
+	Core.setByteWr(0, low);
 	if (this.bitSize > 8) {
 		var high = (a_index >> 8) & 0xFF;
-		Core.setByte(1, high);
+		Core.setByteWr(1, high);
 	}
   
 }
@@ -270,9 +280,9 @@ CommonInt.prototype.updateControl = function(a_sourceLength) {
 	this.previousTextLength = this.editCtrl.text.length;
   } else {
 	var value;
-	value = Core.getByte(0);
+	value = Core.getByteWr(0);
 	if (this.bitSize > 8) {
-		value |= (Core.getByte(1) << 8);
+		value |= (Core.getByteWr(1) << 8);
 	}
 	if (value < this.listCtrl.count) {
 		this.listCtrl.setCurrentIndex(value);
@@ -280,7 +290,10 @@ CommonInt.prototype.updateControl = function(a_sourceLength) {
   }
 }
 
-CommonInt.prototype.resetTables = function() {
+CommonInt.prototype.getString = function() {
+
+	var str = "";
+
 	for (index = 0; index < this.arr_size; index++) {
 		this.mul_table[index] = 0;
 		this.val_table[index] = 0;
@@ -288,14 +301,6 @@ CommonInt.prototype.resetTables = function() {
 	this.mul_table[0] = 1;
 	this.mul_table_size = 1;
 	this.val_table_size = 0;
- 
-}
-
-CommonInt.prototype.getString = function() {
-
-	var str = "";
-
-	this.resetTables();
 	
 	var index;
 	var index_b;
@@ -306,7 +311,7 @@ CommonInt.prototype.getString = function() {
 	var negative = false;
 	
 	 if (this.signed == true) {
-		var bytev = Core.getByte(this.byteSize-1);
+		var bytev = Core.getByteWr(this.byteSize-1);
 		if (bytev & 0x80) {
 			negative = true;
 			this.val_table[0] = 1;
@@ -316,7 +321,7 @@ CommonInt.prototype.getString = function() {
 	//Reinvent the wheel
 	for (index = 0; index < this.byteSize; index++) {
 		index_c = (this.bigEndian == false) ? index : (this.byteSize-1-index);
-		var bytev = Core.getByte(index_c);
+		var bytev = Core.getByteWr(index_c);
 		if (this.signed == true) {
 			if (negative == true) {
 				bytev ^= 0xFF;
@@ -406,42 +411,56 @@ CommonInt.prototype.setString = function(a_string) {
 	   a_string = a_string.slice(1);
 	 }
 
-	var charcount = a_string.length;
+	var charc;
+	
+	for (index = 0; index < a_string.length; index++) {
+		charc = this.charToValue(a_string[index]);
+		if (charc < 0) {
+			a_string = a_string.slice(0, index) + a_string.slice(index+1);
+		}
+	}
 
+	var charcount = a_string.length;
 	//Reinvent the wheel, also
 	for (index = 0; index < charcount; index++) {
 
-		var charc = this.charToValue(a_string[charcount-1-index]);
-
-		index_b = 0;
-		carry = 0;
-		firstflag = true;
-		while ((carry > 0) || (firstflag == true) || (index_b < this.val_table2_size) || (index_b < this.mul_table2_size)) {
-			if (index_b >= this.byteSize) {break;}
-			firstflag = false;
-			var a = this.val_table2[index_b] + (this.mul_table2[index_b] * charc) + carry;
-			carry = Math.floor(a / 256);
-			this.val_table2[index_b] = (a - (carry * 256));
-			index_b++;
-		}
-		if (index_b > this.val_table2_size) {
-			this.val_table2_size = index_b;
-		}
+		charc = this.charToValue(a_string[charcount-1-index]);
 		
-		index_b = 0;
-		carry = 0;
-		firstflag = true;
-		while ((carry > 0) || (firstflag == true) || (index_b < this.mul_table2_size)) {
-			if (index_b >= this.byteSize) {break;}
-			firstflag = false;
-			var a = (this.mul_table2[index_b] * this.base) + carry;
-			carry = Math.floor(a / 256);
-			this.mul_table2[index_b] = (a - (carry*256));
-			index_b++;
-		}
-		if (index_b > this.mul_table2_size) {
-			this.mul_table2_size = index_b;
-		}
+		/*if ((charc < 0) && (this.trailZero == true)) {
+			charc = 0;
+		}*/
+
+		//if (charc >= 0) {
+			index_b = 0;
+			carry = 0;
+			firstflag = true;
+			while ((carry > 0) || (firstflag == true) || (index_b < this.val_table2_size) || (index_b < this.mul_table2_size)) {
+				if (index_b >= this.byteSize) {break;}
+				firstflag = false;
+				var a = this.val_table2[index_b] + (this.mul_table2[index_b] * charc) + carry;
+				carry = Math.floor(a / 256);
+				this.val_table2[index_b] = (a - (carry * 256));
+				index_b++;
+			}
+			if (index_b > this.val_table2_size) {
+				this.val_table2_size = index_b;
+			}
+			
+			index_b = 0;
+			carry = 0;
+			firstflag = true;
+			while ((carry > 0) || (firstflag == true) || (index_b < this.mul_table2_size)) {
+				if (index_b >= this.byteSize) {break;}
+				firstflag = false;
+				var a = (this.mul_table2[index_b] * this.base) + carry;
+				carry = Math.floor(a / 256);
+				this.mul_table2[index_b] = (a - (carry*256));
+				index_b++;
+			}
+			if (index_b > this.mul_table2_size) {
+				this.mul_table2_size = index_b;
+			}
+		//}
 	}
 
 	carry = 1;
@@ -463,7 +482,7 @@ CommonInt.prototype.setString = function(a_string) {
 		}
   
 		var index_c = (this.bigEndian == false) ? index : (this.byteSize-1-index);
-		Core.setByte(index_c, v);
+		Core.setByteWr(index_c, v);
 	}
 
 }
@@ -480,7 +499,7 @@ CommonInt.prototype.valueToChar = function(value) {
 
 CommonInt.prototype.charToValue = function(chara) {
 	var ccode = chara.charCodeAt(0);
-	var value = 0; 
+	var value = -1;
 	if ((ccode >= 0x30) && (ccode <= 0x39)) {
 		value = (ccode-0x30);
 	} else if ((ccode >= 0x41) && (ccode <= 0x5A)) {
@@ -491,10 +510,9 @@ CommonInt.prototype.charToValue = function(chara) {
 		value = (ccode-0x21)+36;
 	}
 	if (value >= this.base) {
-		return 0;
-	} else {
-		return value;
+		value = -1;
 	}
+	return value;
 }
 
 
@@ -506,21 +524,21 @@ CommonInt.prototype.addRelative = function(a_addVal) {
   var cap = 0;
 
   if (this.signed == true) {
-    val = Core.getByte(this.byteSize-1);
+    val = Core.getByteWr(this.byteSize-1);
     negative = ((val & 0x80) > 0) ? true : false;
   }
   carry = a_addVal;
   for (index = 0; index < this.byteSize-1; index++) {
-    val = Core.getByte(index);
+    val = Core.getByteWr(index);
     val += carry;
     carry = (val >> 8);
     if (val < 0) {
 	val += 256;
     }
     val = val & 0xFF;
-    Core.setByte(index, val);
+    Core.setByteWr(index, val);
   }
-  val = Core.getByte(this.byteSize-1);
+  val = Core.getByteWr(this.byteSize-1);
   if (this.signed == true) {
 	val &= 0x7F;
   }
@@ -554,17 +572,17 @@ CommonInt.prototype.addRelative = function(a_addVal) {
     }
     val = val & 0xFF;
   }
-  Core.setByte(this.byteSize-1, val);
+  Core.setByteWr(this.byteSize-1, val);
 
   if (cap != 0) {
     for (index = 0; index < this.byteSize; index++) {
-      val = Core.getByte(index);
+      val = Core.getByteWr(index);
       if ((index == this.byteSize-1) && (this.signed == true)) {
         val = cap < 0 ? 0x80 : 0x7F;
       } else {
         val = cap < 0 ? 0 : 0xFF;
       }
-      Core.setByte(index, val);
+      Core.setByteWr(index, val);
     }
   }
 
