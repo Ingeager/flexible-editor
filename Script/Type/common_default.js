@@ -27,8 +27,7 @@ DefaultControls.addDefault = function() {
 	DefaultControls.addElementDefaults();
 	//DefaultControls.addActivePointer();
 	DefaultControls.addCommon();
-	DefaultControls.addText();
-	
+
 	var back_y2 = Core.base_y;
 	var back_x2 = Core.base_x;
 	Core.base_x += 220;
@@ -39,7 +38,8 @@ DefaultControls.addDefault = function() {
 	if (Core.base_y < back_y2) {
 		Core.base_y = back_y2;
 	}
-	
+
+	DefaultControls.addText();
 	DefaultControls.addLine();
 
 }
@@ -143,6 +143,8 @@ DefaultControls.addFlags = function() {
     return;
   }
   var ctrl;
+  var showStr;
+  var flagStr;
   var parentWnd = Core.window;
 
   ctrl = new QLabel(parentWnd);
@@ -152,19 +154,37 @@ DefaultControls.addFlags = function() {
   
   ctrl.show();
 
-  var flagStr = Core.getAttr("flag");
+  flagStr = Core.getAttr("flag");
 
-  ctrl = new QPlainTextEdit(parentWnd);
-  DefaultControls.flagList = ctrl;
-  ctrl.move(Core.base_x+35, Core.base_y+0);
-  ctrl.resize(100, 55);
+ // if (Core.versionDate >= 250907) {
+	ctrl = new QPlainTextEdit(parentWnd);
+	DefaultControls.flagList = ctrl;
+	ctrl.move(Core.base_x+35, Core.base_y+0);
+	ctrl.resize(100, 55);
 
+	showStr = flagStr.replace(".", "\n");
+	ctrl.setPlainText(showStr);
+	ctrl.readOnly = true;
+	ctrl.show();
 
-  var showStr = flagStr.replace(".", "\n");
-  ctrl.setPlainText(showStr);
-  ctrl.show();
-  
-  Core.base_y += 65;
+	Core.base_y += 65;
+	  
+ /* } else {
+	showStr = flagStr.split(".");
+	var ix;
+	for (ix = 0; ix < showStr.length; ix++) {
+		ctrl = new QLineEdit(parentWnd);
+		ctrl.move(Core.base_x+35, Core.base_y+0);
+		ctrl.resize(100, 21);
+
+		ctrl.text = showStr[ix];
+		ctrl.readOnly = true;
+		ctrl.show();
+
+		Core.base_y += 20;
+	}
+	Core.base_y += 10;
+  }*/
 }
 
 
@@ -269,7 +289,7 @@ DefaultControls.arraySliderFunc = function() {
 		Event.dispatch(Event.bit.changeMajor);
 	} else {
 		Core.arrayIndex = DefaultControls.arrayTuner.value;
-		event.dispatch(event.bit.changeMajor);
+		event.dispatch(event.bit.changeindex);
 	}
 	DefaultControls.ctrlArraySpinBox.programChanged = true;
 	DefaultControls.ctrlArraySpinBox.value = DefaultControls.arrayTuner.value;
@@ -286,7 +306,7 @@ DefaultControls.arraySpinBoxFunc = function(a_value) {
 	  	Event.dispatch(Event.bit.changeMajor);
 	 } else {
 		Core.arrayIndex = a_value;
-		event.dispatch(event.bit.changeMajor);
+		event.dispatch(event.bit.changeindex);
 	}
 	DefaultControls.arrayTuner.programChanged = true;
 	DefaultControls.arrayTuner.value = a_value;
@@ -299,7 +319,7 @@ DefaultControls.arrayComboFunc = function(a_value) {
 	  	Event.dispatch(Event.bit.changeMajor);
 	 } else {
 		Core.arrayIndex = a_value;
-		event.dispatch(event.bit.changeMajor);
+		event.dispatch(event.bit.changeindex);
 	}
 }
 
@@ -356,7 +376,6 @@ DefaultControls.addLine = function() {
 	ctrl.show();
 
 	Core.base_y = y + 12;
-
 }
 
 

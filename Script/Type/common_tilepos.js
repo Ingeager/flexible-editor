@@ -62,7 +62,7 @@ CommonTilepos.prototype.drawItemFunc = function(a_index, a_page, cell_y, cell_x,
 }
 
 CommonTilepos.prototype.eventFunc = function(flags) {
-	if (flags && event.bit.changeindex) {
+	/*if (flags && event.bit.changeindex) {
 		//Update controls
-	}
+	}*/
 }

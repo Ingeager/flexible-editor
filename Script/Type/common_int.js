@@ -78,7 +78,6 @@ CommonInt.prototype.init = function() {
 		this.base = 10;
 	}
 
-	// Experimental
 	if (Core.hasAttr("base")) {
 		this.base = Number(Core.getAttr("base"));
 		if (this.base < 2) {
@@ -99,9 +98,16 @@ CommonInt.prototype.init = function() {
 	if (a > 0) {b++;}
 	this.maxCharSize = b*this.byteSize;
 
-	if ((this.base == 16) && ((this.bitSize % 8) == 0)) {
+	
+	if (this.base == 16) {
 		this.symmetricBase = true;
 		this.maxCharSize = (this.byteSize*2);
+	} else if (this.base == 4) {
+		this.symmetricBase = true;
+		this.maxCharSize = (this.byteSize*4);
+	} else if (this.base == 2) {
+		this.symmetricBase = true;
+		this.maxCharSize = (this.byteSize*8);	
 	} else {
 		this.symmetricBase = false;
 	}
@@ -130,7 +136,6 @@ CommonInt.prototype.init = function() {
 		//var ctrlWidth_table = [80, 120, 150, 120, 200, 200, 200, 200];
 		var ctrlHeight_table = [56, 50, 50, 40, 40, 40, 40, 40];
 		var fontpx = 15;
-		//var ctrlWidth = 580;
 		var ctrlHeight = 40;
 		if (this.byteSize < 9) {
 			fontpx = fontpx_table[this.byteSize-1];
@@ -229,16 +234,37 @@ CommonInt.prototype.upDownFunc = function(a_value) {
 }
 
 CommonInt.prototype.editTextFunc = function(a_text) {
+	var index;
+	var charc;
+	var negative = false;
+	var cursorPosition = this.editCtrl.cursorPosition;
+	
 	if (a_text == "-") {return;}
 	if ((a_text == "-0") && (this.previousText == "0")) {return;}
-	if ((this.trailZero == true) || ((this.symmetricBase == true) && (a_text.length > this.maxCharSize))) {
-		if ((this.editCtrl.cursorPosition-1) == (this.maxCharSize)) {
-			a_text = a_text.substring(0, this.maxCharSize);
-		} else {
-			a_text = a_text.substring(0, this.editCtrl.cursorPosition) + a_text.substring(this.editCtrl.cursorPosition+1);
+
+	if (a_text[0] == "-") {
+		negative = true;
+		a_text = a_text.slice(1);
+		cursorPosition--;
+	 }
+	for (index = 0; index < a_text.length; index++) {
+		charc = this.charToValue(a_text[index]);
+		if (charc < 0) {
+			a_text = a_text.slice(0, index) + a_text.slice(index+1);
 		}
 	}
-	this.setString(a_text);
+	if ((this.trailZero == true) || ((this.symmetricBase == true) && (a_text.length > this.maxCharSize))) {
+		if ((cursorPosition-1) == (this.maxCharSize)) {
+			a_text = a_text.substring(0, this.maxCharSize);
+		} else {
+			a_text = a_text.substring(0, cursorPosition) + a_text.substring(cursorPosition+1);
+		}
+	}
+	if ((a_text == "0") && (negative == true)) {
+		negative = false;
+	}
+	
+	this.setString(a_text, negative);
 	this.updateControl(a_text.length);
 	this.previousText = this.editCtrl.text;
 	
@@ -383,14 +409,14 @@ CommonInt.prototype.getString = function() {
 	
 }
 
-CommonInt.prototype.setString = function(a_string) {
+CommonInt.prototype.setString = function(a_string, negative) {
 
 	var index;
 	var index_b;
 	var carry;
 	var firstflag;
 	var index;
-	var negative = false;
+	//var negative = false;
 
 	this.mul_table2_size = 0;
 	this.val_table2_size = 0;
@@ -402,25 +428,10 @@ CommonInt.prototype.setString = function(a_string) {
 	this.mul_table2[0] = 1;
 	this.mul_table2_size = 1;
 	this.val_table2_size = 0;
-	
-	 if (a_string == "-0") {
-	   a_string = "0";
-	 }
-	 if (a_string[0] == "-") {
-	   negative = true;
-	   a_string = a_string.slice(1);
-	 }
 
 	var charc;
-	
-	for (index = 0; index < a_string.length; index++) {
-		charc = this.charToValue(a_string[index]);
-		if (charc < 0) {
-			a_string = a_string.slice(0, index) + a_string.slice(index+1);
-		}
-	}
-
 	var charcount = a_string.length;
+	
 	//Reinvent the wheel, also
 	for (index = 0; index < charcount; index++) {
 

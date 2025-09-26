@@ -49,6 +49,7 @@ CommonBit.prototype.addControl = function(a_caption, a_LSBpos) {
   this.ctrl[ix].text = a_caption;
   this.ctrl[ix].move(Core.base_x, Core.base_y);
   this.ctrl[ix].resize(200, 25);
+  this.ctrl[ix].programChanged = false;
   this.ctrl[ix].stateChanged.connect(this.ctrlRef[ix], this.setCheckFunc);
   this.ctrl[ix].show();
   
@@ -64,7 +65,10 @@ CommonBit.prototype.updateCtrl = function(a_ix) {
   var byte_ix = this.bit_ix[a_ix] >> 3;
   var sub_bit = this.bit_ix[a_ix] & 7;
   var v = ((Core.getByteWr(byte_ix) & (1<<sub_bit)) > 0);
+  this.ctrl[a_ix].programChanged = true;
   this.ctrl[a_ix].setChecked(v);
+  this.ctrl[a_ix].programChanged = false;
+
 }
 
 CommonBit.prototype.updateAll = function() {
@@ -76,6 +80,7 @@ CommonBit.prototype.updateAll = function() {
 CommonBit.prototype.setCheckFunc = function(a_state) {
   var thisRef = this.thisRef;
   var ix = this.index;
+  if (thisRef.ctrl[ix].programChanged == true) {return;}
   var bitv = (a_state > 0) ? 1 : 0;
   var byte_ix = thisRef.bit_ix[ix] >> 3;
   var sub_bit = thisRef.bit_ix[ix] & 7;

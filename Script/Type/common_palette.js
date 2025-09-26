@@ -10,13 +10,16 @@ CommonPalette = function() {
 	this.channelBitLSBIndex = [0, 8, 16];  //LSB position in data of LSB bit of each channel in order: R, G, B.
 							//(Does not have to be in increasing value, you can do [16, 8, 0] for example.)
 	this.bigEndian = false;     // (To be implemented)
-	this.palGrid = {};
-	this.BMView = {};
+	this.palGrid = 0;
+	this.BMView = 0;
+	this.pageSpinCtrl = 0;
+	this.valueCtrl = 0;
+	this.rgbValueCtrl = 0;
 	this.cslider = [];
 	this.valueEdit = [];
-	this.sliderRef = new Array(3);
-	this.valueEditRef = new Array(3);
-	for (x = 0; x < 3; x++) {
+	this.sliderRef = new Array(4);
+	this.valueEditRef = new Array(4);
+	for (x = 0; x < 4; x++) {
 		this.sliderRef[x] = [];
 		this.sliderRef[x].thisRef = this;
 		this.sliderRef[x].index = x;
@@ -35,12 +38,12 @@ CommonPalette.prototype.init = function () {
 	var entries = Core.getHexValueAttr("len");
 	var cellsx;
 	var cellsy;
-	
-	//cellsx = 16;
-	//cellsy = 8;
-	if (entries >= 0x100) {
+	var pages = 0;
+
+	if (entries > 0x100) {
 		cellsx = 16;
 		cellsy = 16;
+		pages = Math.floor(entries / 0x100);
 	} else if (entries > 16) {
 		cellsy = ((entries-1) >> 4)+1;
 		cellsx = 16;
@@ -52,6 +55,9 @@ CommonPalette.prototype.init = function () {
 	var cellSize = 26;
 	if (cellsy >= 8) {
 		cellSize = 20;
+	}
+	if (cellsy == 1) {
+		cellSize = 30;
 	}
 
 	this.palGrid = new GridHandler(cellSize, cellSize, cellsx, cellsy, entries);
@@ -72,17 +78,63 @@ CommonPalette.prototype.init = function () {
 	this.BMView.refresh();
 	this.BMView.show();
 
+	/*if (pages > 0) {
+		var x2 = Core.base_x + wpixels + 15;
+		var ctrl = new QLabel(parentWnd);
+		ctrl.text = "Page:";
+		ctrl.move(x2, Core.base_y+15);
+		ctrl.show();
+
+		ctrl = new QSpinBox(parentWnd);
+		this.pageSpinCtrl = ctrl;
+		ctrl.move(x2, Core.base_y+35);
+		ctrl.resize(35, 25);
+		ctrl.minimum = 0;
+		ctrl.maximum = pages;
+		ctrl.show();
+	}*/
+
+	Core.base_y += (hpixels + 10);
+
+	var ctrl = new QLabel(parentWnd);
+	ctrl.text = "Value:";
+	ctrl.move(Core.base_x, Core.base_y);
+	ctrl.resize(60, 20);
+	ctrl.show();
+
+	ctrl = new QLineEdit(parentWnd);
+	this.valueCtrl = ctrl;
+	ctrl.move(Core.base_x+30, Core.base_y);
+	ctrl.resize(60, 20);
+	ctrl.readOnly = true;
+	ctrl.show();
+
+	ctrl = new QLabel(parentWnd);
+	ctrl.text = "RGB Value:";
+	ctrl.move(Core.base_x+120, Core.base_y);
+	ctrl.resize(60, 20);
+	ctrl.show();
+
+	ctrl = new QLineEdit(parentWnd);
+	this.RGBvalueCtrl = ctrl;
+	ctrl.move(Core.base_x+180, Core.base_y);
+	ctrl.resize(60, 20);
+	ctrl.readOnly = true;
+	ctrl.show();
+
+	Core.base_y += 25;
+
 	if (this.indexed == false) {
-		this.cslider = new Array(3);
-		this.valueEdit = new Array(3);
-		for (var chan = 0; chan < 3; chan++) {
-			this.cslider[chan]= new QSlider(parentWnd);
+		this.cslider = new Array(this.channels);
+		this.valueEdit = new Array(this.channels);
+		for (var chan = 0; chan < this.channels; chan++) {
+			this.cslider[chan] = new QSlider(parentWnd);
 			//this.cslider[chan].chnIndex = chan;
-			this.cslider[chan].move(16, (Core.base_y + hpixels+20+(chan*25)));
+			this.cslider[chan].move(16, (Core.base_y + (chan*25)));
 			this.cslider[chan].setOrientation(1);
 			this.cslider[chan].resize(350, 20);
 			
-			max = (1 << this.channelBitSizes[chan])-1;
+			var max = (1 << this.channelBitSizes[chan])-1;
 			this.cslider[chan].setRange(0, max);
 			this.cslider[chan].setSingleStep(1);
 			this.cslider[chan].setPageStep(1);
@@ -91,7 +143,7 @@ CommonPalette.prototype.init = function () {
 			this.cslider[chan].show();
 
 			this.valueEdit[chan] = new QLineEdit(parentWnd);
-			this.valueEdit[chan].move(this.cslider[chan].width+35, (Core.base_y + hpixels+20+(chan*25)));
+			this.valueEdit[chan].move(this.cslider[chan].width+35, (Core.base_y + (chan*25)));
 			this.valueEdit[chan].resize(45, 20);
 			this.valueEdit[chan].readOnly = true;
 			this.valueEdit[chan].show();
@@ -103,17 +155,19 @@ CommonPalette.prototype.init = function () {
 		this.valueEdit[0].styleSheet = "color: rgb(191, 0, 0)";
 		this.valueEdit[1].styleSheet = "color: rgb(0, 127, 0)";
 		this.valueEdit[2].styleSheet = "color: rgb(0, 0, 255)";
+	      if (this.channels == 4) {
+			this.cslider[3].styleSheet = "background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 0), stop:1 rgba(255, 255, 255, 255))";
+			this.valueEdit[3].styleSheet = "color: rgb(40, 40, 40)";
+	       }
 
-			
 		this.updateCurrentIndex();
 	} else {
 
 		var entries = this.indexedPaletteSize;
-		if ((entries < 0x100) && (entries > 0)) {
+		if ((entries <= 0x100) && (entries > 0)) {
 
 			this.palTable_BMView = new BitmapView(parentWnd);
-			var y = this.BMView.y + this.BMView.height;
-			this.palTable_BMView.move(Core.base_x, y+20);
+			this.palTable_BMView.move(Core.base_x, Core.base_y);
 
 			if (entries > 16) {
 				cellsy = ((entries-1) >> 4)+1;
@@ -138,49 +192,72 @@ CommonPalette.prototype.init = function () {
 		}
 	
 	}
-	
 
 }
 
-CommonPalette.prototype.sliderChangeFunc = function(a_value) {
-	var cpRef = this.thisRef;
-	var index = this.index;
-	if (cpRef.cslider[index].programChanged == true) {return;}
-	var chnData = new Array(3);
-	chnData[index] = a_value;
-	cpRef.setColorBits(cpRef.palGrid.getIndex(), chnData, 1 << index);
-	cpRef.palGrid.redrawCurrentCell();
-	cpRef.BMView.refresh();
-	cpRef.valueEdit[index].text = a_value;
-}
 
 CommonPalette.prototype.updateCurrentIndex = function() {
 	if (this.indexed == false) {
+		var ix;
 		var rgb = new Array(this.channels);
-		this.getColorBits(this.palGrid.getIndex(), rgb, 7);
-		this.cslider[0].programChanged = true;
-		this.cslider[1].programChanged = true;
-		this.cslider[2].programChanged = true;
-		this.cslider[0].setValue(rgb[0]);
-		this.cslider[1].setValue(rgb[1]);
-		this.cslider[2].setValue(rgb[2]);
-		this.cslider[0].programChanged = false;
-		this.cslider[1].programChanged = false;
-		this.cslider[2].programChanged = false;
-		this.valueEdit[0].text = rgb[0];
-		this.valueEdit[1].text = rgb[1];
-		this.valueEdit[2].text = rgb[2];
+		var bits = (this.channels == 3) ? 7 : 15;
+		var index = this.palGrid.getIndex();
+		this.getColorBits(index, rgb, bits);
+		for (ix = 0; ix < this.channels; ix++) {
+			this.cslider[ix].programChanged = true;
+			this.cslider[ix].setValue(rgb[ix]);
+			this.cslider[ix].programChanged = false;
+			this.valueEdit[ix].text = rgb[ix];
+		}
+		if ((this.bitSize & 0x7) == 0) {
+			var byteIndex = ((index * this.bitSize) >> 3);
+		      var chars = (this.bitSize + 3) >> 2;
+		      var valueStr = "";
+		      var valueByte;
+		      for (ix = 0; ix < chars; ix++) {
+				if ((ix & 1) == 0) {
+					valueByte = Core.getByte(byteIndex + (ix >> 1));
+				}
+				valueStr = (valueByte & 0xF).toString(16).toUpperCase() + valueStr;
+				valueByte >>= 4;
+		      }
+		      this.valueCtrl.text = valueStr;
+		} else {
+		      this.valueCtrl.text = "N/A";		
+		}
+		this.updateRGBvalueText(index);
+      
 	} else {
 		var index = this.palGrid.getIndex();
 		var data = new Array(1);
 		this.getColorBits(index, data, 1);
-		indexedPaletteIndex = data[0];
+		var indexedPaletteIndex = data[0];
 		this.palTableGrid.setCurrentIndex(indexedPaletteIndex);
+		this.updateIndexedValueText(indexedPaletteIndex);
+		this.updateRGBvalueText(index);
 		
 		this.palTableGrid.redraw();
 		this.palTable_BMView.refresh();
 		
 	}
+}
+
+//For indexed palette mode.
+CommonPalette.prototype.updateIndexedValueText = function(a_value) {
+	var valueText = a_value.toString(16).toUpperCase();
+	if (valueText.length < 2) {valueText = "0" + valueText;}
+	this.valueCtrl.text = valueText;
+}
+
+CommonPalette.prototype.updateRGBvalueText = function(a_index) {
+	var RGBval = this.getRGB(a_index);
+	var valueText = RGBval.toString(16).toUpperCase();
+	var originalLen = valueText.length;
+	var count;
+	for (count = 0; count < (6-originalLen); count++) {
+		valueText = "0" + valueText;
+	}
+	this.RGBvalueCtrl.text = valueText;
 }
 
 CommonPalette.prototype.getColorBits = function(a_index, a_dataobj, a_chn_bits) {
@@ -295,6 +372,20 @@ CommonPalette.prototype.getIndexedRGB = function(index)  {
 	return((this.indexedPalette[composed+0] << 16) | (this.indexedPalette[composed+1] << 8) | this.indexedPalette[composed+2]);
 }
 
+CommonPalette.prototype.sliderChangeFunc = function(a_value) {
+	var cpRef = this.thisRef;
+	var index = this.index;
+	if (cpRef.cslider[index].programChanged == true) {return;}
+	var chnData = new Array(4);
+	chnData[index] = a_value;
+	cpRef.setColorBits(cpRef.palGrid.getIndex(), chnData, 1 << index);
+	cpRef.palGrid.redrawCurrentCell();
+	cpRef.BMView.refresh();
+	cpRef.updateCurrentIndex();
+	//cpRef.valueEdit[index].text = a_value;
+}
+
+
 //Called back from the grid handler to draw the contents of each cell.
 //(In this case, the "this" object refers to the GridHandler object, not the CommonPalette one.
 //Therefore, we use "parent", that we set up before, to get a reference to the CommonPalette object.)
@@ -321,12 +412,26 @@ CommonPalette.prototype.palTableGridMousePressFunc = function(a_buttons, a_y, a_
 	var chnData = new Array(1);
 	chnData[0] = value;
 	this.setColorBits(index, chnData, 1);
+
+	this.updateIndexedValueText(value);
+	this.updateRGBvalueText(index);
+
 	this.palGrid.redraw();
 	this.BMView.refresh();
 }
 
+CommonPalette.prototype.pageSpinClickFunc = function() {
+
+}
+
+CommonPalette.prototype.pageSpinEditFunc = function() {
+
+}
+
 CommonPalette.prototype.eventFunc = function(flags) {
-	if (flags && event.bit.changeindex) {
+ /*if (Core.versionDate >= 250825) {
+	if (flags && Event.bit.changeindex) {
 		
 	}
+ }*/
 }

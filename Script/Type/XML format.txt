@@ -1,0 +1,392 @@
+Update Notes
+============
+
+Script Update Pack 2025-09-12:
+ - Array support for INT types.
+ - UI Improvements for Integer, Palette and String types.
+ - Integers: Support for BASE attribute.
+ - common_default.js adds controls showing flags, if defined, and "common" attribute if defined.
+ - Added deprecated Array types from DRDHack.
+
+(The updated scripts should all work for the current Binary)
+
+DRDXML format - Introduction
+============================
+
+Flexible Editor makes use of "data-reference databases" (DRD) written in XML format.
+These databases basically describe the location and types of datas in a binary file.
+It's based on a format developed about 20 years ago for the program called "DRDHack".
+Flexible Editor doesn't support everything that editor did yet, but the plan
+is to make it fully compatible with .XML documents written for that.
+The format as it was then will be referenced to as "2006 standard" some places
+in this document.
+
+For now, XML files can be written outside the editor and then loaded, but it may
+be possible to edit them inside the editor in the future.
+As required by the XML standard, the XML must have a root element that contains all
+elements in the document.
+
+Here's a basic example of a XML file that Flexible Editor can load:
+
+<drd>
+    <item name="Data" ptr="FA0" type="byte"/>
+</drd>
+
+"drd" is just a dummy element in order to have a root element. You can name this
+whatever you like.
+An "item" element describes one item in the database, or the database tree, or
+a parent for other items.
+The "ptr" attribute in the item element is the hexadecimal location of the data.
+"type" describes the type of data.
+Most attributes that have a numerical value is written in hexadecimal without a prefix.
+But there are exceptions, where a decimal value is expected instead.
+
+You can build a tree structure using the ITEM element, where some ITEM elements
+function as containers, or parent elements of other items.
+The ITEM element is not required to have any attributes.
+
+Example:
+
+<drd>
+	<item name="Byte datas">
+		<item name="Byte Data 1" ptr="FA0" type="byte"/>
+		<item name="Byte Data 2" ptr="FA4" type="byte"/>
+	</item>
+	<item name="Word datas">
+		<item name="Word Data 1" ptr="1B4C" type="int16"/>
+		<item name="Word Data 2" ptr="1B50" type="int16" flag="SIGNED.DECIMAL"/>
+	</item>
+</drd>
+
+If you want to make the parent elements more distinct from the others,
+you can use BRA instead. It's interpreted exactly the same way as ITEM.
+
+If you want to write an XML and want more examples, check out demo.xml.
+It demonstrates an example for all data types.
+Also, the "XML" subfolder will contain demos and examples.
+
+Supported Elements
+==================
+
+ITEM
+----
+
+ITEM is used to describe one item of data, or function as a
+parent element for other item elements.
+It can describe various data types, or none (blank).
+All attributes are optional, it doesn't have to have the NAME
+attribut set either.
+
+In a different case, am ITEM element also describes a List item element, see further down in the document.
+
+Supported attributes for ITEM:
+
+	TYPE	Data type. See further below for specifics, and which extra attributes
+		you can specify depending on the Data type.
+	PTR	Hexadecimal pointer to data (without prefix).
+	RELPTR	Relative pointer to data, in Hexadecimal (without prefix).
+		Assumes that a PTR is provided from a parent element,
+		or a COMMON element.
+	LEN	Hexadecimal without prefix. This can be:
+		1. Size of data for variable length data such as Palettes.
+		2. Size of array for fixed-length data that supports arrays.
+	FLAG	Define flags relevant to the data type. All flags you want to
+		set is placed in this attribute, separated using a dot (.)
+		Example: ... flag="DECIMAL.SIGNED" ...
+	COMMON	Use a COMMON element as a template. (See "Common Element")
+
+Text: ITEM elements can contain a text part that will function as a comment.
+If present, it will be displayed in an edit control in the editing window.
+
+BRA
+---
+
+Describes a Branch.
+Works exactly the same as ITEM, but was used in the 2006 standard
+to exclusively describe a parent element (branch).
+You can still use it if you want.
+
+COMMON
+------
+
+Template for use with items. See "Common Element".
+
+Supported attributes:
+	KEY	Key by which to reference the Common element. Required.
+
+INFO
+----
+
+Descriptions and configurations relating to the whole document.
+
+Supported attributes:
+
+	INTSIZE	Set the default Integer size in bits. Relevant for INT data type.
+		This is a decimal value.
+		If this isn't set, it will be 16.
+
+LIST
+----
+
+Container parent element for all list items.
+Each list is set up using an ITEM element. (See below :)
+
+ITEM (List Item)
+----------------
+
+Each list has a Key attribute used as reference to it from data items where you wish to use the list.
+The actual list contents is placed in the text part of this element.
+Each list entry is placed within double quotes. (Line breaks are ignored)
+Like this: "Entry 1" "Entry 2" "Entry 3" ...
+When lists are used, values are automatically added to the start of the strings.
+
+Supported attributes:
+
+	KEY	Key (Name) used to refer to the list. Required.
+
+A full example of a document using a list:
+
+<drd>
+	<item name="Data using a list" ptr="88" type="int8" list="example"/>
+	<list>
+		<item key="example">
+			"Eat" "Sleep" "Code" "Repeat"
+		</item>
+	</list>
+</drd>
+
+You'll have 4 values to choose between corresponding to the 4 entries in the list named "example".
+
+Pointers (PTR/RELPTR)
+=====================
+
+To find the pointer to data, the editor first looks for PTR in the relevant Item element.
+If it doesn't find it, it will dig through the parent elements of the item until it finds a PTR or the root element.
+If it doesn't find a base pointer, it will just add everything relative to 0.
+
+So you can for example do this:
+
+<item ptr="4000">
+  <item relptr="600">
+    <item relptr="22"/>   <- Final pointer will be 0x4622
+  </item>
+</item>
+
+This is also allowed and will have the same result:
+
+<item relptr="4000">
+  <item relptr="600">
+    <item relptr="22"/>   <- Final pointer will be 0x4622
+  </item>
+</item>
+
+Data Types (TYPE attribute)
+===========================
+
+These are the data types that have basic or moderate support by Flexible Editor.
+
+blank		No data type. This is the default if the TYPE attribute isn't specified.
+
+Integer Types
+-------------
+
+byte		8 bit Integer.
+int8		Same as byte, provided for completion.
+int16		16 bit Integer.
+int24		24 bit Integer.
+int32		32 bit Integer.
+int64		64 bit Integer.
+int		General Integer, 16-bit by default but the bitsize can be changed
+		with the INTSIZE attribute.
+
+Supported attributes for Integer Types:
+	INTSIZE		Change the Integer bitsize for any Integer type. This can be any
+			number divisible by 8. The actual upper limit hasn't been tested,
+			but 128 is fine.
+			(Decimal value)
+	LIST		Edit the integer using a list, where this attribute refers to the
+			KEY attribute of a list. Note that only 8 and 16 bit values
+			are supported in this case. Bits higher than Bit 15 is ignored both
+			on Read and Write.
+	BIT		Adds controls for editing/toggling the bits of the value.
+			This attribute contains the label texts to describe each bit for
+			each editing control.
+			In order from MSB to LSB, text to describe each bit is placed
+			separated using a dot/period. If a field is empty, the control
+			won't appear.
+			Example for "byte" or "int8" type:
+			bit="Bit 7.Bit 6.Bit 5.....Bit 0"
+			^This will allow editing for Bits 7, 6, 5 and 0, but not bit 1 to 4.
+	BASE		Edit Integer in a specific Base / Radix. 
+			Decimal value. This can be anything from 2 to 51.
+			(DECIMAL flag will be ignored if this is set).
+	LEN		Define an Array of integers where LEN is the Array length.
+			Value is Hexadecimal without prefix.
+			The total byte size of the array will be LEN * Integer byte size.
+
+Supported flags for all Integer Types:
+	SIGNED		Edit the integer as a Two's complement Signed value.
+	DECIMAL		Edit the integer as a decimal (Base 10) number. 
+
+	Examples:
+
+ <item name="Potentially negative hex value" ptr="7F0" type="int24" flag="SIGNED"/>
+ <item name="Potentially negative decimal value" ptr="7F3" type="int24" flag="SIGNED.DECIMAL"/>
+
+Raw data types
+--------------
+
+hex	Edit bytes in hexadecimal. Basic and limited for now.
+
+Supported attributes:
+	LEN	Number of bytes in hex. The hex editor is limited for now and can only
+		be done on one row. Also, for now, hex strings use the same engine as
+		integers and is actually treated as Big-endian integers with a
+		variable size, so large ones may make the editor slow.
+		The upper limit of LEN here hasn't been tested.
+
+String Types
+------------
+
+string		ANSI string. Can be fixed-size or character-terminated.
+
+Supported attributes:
+
+	LEN		Sets character length for fixed-size in Hexadecimal.
+			For character-terminated strings, this defines the maximum length (including the end character).
+
+	ENDCODE		Defines the character code of the end/termination character.
+			Decimal value.
+			(For example: endcode="0")
+
+Types: Graphics - Palette
+-------------------------
+
+pal_nes		NES Palette
+pal_15		15 bit palette, 5 bits each for R, G and B. (RGB555)
+		Use for SNES, GameBoy Color, GameBoy Advance.
+		Can probably also be used for palette contents of PlayStation1 CLUT
+		data but it hasn't been tested.
+pal_smd		Sega Mega Drive and Game Gear palette data. (RGB333)
+pal_6		Sega Master System palette (RGB222)
+pal_24		24 bit palette (RGB888)
+
+Supported attributes for all Palette Types:
+	LEN	Number of palette entries in hexadecimal. The editor is currently limited to 256.
+
+Types: Graphics - Other
+-----------------------
+
+nes_nt_addr	NES NameTable Address. 16-bit, Big-endian address. (Upper byte first, then lower.)
+snes_nt_addr	SNES NameTable Address. 16-bit, Little-endian address into a Nametable
+		where each tile occupies 16 bits/2 bytes of data.
+coordinate	Y and/or X coordinate data, 8-bit.
+
+
+Supported attributes for SNES_NT_ADDR:
+	BASE	Set the base VRAM address that the Nametable is supposed to start, in hex.
+		The data value will then be read and written relative to this value.
+		If this is not set, data is edited as the lower 11 bits
+		(representing the 11 bits required to describe a typical address)
+		and the upper bits are left alone.
+
+Supported attributes for COORDINATE:
+	Y	Enable Y editing. Value is relative byte pointer for the Y coordinate.
+	X	Enable X editing. Value is relative byte pointer for the X coordinate.
+	
+	(You can define "y" to edit only Y coordinate,
+	"x" to edit only X coordinate, or you can define both.)
+
+
+
+Deprecated but Supported Data Types 
+-----------------------------------
+
+These are data types that are supported for compatibility with the 2006 standard,
+but that I don't recommended using in newer documents.
+
+listbyte	8 bit Integer editing using a list. You can simply use "byte" data type
+		and provide a "list" attribute to reproduce it.
+listint		Genereal Integer editing using a list. You can simply use "int" data type
+		and provide a "list" attribute to reproduce it.
+arr_byte	Array of Byte. Works the same as BYTE with LEN attribute set.
+arr_listbyte	Array of Byte using list. Works the same way as BYTE with LEN and LIST attributes set.
+arr_int		Array of Int. Works the same as INT type with LEN attribute set.
+arr_listint	Array of Int using list. Works the same way as INT type with LEN and LIST attributes set.
+
+Not yet supported
+-----------------
+
+These are data types that was specified in the DRD standard from 2006,
+but has not yet been implemented in Flexible Editor.
+
+tbl_string	String editing using a .tbl file.
+
+Arrays
+======
+
+Defining LEN attribute for a fixed-length data type will turn it into an Array of that data
+if it supports it (Currently supported for all Integers).
+A slider control will be added for changing the index.
+Alternately, attributes ARRINDEX_LABLIST or ARRINDEX_LABDEF can be defined to give the
+Array indexes labels, where the index is changed using a dropdown list.
+
+Array-specific Attributes:
+
+	ARRINDEX_LABLIST	Define a List Item to be used to label the indexes in the Array.
+				(Must match the KEY attribute of a List Item)
+				The length of the list doesn't have to match the
+				number of entries defined by LEN.
+
+	ARRINDEX_LABDEF		Define labels for each Array index in an attribute.
+				The labels are seperated with a . (dot)
+				The number of labels defined doesn't have to match the
+				number of entries defined by LEN.
+
+Common Element
+==============
+
+A "common" element can be used as a template for attributes in Item elements.
+(All attributes other than "key" is treated as if they're part of the Item)
+These elements can be placed anywhere in the XML but it may look best if they're placed after all "item" ones.
+They are referenced to by it's Key, set with attribute "key", which can be pretty much be anything you like.
+To use it in a item element, add an attribute "common", that references the key.
+
+Example:
+
+<item name="Similar Data 1" ptr="140" common="data"/>
+<item name="Similar Data 2" ptr="180" common="data"/>
+<common key="data" type="int24"/>
+
+Both "item" will have the data type "int24".
+
+Advanced
+--------
+An Item element's attributes will have first priority. So if an attribute is found both in the Item
+itself, and a COMMON element, the one from the Item will be used.
+
+COMMON elements currently can't be nested (A COMMON element can't have a COMMON attribute.)
+
+Customization / User Scripts for Data Types
+===========================================
+
+All UI code for data types is written in JavaScript / ECMAScript 5.
+The scripts are found in the Script/Type subfolder.
+
+When the editor sets up the editing windows, it reads the TYPE attribute,
+then looks for a .js script file in that folder with a matching base name. (TYPE + ".js")
+
+You can play around with the scripts, it's also possible to write your own scripts to create
+user data types, though the features available are rather limited for now.
+(See "Script/Script API.txt")
+
+List of Changes and Additions from 2006 DRD standard
+====================================================
+
+* NAME is optional, and is auto-generated if left blank.
+* TYPE was previously stated to be mandatory even though it wasn't and it made no sense that it should be when it's a parent ITEM or BRA.
+	This has been changed so it's always optional, and when it's not present it's automatically defined as BLANK.
+* BLANK Default Data Type, no data to edit but may contain PTR, and whatever else.
+* In addition to BYTE and INT, which was previously rather ambiguous regarding size,
+	specific-size INT data types from INT8 to INT64 are available.
+* An assortment of new data types.
