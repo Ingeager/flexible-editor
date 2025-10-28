@@ -112,14 +112,15 @@ GridHandler.prototype.eventMousePress = function(a_buttons, a_y, a_x) {
 	}
 	
 	var cell_index = this.calculateIndex(celly_click, cellx_click);
-	var old_current_y = this.current_y;
-	var old_current_x = this.current_x;
-	this.current_y = celly_click;
-	this.current_x = cellx_click;
 	
 	if (cell_index < this.entries) {
 		if (this.cell_enabled[cell_index] == true) {
 
+			var old_current_y = this.current_y;
+			var old_current_x = this.current_x;
+			this.current_y = celly_click;
+			this.current_x = cellx_click;
+	
 			if (this.redrawCellOnSelect == 2) {
 				this.redraw();
 			} else if (this.redrawCellOnSelect == 1) {
