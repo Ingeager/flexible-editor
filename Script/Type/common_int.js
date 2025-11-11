@@ -206,16 +206,21 @@ CommonInt.prototype.init = function() {
 		this.hasBitControls = true;
 	}
 
-	event.signal.connect(this, this.eventFunc);
-
+	if (Core.versionDate < 250823) {
+		event.signal.connect(this, this.eventFunc);
+	} else {
+		Event.signal.connect(this, this.eventFunc);
+	}
 }
 
 //Update everything
 CommonInt.prototype.eventFunc = function(a_event_bits) {
+	//if (a_event_bits & Event.bit.changeMajor) {
 	this.updateControl();
 	if (this.hasBitControls == true) {
 		this.bitClass.updateAll();
 	 }
+	//}
 }
 
 CommonInt.prototype.upDownFunc = function(a_value) {

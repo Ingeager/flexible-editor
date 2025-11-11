@@ -157,6 +157,7 @@ DefaultControls.addFlags = function() {
   flagStr = Core.getAttr("flag");
 
  // if (Core.versionDate >= 250907) {
+ 
 	ctrl = new QPlainTextEdit(parentWnd);
 	DefaultControls.flagList = ctrl;
 	ctrl.move(Core.base_x+35, Core.base_y+0);
@@ -168,7 +169,8 @@ DefaultControls.addFlags = function() {
 	ctrl.show();
 
 	Core.base_y += 65;
-	  
+
+ //Multi-control version
  /* } else {
 	showStr = flagStr.split(".");
 	var ix;
@@ -286,7 +288,7 @@ DefaultControls.arraySliderFunc = function() {
 
 	if (Core.versionDate >= 250823) {
 		Core.setArrayIndex(DefaultControls.arrayTuner.value);
-		Event.dispatch(Event.bit.changeMajor);
+		Event.dispatch(Event.bit.changeIndex);
 	} else {
 		Core.arrayIndex = DefaultControls.arrayTuner.value;
 		event.dispatch(event.bit.changeindex);
@@ -303,7 +305,7 @@ DefaultControls.arraySpinBoxFunc = function(a_value) {
 
  	if (Core.versionDate >= 250823) {
 	  	Core.setArrayIndex(a_value);
-	  	Event.dispatch(Event.bit.changeMajor);
+	  	Event.dispatch(Event.bit.changeIndex);
 	 } else {
 		Core.arrayIndex = a_value;
 		event.dispatch(event.bit.changeindex);
@@ -316,7 +318,7 @@ DefaultControls.arraySpinBoxFunc = function(a_value) {
 DefaultControls.arrayComboFunc = function(a_value) {
  	if (Core.versionDate >= 250823) {
 	  	Core.setArrayIndex(a_value);
-	  	Event.dispatch(Event.bit.changeMajor);
+	  	Event.dispatch(Event.bit.changeIndex);
 	 } else {
 		Core.arrayIndex = a_value;
 		event.dispatch(event.bit.changeindex);

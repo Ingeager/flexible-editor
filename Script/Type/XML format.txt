@@ -1,5 +1,14 @@
+
 Update Notes
 ============
+
+Release 2025-11-11:
+ - Documented NAME Attribute for Item, which I forgot to add for the first release.
+ - Added ICON Element.
+ - Added ICON Item attribute.
+ - Added HEADICON Attribute for INFO element.
+ - Added Array for Parent Items/blank data type Items.
+ - Added NESPAL Element.
 
 Script Update Pack 2025-09-12:
  - Array support for INT types.
@@ -7,8 +16,6 @@ Script Update Pack 2025-09-12:
  - Integers: Support for BASE attribute.
  - common_default.js adds controls showing flags, if defined, and "common" attribute if defined.
  - Added deprecated Array types from DRDHack.
-
-(The updated scripts should all work for the current Binary)
 
 DRDXML format - Introduction
 ============================
@@ -42,7 +49,7 @@ Most attributes that have a numerical value is written in hexadecimal without a 
 But there are exceptions, where a decimal value is expected instead.
 
 You can build a tree structure using the ITEM element, where some ITEM elements
-function as containers, or parent elements of other items.
+function as containers, or parents of other items.
 The ITEM element is not required to have any attributes.
 
 Example:
@@ -74,26 +81,36 @@ ITEM
 ITEM is used to describe one item of data, or function as a
 parent element for other item elements.
 It can describe various data types, or none (blank).
-All attributes are optional, it doesn't have to have the NAME
-attribut set either.
+All attributes are optional, including the NAME attribute.
 
-In a different case, am ITEM element also describes a List item element, see further down in the document.
+In a different case, an ITEM element also describes a List Item element, see further down in the document.
 
 Supported attributes for ITEM:
 
+	NAME	Display name describing the Item, shown in the Item tree and window titles.
 	TYPE	Data type. See further below for specifics, and which extra attributes
 		you can specify depending on the Data type.
 	PTR	Hexadecimal pointer to data (without prefix).
 	RELPTR	Relative pointer to data, in Hexadecimal (without prefix).
-		Assumes that a PTR is provided from a parent element,
-		or a COMMON element.
+		Assumes that a PTR is provided from a parent Item, or a COMMON element.
+		If the parent Item is an array, the pointer will be relative to the offset of
+		the parent Item's current index.
 	LEN	Hexadecimal without prefix. This can be:
-		1. Size of data for variable length data such as Palettes.
-		2. Size of array for fixed-length data that supports arrays.
+		1. Size of data for variable length data, such as Strings or Palettes.
+		2. Size of array for fixed-length data that supports arrays. (Integers)
+		3. Size of array for a parent Item without Type.
+		(For 2 and 3, see "Arrays" section for more details.)
 	FLAG	Define flags relevant to the data type. All flags you want to
 		set is placed in this attribute, separated using a dot (.)
-		Example: ... flag="DECIMAL.SIGNED" ...
-	COMMON	Use a COMMON element as a template. (See "Common Element")
+		Example: .. flag="DECIMAL.SIGNED" ..
+	COMMON	Use a COMMON element as a template. (See "Common Element" section)
+	ICON	Use a graphical icon for this Item in the Item Tree.
+		Value must correspond to the KEY attribute from an ICON Element.
+		(See "ICON Element" section)
+
+An Item for editing data will use either PTR or RELPTR.
+(They can both be used, but there's not much point)
+See the section on Pointers further on for more details.
 
 Text: ITEM elements can contain a text part that will function as a comment.
 If present, it will be displayed in an edit control in the editing window.
@@ -109,10 +126,20 @@ You can still use it if you want.
 COMMON
 ------
 
-Template for use with items. See "Common Element".
+Template for use with items. See "Common Element" section.
 
 Supported attributes:
-	KEY	Key by which to reference the Common element. Required.
+	KEY	Key used to reference to the Common element. Required.
+
+NESPAL
+------
+
+Load a NES palette from a file to use in place of the default one.
+
+Supported attributes:
+	FILENAME	File path of the NES Palette file, can be relative or absolute.
+			If it's relative, the editor will look in the same folder as the XML,
+			then in the program folder, in that order of prority.
 
 INFO
 ----
@@ -121,9 +148,16 @@ Descriptions and configurations relating to the whole document.
 
 Supported attributes:
 
-	INTSIZE	Set the default Integer size in bits. Relevant for INT data type.
-		This is a decimal value.
-		If this isn't set, it will be 16.
+	INTSIZE		Set the default Integer size in bits. Relevant for INT data type.
+			This is a decimal value.
+			This can be any number divisible by 8.
+			The actual upper limit hasn't been tested,
+			but 512 appears to be fine.
+			If this isn't set, it will be 16.
+
+	HEADICON	Set an Icon as the app window icon, from an Icon Element.
+			Must correspond to the KEY attribute of an Icon Element.
+			(See "ICON Element" section)
 
 LIST
 ----
@@ -157,10 +191,10 @@ A full example of a document using a list:
 
 You'll have 4 values to choose between corresponding to the 4 entries in the list named "example".
 
-Pointers (PTR/RELPTR)
-=====================
+Pointers (PTR/RELPTR/Arrays)
+============================
 
-To find the pointer to data, the editor first looks for PTR in the relevant Item element.
+To find the pointer to data, the editor first looks for PTR in the current Item element.
 If it doesn't find it, it will dig through the parent elements of the item until it finds a PTR or the root element.
 If it doesn't find a base pointer, it will just add everything relative to 0.
 
@@ -180,6 +214,12 @@ This is also allowed and will have the same result:
   </item>
 </item>
 
+If any of the Items contains an Array, a relative pointer will be added based on the current Array index.
+(Index * index byte size).
+The index byte size depends on the data type, or if it's blank/no type,
+it is the contents of the ARR_INDEXWIDTH attribute.
+See "Arrays" section for more details.
+
 Data Types (TYPE attribute)
 ===========================
 
@@ -196,17 +236,19 @@ int16		16 bit Integer.
 int24		24 bit Integer.
 int32		32 bit Integer.
 int64		64 bit Integer.
-int		General Integer, 16-bit by default but the bitsize can be changed
-		with the INTSIZE attribute.
+int		General Integer, the bitsize is 16 by default and
+		can be changed with the INTSIZE attribute:
+		If it's in the same element it changes the intsize for that Item.
+		If there's an INTSIZE attribute in the INFO element it sets it as a global default.
 
 Supported attributes for Integer Types:
-	INTSIZE		Change the Integer bitsize for any Integer type. This can be any
+	INTSIZE		Decimal value. Change the Integer bitsize for any Integer type. This can be any
 			number divisible by 8. The actual upper limit hasn't been tested,
-			but 128 is fine.
-			(Decimal value)
-	LIST		Edit the integer using a list, where this attribute refers to the
-			KEY attribute of a list. Note that only 8 and 16 bit values
-			are supported in this case. Bits higher than Bit 15 is ignored both
+			but 512 appears to be fine.
+	LIST		Edit the integer using a List so each value is described with a string.
+			This attribute refers to the KEY attribute of a list Item.
+			Note that only 8 and 16 bit values
+			are supported in this case. Bits higher than Bit 15 will be ignored both
 			on Read and Write.
 	BIT		Adds controls for editing/toggling the bits of the value.
 			This attribute contains the label texts to describe each bit for
@@ -215,9 +257,9 @@ Supported attributes for Integer Types:
 			separated using a dot/period. If a field is empty, the control
 			won't appear.
 			Example for "byte" or "int8" type:
-			bit="Bit 7.Bit 6.Bit 5.....Bit 0"
+			.. bit="Highest Bit.Bit 6.Bit 5.....Lowest Bit" ..
 			^This will allow editing for Bits 7, 6, 5 and 0, but not bit 1 to 4.
-	BASE		Edit Integer in a specific Base / Radix. 
+	BASE		Edit Integer in a specific Base / Radix.
 			Decimal value. This can be anything from 2 to 51.
 			(DECIMAL flag will be ignored if this is set).
 	LEN		Define an Array of integers where LEN is the Array length.
@@ -325,11 +367,11 @@ tbl_string	String editing using a .tbl file.
 Arrays
 ======
 
-Defining LEN attribute for a fixed-length data type will turn it into an Array of that data
-if it supports it (Currently supported for all Integers).
+Setting the LEN attribute for a fixed-length data type will turn it into an Array of that data
+if supported (Currently the case for all Integers).
 A slider control will be added for changing the index.
-Alternately, attributes ARRINDEX_LABLIST or ARRINDEX_LABDEF can be defined to give the
-Array indexes labels, where the index is changed using a dropdown list.
+Attributes ARRINDEX_LABLIST or ARRINDEX_LABDEF can be defined to give the
+Array indexes labels from a List item, in this case the index is changed using a dropdown list.
 
 Array-specific Attributes:
 
@@ -342,23 +384,82 @@ Array-specific Attributes:
 				The labels are seperated with a . (dot)
 				The number of labels defined doesn't have to match the
 				number of entries defined by LEN.
+	
+	ARR_INDEXWIDTH		Hex value. Byte size of each array index.
+				This can only be used for blank data types for now.
+				(When parent items are set up as arrays)
 
-Common Element
+Tables / Parent Item Arrays
+---------------------------
+
+Parent items with blank types can also be turned into an array using LEN,
+where the child Items are relative to the current Index.
+This can be used for editing tables with multiple instances of the same pattern of data.
+The attribute ARR_INDEXWIDTH is used here to set the byte size of each index. (Default is 1)
+Also, in the editor, the user must change the array index in the parent item,
+then go to the individual child Items and change the actual data.
+
+Parent Array Example:
+
+In this example, let's say you have a table of stats for multiple player characters where for each
+character there are 3 bytes: a 2-byte HP value and 1-byte "Class", and there are 0x20 (32) characters:
+
+<item name="Character Table" ptr="8000" len="20" arr_indexwidth="3">
+	<item name="Character HP" relptr="0" type="int16" flag="DECIMAL" />
+	<item name="Character Class" relptr="2" type="byte" list="class"/>
+</item>
+
+^ Index 0 will start at offset $8000, Index 1 at $8003, and so on.
+"Character HP" and "Character Type" uses RELPTR, which makes them relative to the current pointer
+of the Parent Item. This way you can edit the HP and Class stats for all 32 characters without
+creating XML Items for each one.
+
+You can also create multi-dimensional arrays by turning multiple levels of parent Items into arrays.
+
+ICON Element
+============
+The "icon" element loads a bitmap for use either as icons to represent Items in the tree structure,
+or setting up a program icon in place of the default one.
+KEY attribute defines the Key to reference to it from Item elements, and FILENAME is the file name.
+A variety of file types are supported, such as BMP and PNG.
+The image files don't have to be a suitable size (they are stretched)
+But for the Item Tree, the idea size is 16x16 pixels. They can also be transparent.
+The placement of the ICON Element in the XML document doesn't matter.
+These are parsed before everything else.
+
+"filename" can be relative or absolute.
+If it's relative, the editor will look in the same folder as the XML,
+then relative to the program folder, in that order of prority.
+You can use files in the \Icons subfolder if you want.
+
+Document Example:
+
+<drd>
+	<item name="My data" ptr="0" type="int32" icon="myicon"/>
+	<info headicon="myicon"/>
+	<icon key="myicon" filename="C:\icons\myicon.bmp"/>
+</drd>
+
+^ This loads an icon and uses it both as the program icon and the icon for the single Item element.
+
+COMMON Element
 ==============
 
 A "common" element can be used as a template for attributes in Item elements.
 (All attributes other than "key" is treated as if they're part of the Item)
 These elements can be placed anywhere in the XML but it may look best if they're placed after all "item" ones.
 They are referenced to by it's Key, set with attribute "key", which can be pretty much be anything you like.
-To use it in a item element, add an attribute "common", that references the key.
+To use it in a item element, add the attribute "common", that references the key.
 
-Example:
+Document Example:
 
-<item name="Similar Data 1" ptr="140" common="data"/>
-<item name="Similar Data 2" ptr="180" common="data"/>
-<common key="data" type="int24"/>
+<drd>
+	<item name="Similar Data 1" ptr="140" common="data"/>
+	<item name="Similar Data 2" ptr="180" common="data"/>
+	<common key="data" type="int24"/>
+</drd>
 
-Both "item" will have the data type "int24".
+Both Items will have the data type "int24".
 
 Advanced
 --------
