@@ -1,0 +1,27 @@
+<drd>
+	<item name="Floor Stats" icon="value">
+		<item name="Palette Pointer" icon="value" ptr="2F21" type="int24" len="3C"/>
+		<item name="Object Pointer" icon="value" ptr="398A" type="int24" len="38"/>
+		<item name="Music" icon="value" ptr="7421" type="byte" len="3C" list="bgm"/>
+		<item name="Tileset Pointer" icon="value" ptr="3E200" type="int24" len="3C"/>
+		<item name="BG Tileset Pointer" icon="value" ptr="3E2B4" type="int24" len="3C"/>
+		<item name="Level Pointer" icon="value" ptr="3E368" type="int24" len="3C"/>
+		<item name="BG Tilemap Pointer" icon="value" ptr="3E41C" type="int24" len="3C"/>
+		<item name="Starting Sword" icon="value" ptr="3F3E8" type="byte" len="3C"/>
+		<item name="Starting Shield" icon="value" ptr="3F428" type="byte" len="3C"/>
+	</item>
+	<item name="Palette (Floor 00)" icon="palette" ptr="F8350" type="pal_15" len="60"/>
+	<item name="Palette (Floor 01-50)" icon="palette" ptr="F8450" arr_indexwidth="C0" len="32">
+		<item name="Palette Data" icon="palette" type="pal_15" len="60"/>
+	</item>
+	<item name="Stats Palette" icon="palette" ptr="F8410" len="20" type="pal_15"/>
+	<item name="Starting Floor data" ptr="3FA1" type="byte" len="8" icon="value" flag="DECIMAL"/>
+	<list>
+		<item key="bgm">
+		"Intro" "Floor Select" "Floor 00" "Floor 01" "Common (04)" "Floor 14" "Common (Vegetation)" "Common (Upper)" "Boss (Dragon A)" "Boss (Chimera)" "Boss (Worms)" "Boss (Dragon B)" "Boss (Drokmar)" "Common (Burning)" "Common (Toxic)" "Common (15)"
+		"Floor 50" "Boss Bonus" "???" "Ending fanfare" "Game Over" "Credits" "Boss Intro" "Get a Sword" "Last Boss Defeated" "Capcom" " " " " " " " " " " " " " " " " " " " " " "
+		</item>
+	</list>
+	<icon key="palette" filename="Icons/palette.png"/>
+	<icon key="value" filename="Icons/value.png"/>
+</drd>
