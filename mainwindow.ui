@@ -50,6 +50,9 @@
        <property name="dragEnabled">
         <bool>true</bool>
        </property>
+       <property name="indentation">
+        <number>16</number>
+       </property>
        <property name="rootIsDecorated">
         <bool>true</bool>
        </property>
@@ -180,11 +183,25 @@
     <addaction name="actionSaveBinary"/>
     <addaction name="separator"/>
     <addaction name="actionOpenXML"/>
+    <addaction name="actionNewXML"/>
+    <addaction name="actionReloadXML"/>
+    <addaction name="actionSaveXML"/>
     <addaction name="actionImport_XML"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionInsertItem"/>
+    <addaction name="actionInsertChild"/>
+    <addaction name="actionDeleteItem"/>
+    <addaction name="separator"/>
+    <addaction name="actionClearXML"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
@@ -221,6 +238,44 @@
   <action name="actionExit">
    <property name="text">
     <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionSaveXML">
+   <property name="text">
+    <string>Save XML</string>
+   </property>
+  </action>
+  <action name="actionInsertItem">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Insert Blank Item</string>
+   </property>
+  </action>
+  <action name="actionDeleteItem">
+   <property name="text">
+    <string>Delete Item</string>
+   </property>
+  </action>
+  <action name="actionReloadXML">
+   <property name="text">
+    <string>Reload XML</string>
+   </property>
+  </action>
+  <action name="actionClearXML">
+   <property name="text">
+    <string>Reset XML</string>
+   </property>
+  </action>
+  <action name="actionInsertChild">
+   <property name="text">
+    <string>Insert Child Item</string>
+   </property>
+  </action>
+  <action name="actionNewXML">
+   <property name="text">
+    <string>New XML file..</string>
    </property>
   </action>
  </widget>

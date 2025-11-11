@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Mon 1. Sep 15:05:38 2025
+** Created: Tue 28. Oct 22:20:32 2025
 **      by: Qt User Interface Compiler version 4.8.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -39,6 +39,13 @@ public:
     QAction *actionImport_XML;
     QAction *actionSaveBinary;
     QAction *actionExit;
+    QAction *actionSaveXML;
+    QAction *actionInsertItem;
+    QAction *actionDeleteItem;
+    QAction *actionReloadXML;
+    QAction *actionClearXML;
+    QAction *actionInsertChild;
+    QAction *actionNewXML;
     QWidget *centralWidget;
     QWidget *horizontalLayoutWidget;
     QHBoxLayout *horizontalLayout;
@@ -52,6 +59,7 @@ public:
     QSpacerItem *verticalSpacer_2;
     QMenuBar *menuBar;
     QMenu *menuFile;
+    QMenu *menuEdit;
     QToolBar *mainToolBar;
     QStatusBar *statusBar;
 
@@ -71,6 +79,21 @@ public:
         actionSaveBinary->setObjectName(QString::fromUtf8("actionSaveBinary"));
         actionExit = new QAction(MainWindow);
         actionExit->setObjectName(QString::fromUtf8("actionExit"));
+        actionSaveXML = new QAction(MainWindow);
+        actionSaveXML->setObjectName(QString::fromUtf8("actionSaveXML"));
+        actionInsertItem = new QAction(MainWindow);
+        actionInsertItem->setObjectName(QString::fromUtf8("actionInsertItem"));
+        actionInsertItem->setEnabled(true);
+        actionDeleteItem = new QAction(MainWindow);
+        actionDeleteItem->setObjectName(QString::fromUtf8("actionDeleteItem"));
+        actionReloadXML = new QAction(MainWindow);
+        actionReloadXML->setObjectName(QString::fromUtf8("actionReloadXML"));
+        actionClearXML = new QAction(MainWindow);
+        actionClearXML->setObjectName(QString::fromUtf8("actionClearXML"));
+        actionInsertChild = new QAction(MainWindow);
+        actionInsertChild->setObjectName(QString::fromUtf8("actionInsertChild"));
+        actionNewXML = new QAction(MainWindow);
+        actionNewXML->setObjectName(QString::fromUtf8("actionNewXML"));
         centralWidget = new QWidget(MainWindow);
         centralWidget->setObjectName(QString::fromUtf8("centralWidget"));
         horizontalLayoutWidget = new QWidget(centralWidget);
@@ -95,6 +118,7 @@ public:
         wTree->setMaximumSize(QSize(250, 16777215));
         wTree->setProperty("showDropIndicator", QVariant(true));
         wTree->setDragEnabled(true);
+        wTree->setIndentation(16);
         wTree->setRootIsDecorated(true);
         wTree->setColumnCount(1);
         wTree->header()->setVisible(false);
@@ -162,6 +186,8 @@ public:
         menuBar->setGeometry(QRect(0, 0, 1107, 21));
         menuFile = new QMenu(menuBar);
         menuFile->setObjectName(QString::fromUtf8("menuFile"));
+        menuEdit = new QMenu(menuBar);
+        menuEdit->setObjectName(QString::fromUtf8("menuEdit"));
         MainWindow->setMenuBar(menuBar);
         mainToolBar = new QToolBar(MainWindow);
         mainToolBar->setObjectName(QString::fromUtf8("mainToolBar"));
@@ -171,13 +197,22 @@ public:
         MainWindow->setStatusBar(statusBar);
 
         menuBar->addAction(menuFile->menuAction());
+        menuBar->addAction(menuEdit->menuAction());
         menuFile->addAction(actionOpenBinary);
         menuFile->addAction(actionSaveBinary);
         menuFile->addSeparator();
         menuFile->addAction(actionOpenXML);
+        menuFile->addAction(actionNewXML);
+        menuFile->addAction(actionReloadXML);
+        menuFile->addAction(actionSaveXML);
         menuFile->addAction(actionImport_XML);
         menuFile->addSeparator();
         menuFile->addAction(actionExit);
+        menuEdit->addAction(actionInsertItem);
+        menuEdit->addAction(actionInsertChild);
+        menuEdit->addAction(actionDeleteItem);
+        menuEdit->addSeparator();
+        menuEdit->addAction(actionClearXML);
 
         retranslateUi(MainWindow);
 
@@ -192,8 +227,16 @@ public:
         actionImport_XML->setText(QApplication::translate("MainWindow", "Import XML..", 0, QApplication::UnicodeUTF8));
         actionSaveBinary->setText(QApplication::translate("MainWindow", "Save Binary", 0, QApplication::UnicodeUTF8));
         actionExit->setText(QApplication::translate("MainWindow", "Exit", 0, QApplication::UnicodeUTF8));
+        actionSaveXML->setText(QApplication::translate("MainWindow", "Save XML", 0, QApplication::UnicodeUTF8));
+        actionInsertItem->setText(QApplication::translate("MainWindow", "Insert Blank Item", 0, QApplication::UnicodeUTF8));
+        actionDeleteItem->setText(QApplication::translate("MainWindow", "Delete Item", 0, QApplication::UnicodeUTF8));
+        actionReloadXML->setText(QApplication::translate("MainWindow", "Reload XML", 0, QApplication::UnicodeUTF8));
+        actionClearXML->setText(QApplication::translate("MainWindow", "Reset XML", 0, QApplication::UnicodeUTF8));
+        actionInsertChild->setText(QApplication::translate("MainWindow", "Insert Child Item", 0, QApplication::UnicodeUTF8));
+        actionNewXML->setText(QApplication::translate("MainWindow", "New XML file..", 0, QApplication::UnicodeUTF8));
         wUpdate->setText(QApplication::translate("MainWindow", "Update", 0, QApplication::UnicodeUTF8));
         menuFile->setTitle(QApplication::translate("MainWindow", "File", 0, QApplication::UnicodeUTF8));
+        menuEdit->setTitle(QApplication::translate("MainWindow", "Edit", 0, QApplication::UnicodeUTF8));
     } // retranslateUi
 
 };

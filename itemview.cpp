@@ -80,6 +80,7 @@ void ItemView::initTypeScript() {
     int vB = Core.mItemElmTable[mElementRef].mCharEnd;
     vNiceText = Core.mXMLsource.mid(vA, vB-vA);
     ui->wXMLedit->setPlainText(vNiceText);
+    ui->wXMLedit->hide();
    
 }
 

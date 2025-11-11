@@ -3,6 +3,7 @@
 
 
 #include <QDomDocument>
+
 #include <QFile>
 #include <QTextStream>
 #include <QLineEdit>
@@ -11,7 +12,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 
-QDomDocument mainXML;
+
 tCore Core;
 
 void QSliderSC::setValue(int value) {
@@ -21,17 +22,36 @@ void QSliderSC::setValue(int value) {
 }
 
 static QScriptValue scriptF_hasText(QScriptContext *aContext, QScriptEngine *aEngine) {
-    QString text = Core.getEngineElmRef(aEngine).toElement().text();
+    QDomElement vElement = Core.getEngineElmRef(aEngine).toElement();
+    QDomNodeList vDNL = vElement.childNodes();
+    for (int vCount = 0; vCount < vDNL.count(); vCount++) {
+        if (vDNL.item(vCount).isText() == true) {
+            return true;
+        }
+    }
+    /*QString text = Core.getEngineElmRef(aEngine).toElement().text();
+    
     if (text.length() > 0) {
         return true;
     } else {
         return false;
-    }
+    }*/
+    
+    return false;
 }
 
 static QScriptValue scriptF_getText(QScriptContext *aContext, QScriptEngine *aEngine) {
-    //QScriptValue vResult;    
-    QString text = Core.getEngineElmRef(aEngine).toElement().text();
+    QString text = "";
+    QDomElement vElement = Core.getEngineElmRef(aEngine).toElement();
+    QDomNodeList vDNL = vElement.childNodes();
+    for (int vCount = 0; vCount < vDNL.count(); vCount++) {
+        if (vDNL.item(vCount).isText() == true) {
+            text += vDNL.item(vCount).toText().data();
+        }
+    }
+    
+    //QScriptValue vResult; 
+    //QString text = Core.getEngineElmRef(aEngine).toElement().text();
     return(text);
 }
 
@@ -52,7 +72,7 @@ static QScriptValue scriptF_hasAttr(QScriptContext *aContext, QScriptEngine *aEn
 
 
 static QScriptValue scriptF_getByte(QScriptContext *aContext, QScriptEngine *aEngine) {
-    
+
     QScriptValue vReturnVal;
     if (aContext->argumentCount() > 0) {
         quint64 vArgPointer = aContext->argument(0).toVariant().toULongLong();
@@ -222,9 +242,12 @@ static QScriptValue scriptF_loadTextFile(QScriptContext *aContext, QScriptEngine
     if (aContext->argumentCount() > 0) {
         QByteArray vFileData;
         QString vFileName = aContext->argument(0).toString();
-        bool vResult = Core.loadFileCommon(vFileName, &vFileData);
-        if (vResult == true) {
-            vReturnVal = QScriptValue(vFileData.data()).toString();
+        bool vResult1 = Core.findIncludeFile(&vFileName);
+        if (vResult1 == true) {
+            bool vResult2 = Core.loadFileCommon(vFileName, &vFileData);
+            if (vResult2 == true) {
+                vReturnVal = QScriptValue(vFileData.data()).toString();
+            }
         }
     }
     
@@ -236,24 +259,37 @@ tCore::tCore() {
     mEventForScript = new tEventForScript(0);
     
     mTypeScriptPath = "Script/Type/";
+    mDefaultNESPALFile = "fr_nesB.pal";
     
     mDRD_intSize = 16;
     
-    mVersionDate = 250827;
+    mVersionDate = 251111;
     
     mBinFileOpened = false;
     mBinFileName = "";
+    mBufferSystem = eBufferSystem_Single; //Overwritten on file open
+
+    mXMLFileOpened = false; 
+    mXMLEditIndex = -1;
+    
+    mLowLevelErrorFlag = false;
+    
 }
 
 tCore::~tCore() { }
 
 void tCore::error(QString aMessage, int aLevel) {
-    if (aLevel >= 2) {
-        QMessageBox vErrorBox;
-        vErrorBox.setText(aMessage);
-        vErrorBox.setIcon(aLevel < 3 ? QMessageBox::Warning : QMessageBox::Critical);
-        vErrorBox.exec();
+    if (aLevel == 1) {
+        if (Core.mLowLevelErrorFlag == true) {
+            return;
+        }
+        Core.mLowLevelErrorFlag = true;
     }
+    
+    QMessageBox vErrorBox;
+    vErrorBox.setText(aMessage);
+    vErrorBox.setIcon(aLevel < 3 ? QMessageBox::Warning : QMessageBox::Critical);
+    vErrorBox.exec();
 }
 
 bool tCore::qElementGetHasAttribute(QDomElement aElement, QString aName, QString *aReturnStr) {
@@ -276,29 +312,72 @@ QDomElement tCore::getEngineElmRef(QScriptEngine *aEngine) {
 }
 
 quint32 tCore::getFileByte(qint64 aPtr) {
-    quint32 vPtr = aPtr;
-    if (vPtr < mEditFileFullBuffer.size()) {
-    return ((uchar)mEditFileFullBuffer[vPtr]);
+    if (Core.mBinFileOpened == false) {return 0;}
+    if (Core.mBufferSystem == eBufferSystem_Single) {
+        quint32 vPtr = aPtr;
+        if (vPtr < mEditFileFullBuffer.size()) {
+        return ((uchar)mEditFileFullBuffer[vPtr]);
+        } else {
+           Core.error("Read past binary size: 0x" + QString::number(vPtr, 16), 1);
+           return 0;
+        }
+    } else if (Core.mBufferSystem == eBufferSystem_WriteBuffer) {
+        //Read directly from file.
+        if (aPtr < mLockedBinQFile.size()) {
+            char vChar;
+            mLockedBinQFile.seek(aPtr);
+            mLockedBinQFile.getChar(&vChar);
+            return (uchar)vChar;
+        } else {
+            Core.error("Read past file size: 0x" + QString::number(aPtr, 16), 1);
+            return 0;
+        }
     } else {
-       Core.error("Read past binary size: 0x" + QString::number(vPtr, 16), 1);
-       return 0;
+        return 0;
     }
+    
 }
 
 void tCore::setFileByte(qint64 aPtr, quint32 aValue) {
-    quint32 vPtr = aPtr;
-    if (vPtr < mEditFileFullBuffer.size()) {
-    mEditFileFullBuffer[vPtr] = aValue;
-    } else {
-      Core.error("Write past binary size: 0x" + QString::number(vPtr, 16), 1);
+    if (Core.mBinFileOpened == false) {return;}
+    if (Core.mBufferSystem == eBufferSystem_Single) {
+        quint32 vPtr = aPtr;
+        if (vPtr < mEditFileFullBuffer.size()) {
+        mEditFileFullBuffer[vPtr] = aValue;
+        } else {
+          Core.error("Write past binary size: 0x" + QString::number(vPtr, 16), 1);
+        }
+    }
+
+    if (Core.mBufferSystem == eBufferSystem_WriteBuffer) {
+    
+    /*    quint32 vBlockIndex = 0;
+        quint64 vBlock = qFloor(aPtr / Core.mBufferBlockSize);
+        quint32 vIndex = 0;
+        if ((vIndex = mBufferBlockLocations.indexOf(vBlock)) >= 0) {
+            vBlockIndex = vIndex;
+        } else {
+            QByteArray vBA;
+            quint64 vBlockStart = quint64(vBlockIndex) * Core.mBufferBlockSize;
+            QFile vFile;
+            vFile.setFileName(aFName);
+            bool vResult = vFile.open(QIODevice::ReadOnly);
+            if (vResult == true) {
+                vFile.seek(vBlockStart);
+                *aBA = vFile.read(Core.mBufferBlockSize);
+                vFile.close();
+            } else {
+            
+            }
+        }*/
+    
     }
 }
 
 quint32 tCore::getItemByte(qint64 aPtr, QDomElement aElmRef, int aElmIndex) {
     qint64 vPtr = calcItemPtr(aPtr, aElmRef, aElmIndex);
     
-    int vV = getFileByte(vPtr);
-    return (vV);
+    return(getFileByte(vPtr));
 }
 
 void tCore::setItemByte(qint64 aPtr, quint32 aValue, QDomElement aElmRef, int aElmIndex) {
@@ -316,14 +395,15 @@ void tCore::scriptLoad(QString aFileName, QScriptEngine *aEngine) {
     QString contents = stream.readAll();
     scriptFile.close();
     
-    int vIncludeTag = contents.indexOf("FLEX_INCLUDE");
+    QString vIncludeTagStr = "FLEX_INCLUDE";
+    int vIncludeTag = contents.indexOf(vIncludeTagStr);
     while (vIncludeTag >= 0) {
         int vCPA = contents.indexOf('"', vIncludeTag) + 1;
         int vCPB = contents.indexOf('"', vCPA);
         QString vFile = contents.mid(vCPA, vCPB - vCPA);
         vFile.prepend(Core.mTypeScriptPath);
         Core.scriptLoad(vFile, aEngine);
-        vIncludeTag = contents.indexOf("FLEX_INCLUDE", vCPB);
+        vIncludeTag = contents.indexOf(vIncludeTagStr, vCPB);
     }
     
     aEngine->evaluate(contents, aFileName);
@@ -362,9 +442,12 @@ void tCore::scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElm
 
     QScriptValue vEvent = aEngine->newQObject(mEventForScript);
     QScriptValue vEventBits = aEngine->newObject();
-    vEventBits.setProperty("changeindex", 1);
+    vEventBits.setProperty("changeindex", 1); //To be removed, keep for now
+    vEventBits.setProperty("changeIndex", 1);
+    vEventBits.setProperty("changeMajor", 2);
+    vEventBits.setProperty("user", 256);
     vEvent.setProperty("bit", vEventBits);
-    vGlob.setProperty("event", vEvent); //To be removed
+    vGlob.setProperty("event", vEvent); //To be removed, keep for now
     vGlob.setProperty("Event", vEvent);
     
     vGlob.setProperty("QLabel", aEngine->scriptValueFromQMetaObject<QLabelSC>());
@@ -550,6 +633,29 @@ ptrFinishCalcPhaseA:
     return (vWorkPtr);
 }  
 
+bool tCore::findIncludeFile(QString *aFName) {
+    QFileInfo vFI;
+    vFI.setFile(*aFName);
+    if (vFI.isAbsolute() == true) {
+        //Absolute
+        return vFI.exists();
+    }
+    QString vRelativeFile = Core.mXMLFileBasePath + *aFName;
+    vFI.setFile(vRelativeFile);
+    if (vFI.exists()) {
+        //Relative to XML file path.
+        *aFName = vRelativeFile;
+        return true;
+    } else {
+        vFI.setFile(*aFName);
+        if (vFI.exists()) {
+            //Relative to app path.
+            return true;
+        }
+    }
+    return false;
+}
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -558,29 +664,16 @@ MainWindow::MainWindow(QWidget *parent) :
 
     init();
     
-    #ifndef QT_DEBUG
-    dev_init_combo_("demo.xml", "demo.bin");
-    #else
-    dev_init_();
-    #endif
-    
-    #ifndef QT_DEBUG
-        ui->wXMLEdit->hide();
-        ui->wUpdate->hide();
-        ui->verticalSpacer_2->setGeometry(QRect(0, 0, 0, 0));
-    #endif
-    
-    ui->centralWidget->setLayout( ui->horizontalLayout );
-    ui->mainToolBar->hide();
-    ui->actionImport_XML->setVisible(false);
-    
-    updateWindowTitle();
-    
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::disableDirectEdit() {
+    ui->wUpdate->setEnabled(false);
+    ui->wXMLEdit->setEnabled(false); 
 }
 
 void MainWindow::updateWindowTitle() {
@@ -595,16 +688,40 @@ void MainWindow::updateWindowTitle() {
 void MainWindow::closeEvent(QCloseEvent *aCEvent) {
     QMainWindow::closeEvent(aCEvent);
     unloadXML();
+    if (Core.mBufferSystem == eBufferSystem_WriteBuffer) {
+        Core.mLockedBinQFile.close();
+    }
 }
 
 void MainWindow::init() {
   //mXMLmenu.addAction("Insert Item..", this, SLOT(on_insertItem()));
   //mXMLmenu.addAction("Delete Item", this, SLOT(on_deleteItem());
   
-    load_NES_Palette("fr_nesB.pal");
+    load_NES_Palette(Core.mDefaultNESPALFile);
     
-    Core.mDefaultIcon = QIcon("testlogo.bmp");
+    Core.mDefaultIcon = QIcon("testlogo.png");
     setWindowIcon(Core.mDefaultIcon);
+    
+    #ifndef QT_DEBUG
+    loadXMLFile("demo.xml");
+    loadBinFile("demo.bin", eBufferSystem_Single);
+    #else
+    dev_init_();
+    #endif
+    
+    #ifndef QT_DEBUG
+        ui->wXMLEdit->hide();
+        ui->wUpdate->hide();
+        ui->verticalSpacer_2->setGeometry(QRect(0, 0, 0, 0));
+    #endif
+    
+    ui->centralWidget->setLayout( ui->horizontalLayout );
+    ui->mainToolBar->hide();
+    ui->actionImport_XML->setVisible(false);
+    
+    disableDirectEdit();
+
+    updateWindowTitle();
 }
 
 void MainWindow::selectXMLfile() {
@@ -619,39 +736,115 @@ void MainWindow::selectBinFile() {
   QString vFile;
   vFile = QFileDialog::getOpenFileName(this, "Open data file", QString());
   if (vFile.size() > 0) {
-    loadBinFile(vFile, 0);
+    loadBinFile(vFile, eBufferSystem_Single);
   }
 }
 
 void MainWindow::dev_init_() {
 
-    dev_init_combo_("demo.xml", "demo.bin");
-    Core.mBinFileName = "demo_save.bin";
+   // dev_init_combo_("demo.xml", "demo.bin");
+    //Core.mBinFileName = "debug_save.bin";
+  //  Core.mXMLFileName = "debug_save.xml";
     
-   //dev_init_combo_("C:/romhacking/tools/DRDHack/srfx.xml", "C:/romhacking/tools/DRDHack/stuntracefx.smc");
+   // dev_init_combo_("C:/romhacking/tools/DRDHack/srfx.xml", "C:/romhacking/tools/DRDHack/stuntracefx.smc");
    // dev_init_combo_("C:/romhacking/tools/DRDHack/bc.xml", "C:/romhacking/tools/DRDHack/bc.nes");
    // dev_init_combo_("C:/work/mm4ex/megaman4.xml", "D:/roms/nes/Mega Man 4 (U).nes");
    // dev_init_combo_("C:/web/geocities/megaman5.xml", "D:/roms/nes/Mega Man 5 (U).nes");
-
+    dev_init_combo_("XML/Magic Sword (SNES).xml", "C:/work/magicsword/ms_clean.sfc");
 }
-
-void MainWindow::dev_init_SRFX_() {}
 
 void MainWindow::dev_init_combo_(QString aXML, QString aBIN) {
     loadXMLFile(aXML);
-    loadBinFile(aBIN, 0);
+    loadBinFile(aBIN, eBufferSystem_Single);
 }
 
-
 void MainWindow::unloadXML() {
+    disableDirectEdit();
     ui->wTree->clear();
     ui->mdiArea->closeAllSubWindows();
     Core.mItemElmTable.clear();
     Core.mCommonElmIndexTable.clear();
     Core.mListElmIndexTable.clear();
     Core.mIconTable.clear();
-    mainXML.setContent(QString(""));
+    Core.mMainXML.setContent(QString(""));
 }
+
+void MainWindow::loadBinFile(QString aFName, int aMode) {
+
+    aMode = eBufferSystem_Single;
+    QFileInfo vFI;
+    vFI.setFile(aFName);
+    quint64 vFileSize = vFI.size();
+    if (vFileSize >= 1000000000) {
+        int vResult = QMessageBox::question(this, "Flexible Editor", \
+        "The file is larger than 1GB. Do you wish to open it in Read Only mode?\n(Loading might fail otherwise)", 
+        QMessageBox::Yes|QMessageBox::No, QMessageBox::No);
+        if (vResult == QMessageBox::Yes) {
+            aMode = eBufferSystem_WriteBuffer;
+        }
+    }
+
+    ui->mdiArea->closeAllSubWindows();
+    if (Core.mEditFileFullBuffer.size() > 0) {
+        Core.mEditFileFullBuffer.clear();
+    }
+    if (Core.mBufferSystem == eBufferSystem_WriteBuffer) {
+        Core.mLockedBinQFile.close();
+    }
+    Core.mBinFileOpened = false;
+    Core.mBinFileName = "";
+
+    if (aMode == eBufferSystem_Single) {
+        bool vResult = Core.loadFileCommon(aFName, &Core.mEditFileFullBuffer);
+        if (vResult == true) {
+            Core.mBinFileOpened = true;
+            Core.mBinFileName = aFName;
+            Core.mBufferSystem = eBufferSystem_Single;
+            ui->actionSaveBinary->setEnabled(true);
+        } else {
+            //Error message given in loadFileCommon.
+        }
+        
+        updateWindowTitle();
+    } else if (aMode == eBufferSystem_WriteBuffer) {
+        Core.mLockedBinQFile.setFileName(aFName);
+        bool vResult = Core.mLockedBinQFile.open(QIODevice::ReadOnly);
+        if (vResult == true) {
+            Core.mBinFileOpened = true;
+            Core.mBinFileName = aFName;
+            Core.mBufferSystem = eBufferSystem_WriteBuffer;
+            ui->actionSaveBinary->setEnabled(false);
+        } else {
+            Core.error("Failed to open: " + aFName + "in Read Only mode.", 2);
+        }
+    }
+}
+
+void MainWindow::saveBinFile(QString aFName) {
+    if (aFName.size() <= 0) {return;}
+    if (Core.mBinFileOpened == false) {return;}
+    
+    if (Core.mBufferSystem == eBufferSystem_Single) {
+        if (Core.mEditFileFullBuffer.size() <= 0) {return;}
+        QFile vFile;
+        vFile.setFileName(aFName);
+        bool vSuccess = vFile.open(QIODevice::WriteOnly);
+        if (vSuccess) {
+            vFile.seek(0);
+            vFile.write(Core.mEditFileFullBuffer);
+            vFile.close();
+        } else {
+            Core.error("Couldn't save to " + aFName, 2);
+        }
+    } else {
+        
+    }
+}
+
+void MainWindow::load_NES_Palette(QString aFName) {
+    Core.loadFileCommon(aFName, &Core.mNESPal);
+}
+
 
 void MainWindow::loadXMLFile(QString aFName) {
     unloadXML();
@@ -662,19 +855,14 @@ void MainWindow::loadXMLFile(QString aFName) {
     Core.mXMLsource = vFile.readAll();
     vFile.close();
     
-    QString vError;
-    int vErrorLine;
-    int vErrorCol;
-    bool vResult = mainXML.setContent(Core.mXMLsource, &vError, &vErrorLine, &vErrorCol);
+    loadXML_L2(aFName);
+}
 
-    if (vResult == false) {
-        QString vErrMsg;
-        vErrMsg = "XML Parse error (Line " + QString::number(vErrorLine) + ", Col " + QString::number(vErrorCol) + "): " + vError; 
-        #ifdef QT_DEBUG
-            qDebug(vErrMsg.toUtf8());
-        #endif
-        Core.error(vErrMsg, 2);
-    }
+//Called from loadXMLFile, and when creating a new XML file.
+//Assumes Core.mXMLsource and contents of the physical file is in correct state.
+
+void MainWindow::loadXML_L2(QString aFName) {
+
     Core.mXMLFileName = aFName;
     int vPos1 = aFName.lastIndexOf('/');
     int vPos2 = aFName.lastIndexOf('\\');
@@ -687,48 +875,40 @@ void MainWindow::loadXMLFile(QString aFName) {
     } else {
         Core.mXMLFileBasePath = "";
     }
-
-    loadXML();
+    
+    loadXML_L3();
     updateWindowTitle();
+    
+    Core.mXMLFileOpened = true;
 }
 
-void MainWindow::loadBinFile(QString aFName, int aMode) {
-    ui->mdiArea->closeAllSubWindows();
-    if (Core.mEditFileFullBuffer.size() > 0) {
-        Core.mEditFileFullBuffer.clear();
+//Called directly to reload the XML when it's been modified in the program.
+void MainWindow::loadXML_L3() {
+    QString vError;
+    int vErrorLine;
+    int vErrorCol;
+    bool vResult = Core.mMainXML.setContent(Core.mXMLsource, &vError, &vErrorLine, &vErrorCol);
+
+    if (vResult == false) {
+        QString vErrMsg;
+        vErrMsg = "XML Parse error (Line " + QString::number(vErrorLine) + ", Col " + QString::number(vErrorCol) + "): " + vError; 
+        #ifdef QT_DEBUG
+            qDebug(vErrMsg.toUtf8());
+        #endif
+        Core.error(vErrMsg, 2);
     }
-    Core.mBinFileOpened = false;
 
-    bool vResult = Core.loadFileCommon(aFName, &Core.mEditFileFullBuffer);
-    if (vResult == true) {
-        Core.mBinFileOpened = true;
-        Core.mBinFileName = aFName;
-    } else {
-        //Error message given in loadFileCommon.
-    }
-    updateWindowTitle();
+    loadXML_L4();
+
 }
 
-void MainWindow::saveBinFile(QString aFName) {
-    QFile vFile;
-    vFile.setFileName(aFName);
-    bool vSuccess = vFile.open(QIODevice::WriteOnly);
-    if (vSuccess) {
-        vFile.seek(0);
-        vFile.write(Core.mEditFileFullBuffer);
-        vFile.close();
-    } else {
-        Core.error("Couldn't save to " + aFName, 2);
-    }
-}
 
-void MainWindow::load_NES_Palette(QString aFName) {
-    Core.loadFileCommon(aFName, &Core.mNESPal);
-}
+void MainWindow::loadXML_L4() {
 
-void MainWindow::loadXML() {
-
+    //Reset to standard icon
     setWindowIcon(Core.mDefaultIcon);
+    //Reset to standard NES palette
+    load_NES_Palette(Core.mDefaultNESPALFile);
     
     XMLReadStatus vStatus;
     vStatus.mItemCount = 0;
@@ -739,34 +919,20 @@ void MainWindow::loadXML() {
     vStatus.mCurrentSrcLine = 1;
     vStatus.mCharPos = 0;
     
-    if (mainXML.hasChildNodes() == false) {return;}
+    if (Core.mMainXML.hasChildNodes() == false) {return;}
 
     //Find and load any icons before crawling the XML tree.
-    QDomNodeList vIcons = mainXML.elementsByTagName("icon");
+    QDomNodeList vIcons = Core.mMainXML.elementsByTagName("icon");
     if (vIcons.length() > 0) {
         for (int vIx = 0; vIx < vIcons.length(); vIx++) {
             QDomElement vElement = vIcons.at(vIx).toElement();
             QString vKeyName = "";
             QString vFileName = "";
-            QString vFileName2 = "";
             Core.qElementGetHasAttribute(vElement, "key", &vKeyName);
             Core.qElementGetHasAttribute(vElement, "filename", &vFileName);
             if (vFileName.size() > 0) {
-                QFileInfo vFI;
-                QString vXMLrelativeFile = Core.mXMLFileBasePath + vFileName;
-                vFI.setFile(vXMLrelativeFile);
-                if (vFI.exists()) {
-                    //Relative to XML file path.
-                    vFileName2 = vXMLrelativeFile;
-                } else {
-                    vFI.setFile(vFileName);
-                    if (vFI.exists()) {
-                        //Relative to app path.
-                        vFileName2 = vFileName;
-                    }
-                }
-                if (vFileName2.size() > 0) {
-                    QIcon vQIcon(vFileName2);
+                if (Core.findIncludeFile(&vFileName)) {
+                    QIcon vQIcon(vFileName);
                     tIconTableItem vNewIcon;
                     vNewIcon.mIcon = vQIcon;
                     vNewIcon.mKey = vKeyName;
@@ -775,13 +941,16 @@ void MainWindow::loadXML() {
             }
         }
     }
-    loadXMLRecursive(mainXML.documentElement(), &vStatus);
+    
+    QXmlStreamReader vReader;
+    vReader.addData(Core.mXMLsource);
+    loadXMLRecursive(Core.mMainXML.documentElement(), &vStatus, &vReader);
     
     ui->wTree->expandAll();
    
 }
 
-void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus) {
+void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus, QXmlStreamReader *aReader) {
 
     QTreeWidgetItem *vTreeItem = 0;
 
@@ -845,6 +1014,13 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus) 
     } else if (vTagText.compare("common", Qt::CaseInsensitive) == 0) {
         wAddToTables = true;
         Core.mCommonElmIndexTable.append(Core.mItemElmTable.count());
+    } else if (vTagText.compare("nespal", Qt::CaseInsensitive) == 0) {
+        QString vNESPalFile;
+        if (Core.qElementGetHasAttribute(aElement, "filename", &vNESPalFile)) {
+            if (Core.findIncludeFile(&vNESPalFile)) {
+                load_NES_Palette(vNESPalFile);
+            }
+        }
     } else if (vTagText.compare("info", Qt::CaseInsensitive) == 0) {
         QString vIntSizeAttr;
         if (Core.qElementGetHasAttribute(aElement, "intsize", &vIntSizeAttr)) {
@@ -861,6 +1037,11 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus) 
         }
     }
     
+    int vToken = -1;
+    while (vToken != QXmlStreamReader::StartElement) {
+        vToken = aReader->readNext();
+    }
+    
     int vTableIndex = -1;
     if (wAddToTables == true) {
         tItemElmType vNewItemElm;
@@ -870,39 +1051,41 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus) 
         vNewItemElm.mArrayByteSz = 1;
         vNewItemElm.mParentIndex = aStatus->mParentIndex;
         
-        //Calculate first and last character positions in the source document for this Element.
-        int vLineNo = aElement.lineNumber();
-        int vLineNo2 = aElement.nextSibling().lineNumber();
-        if (aElement.nextSibling().isNull() == true) {vLineNo2 = vLineNo+1;}
-
-        while (aStatus->mCurrentSrcLine < vLineNo) {
-            aStatus->mCharPos = Core.mXMLsource.indexOf(QString('\n'), aStatus->mCharPos)+1;
-            aStatus->mCurrentSrcLine++;
-        }
-        if (aElement.hasChildNodes() == false) {
-            while (Core.mXMLsource[aStatus->mCharPos] == 9) {
-                aStatus->mCharPos++;
+        int vCharStart = aStatus->mCharPos;//aReader->characterOffset();
+        
+        while ((Core.mXMLsource[vCharStart] == 0x20) ||
+                (Core.mXMLsource[vCharStart] == 0xD) ||
+                (Core.mXMLsource[vCharStart] == 0xA)) {
+            
+                vCharStart++;
             }
+        
+        int vCharStart2 = vCharStart;
+        while ((Core.mXMLsource[vCharStart2] == 0x9) ||
+             (Core.mXMLsource[vCharStart2] == 0x20)) 
+         {
+           vCharStart2++;
         }
-        int wSourceEndPos = aStatus->mCharPos;
-        int wSourceEndLine = aStatus->mCurrentSrcLine;
-        while (wSourceEndLine < vLineNo2) {
-            wSourceEndPos = Core.mXMLsource.indexOf(QString('\n'), wSourceEndPos)+1;
-            wSourceEndLine++;
+        
+        vNewItemElm.mCharEnd = vCharStart;
+        
+        //If the Element has children, make the tab and spacing preceeding it part of the text.
+        //Otherwise, omit it.
+        if (aElement.firstChildElement().isNull() == true) {
+            vNewItemElm.mCharStart = vCharStart2;
+        } else {
+            vNewItemElm.mCharStart = vCharStart;
         }
-        wSourceEndPos -= 2;
-        vNewItemElm.mCharStart = aStatus->mCharPos;
-        vNewItemElm.mCharEnd = wSourceEndPos;
+        //mTrueCharStart always has it omitted.
+        vNewItemElm.mTrueCharStart = vCharStart2;
+
+        //qDebug(QString::number(vNewItemElm.mCharStart, 16).toLatin1());
         
         vTableIndex = Core.mItemElmTable.size();
         Core.mItemElmTable.append(vNewItemElm);
-
-        #ifdef QT_DEBUG
-        /*    QString vSec = Core.mXMLsource.mid(aStatus->mCharPos, wSourceEndPos-aStatus->mCharPos);
-            qDebug("new");
-            qDebug((char*)vSec.toUtf8().data());*/
-        #endif
     }
+    
+    aStatus->mCharPos = aReader->characterOffset();
 
     QDomElement vChildRef;
     if (aElement.firstChildElement().isNull() == false) {
@@ -917,7 +1100,7 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus) 
         int vSafeCount = 0;
         while ((vChildRef.isNull() == false) && (vSafeCount < 10000)) {
             
-            loadXMLRecursive(vChildRef, aStatus);
+            loadXMLRecursive(vChildRef, aStatus, aReader);
 
             vChildRef = vChildRef.nextSiblingElement();
             vSafeCount++;
@@ -928,14 +1111,36 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus) 
 
     }
 
+    vToken = -1;
+    while (vToken != QXmlStreamReader::EndElement) {
+        vToken = aReader->readNext();
+    }
+
+    aStatus->mCharPos = aReader->characterOffset();
+
+    if (wAddToTables == true) {
+        int vEndChar = aStatus->mCharPos-1;
+        Core.mItemElmTable[vTableIndex].mCharEnd = vEndChar; 
+    }
+
     if (aStatus->mListFloorCounter) {
         aStatus->mListFloorCounter--;
     }
 }
 
+void MainWindow::saveXML() {
+    QFile vFile;
+    vFile.setFileName(Core.mXMLFileName);
+    vFile.open(QIODevice::WriteOnly);
+    vFile.seek(0);
+    QByteArray vByteData = Core.mXMLsource.toUtf8();
+    vFile.write(vByteData.constData(), vByteData.length());
+    vFile.close();
+}
+
 void MainWindow::on_wTree_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous)
 {
- 
+
 }
 
 void MainWindow::on_wTree_itemClicked(QTreeWidgetItem *item, int column)
@@ -954,9 +1159,12 @@ void MainWindow::on_wTree_itemClicked(QTreeWidgetItem *item, int column)
     }
     
     ui->mdiArea->closeAllSubWindows();
+    
+    Core.mLowLevelErrorFlag = false;
    
     ItemView *theItemView = new ItemView;
     
+
     //theItemView->mMainWnd = this;
     theItemView->mTreeItemRef = item;
      
@@ -984,11 +1192,15 @@ void MainWindow::on_wTree_itemClicked(QTreeWidgetItem *item, int column)
 
     QString vSourceText;
     int vA = Core.mItemElmTable[vRefIndex].mCharStart;
-    int vB = Core.mItemElmTable[vRefIndex].mCharEnd;
+    int vB = Core.mItemElmTable[vRefIndex].mCharEnd+1;
     vSourceText = Core.mXMLsource.mid(vA, vB-vA);
     ui->wXMLEdit->setPlainText(vSourceText);
+    Core.mXMLEditIndex = vRefIndex;
  
     theItemView->initTypeScript();
+
+    ui->wUpdate->setEnabled(true);
+    ui->wXMLEdit->setEnabled(true);
 }
 
 
@@ -1038,7 +1250,7 @@ void BitmapView::setPixel(int aY, int aX, int aValue) {
 
 void BitmapView::drawLineX(int aY, int aX1, int aX2, int aValue) {
     QRgb vTo = aValue;
-   
+
     int vLenX = (aX2 - aX1)+1;
     QRgb *pixp = (QRgb*) mImage.scanLine(aY);
     pixp += aX1;
@@ -1084,6 +1296,35 @@ void MainWindow::on_actionOpenXML_triggered()
     selectXMLfile();
 }
 
+void MainWindow::on_actionReloadXML_triggered()
+{
+    if (Core.mXMLFileOpened == true) {
+        loadXMLFile(Core.mXMLFileName);
+    }
+}
+
+void MainWindow::on_actionSaveXML_triggered()
+{
+    if (Core.mXMLFileOpened == true) {
+        saveXML();
+    }
+}
+
+void MainWindow::on_actionNewXML_triggered()
+{
+    QString vFName = QFileDialog::getSaveFileName(this, "New XML file", QString(), "XML document (*.xml)");
+    if (vFName.size() > 0) {
+        unloadXML();
+        
+        Core.mXMLFileName = vFName;
+        Core.mXMLsource = "<drd>\r\n</drd>";
+        
+        saveXML();
+        
+        loadXML_L2(Core.mXMLFileName);
+    }        
+}
+
 void MainWindow::on_actionOpenBinary_triggered()
 {
     selectBinFile();
@@ -1091,11 +1332,7 @@ void MainWindow::on_actionOpenBinary_triggered()
 
 void MainWindow::on_actionSaveBinary_triggered()
 {
-    if (Core.mBinFileOpened == true) {
-    if (Core.mBinFileName.size() > 0) {
-        saveBinFile(Core.mBinFileName);
-    }
-    }
+    saveBinFile(Core.mBinFileName);
 }
 
 void MainWindow::on_actionExit_triggered()
@@ -1103,9 +1340,228 @@ void MainWindow::on_actionExit_triggered()
     close();
 }
 
+void MainWindow::on_actionInsertItem_triggered()
+{
+    bool vPlaceAtSelected = true;
+    if (ui->wTree->topLevelItemCount() < 1) {vPlaceAtSelected = false;}
+    
+    QTreeWidgetItem *qWi;
+    qWi = ui->wTree->currentItem();
+    
+    if (qWi == 0) {vPlaceAtSelected = false;}
+    
+    QString vItemString = "<item ptr=\"0\" type=\"BLANK\"/>";
+    QString vInsertStr;
+    int vCharStart = 0;
+    int vTabCount = 0;
+    
+    if (vPlaceAtSelected == false) {
+        //No items in the XML or none selected.
+        //Assume that there's at least a base element,
+        //then add the new item as a child element to that.
+        //If there isn't a base element, return.
+        
+        QXmlStreamReader vReader;
+        vReader.addData(Core.mXMLsource);
+        
+        int vToken = -1;
+        while ((vToken != QXmlStreamReader::StartElement) && (vReader.atEnd() == false)) {
+            vToken = vReader.readNext();
+        }
+        if (vToken == QXmlStreamReader::StartElement) {
+            vCharStart = vReader.characterOffset();
+            
+            while ((Core.mXMLsource[vCharStart] == 0x20) ||
+                (Core.mXMLsource[vCharStart] == 0xD) ||
+                (Core.mXMLsource[vCharStart] == 0xA)) {
+            
+                vCharStart++;
+            }
+            
+            vTabCount = 1;
+            vInsertStr = QString(vTabCount, 0x9) + vItemString + "\r\n";
+        } else {
+            return;
+        }
+    } else {
+
+        int vRefIndex = qWi->data(0, eElmRefRole).toInt();
+        
+        int vCharStart2 = Core.mItemElmTable[vRefIndex].mTrueCharStart;
+        vCharStart = Core.mItemElmTable[vRefIndex].mCharEnd+1;
+
+        vTabCount = calculateTabOrder(vCharStart2-1);
+
+        vInsertStr = "\r\n" + QString(vTabCount, 0x9) + vItemString;
+        
+        
+        //Code for Inserting *before* current Item. To be added as an option later.
+        
+            /*vCharStart = Core.mItemElmTable[vRefIndex].mTrueCharStart;
+    
+            vTabCount = calculateTabOrder(vCharStart-1);
+    
+            vInsertStr = vItemString + "\r\n" + QString(vTabCount, 0x9);*/
+    }
+    
+    unloadXML();
+    
+    Core.mXMLsource.insert(vCharStart, vInsertStr);
+    
+    loadXML_L3();
+}
+
+void MainWindow::on_actionInsertChild_triggered()
+{
+    if (ui->wTree->topLevelItemCount() < 1) {return;}
+    
+    QTreeWidgetItem *qWi;
+    qWi = ui->wTree->currentItem();
+    
+    if (qWi == 0) {return;}
+    
+    QString vItemString = "<item ptr=\"0\" type=\"BLANK\"/>";
+    
+    int vRefIndex = qWi->data(0, eElmRefRole).toInt();
+
+    int vTabCount = 0;
+    
+    QDomElement vChild = Core.mItemElmTable[vRefIndex].mElmRef.firstChildElement();
+    int vStart = Core.mItemElmTable[vRefIndex].mCharStart;
+    int vEnd = Core.mItemElmTable[vRefIndex].mCharEnd;
+    
+
+    if (vChild.isNull() == true) {
+        unloadXML();
+        
+        //Target element doesn't already have children.
+        vTabCount = calculateTabOrder(vStart-1);
+        
+        //Reverse search for "/>" starting from the last character of the Element.
+        int vWhere = Core.mXMLsource.lastIndexOf("/>", -1-(Core.mXMLsource.size()-1-vEnd));
+        if (vWhere >= 0) {
+            QString vInsertStr = ">\r\n"+QString(vTabCount+1, 0x9)+ \
+                vItemString+"\r\n"+QString(vTabCount, 0x9)+"</item>";
+            Core.mXMLsource.replace(vWhere, 2, vInsertStr);
+        }
+        
+        loadXML_L3();
+    } else {
+        //Target element already has children.
+        
+        //Reverse search in the Item table to find the final child of the selected item.
+        //(It's the last entry whose mParentIndex equals vRefIndex)
+        int vChildIndex = Core.mItemElmTable.size()-1;
+        while ((vChildIndex >= 0) && (Core.mItemElmTable[vChildIndex].mParentIndex != vRefIndex)) {
+            vChildIndex--;
+        }
+        if (vChildIndex >= 0) { //Just to be safe, -1 should not be possible.
+        
+            int vCharStart = Core.mItemElmTable[vChildIndex].mTrueCharStart;
+            int vCharEnd = Core.mItemElmTable[vChildIndex].mCharEnd;
+            
+            vTabCount = calculateTabOrder(vCharStart-1);
+    
+            QString vInsertStr = "\r\n" + QString(vTabCount, 0x9) + vItemString;
+            
+            unloadXML();
+            
+            Core.mXMLsource.insert(vCharEnd+1, vInsertStr);
+            
+            loadXML_L3();
+        }
+    }
+    
+}
+
+int MainWindow::calculateTabOrder(int aStart) {
+    bool vFlag = true;
+    int vTabCount = 0;
+    int vCharStart2 = aStart;
+    while ((vCharStart2 >= 0) && (vCharStart2 < Core.mXMLsource.size()) && (vFlag == true)) {
+        if (Core.mXMLsource[vCharStart2] == 0x9) {
+            vTabCount++;
+            vCharStart2--;
+        } else {
+            vFlag = false;
+        }
+    }
+    return vTabCount;
+}
+
+void MainWindow::on_actionDeleteItem_triggered()
+{
+    if (ui->wTree->topLevelItemCount() < 1) {return;}
+    
+    QTreeWidgetItem *qWi;
+    qWi = ui->wTree->currentItem();
+    
+    if (qWi == 0) {return;}
+
+    int vRefIndex = qWi->data(0, eElmRefRole).toInt();
+    int vCharStart = Core.mItemElmTable[vRefIndex].mCharStart;
+    int vCharEnd = Core.mItemElmTable[vRefIndex].mCharEnd+1;
+    
+    unloadXML();
+    
+    //Remove all characters related to the element + child elements.
+    Core.mXMLsource.remove(vCharStart, vCharEnd-vCharStart);
+    
+    //Clean up: Remove any /r and /n that came after the element
+    bool vFlag = true;
+    while ((vCharStart < Core.mXMLsource.size()) && (vFlag == true)) {
+        if ((Core.mXMLsource[vCharStart] == '\r') || (Core.mXMLsource[vCharStart] == '\n')) {
+            Core.mXMLsource.remove(vCharStart, 1);
+        } else {
+            vFlag = false;
+        }
+    }
+    //Clean up: Remove any Tab (0xA) that preceeded the element
+    vFlag = true;
+    vCharStart--;
+    while ((vCharStart >= 0) && (vCharStart < Core.mXMLsource.size()) && (vFlag == true)) {
+        if (Core.mXMLsource[vCharStart] == 0x9) {
+            Core.mXMLsource.remove(vCharStart, 1);
+            vCharStart--;
+        } else {
+            vFlag = false;
+        }
+    }
+    
+    loadXML_L3();
+}
+
+void MainWindow::on_actionClearXML_triggered()
+{
+
+    int vResult = QMessageBox::warning(this, "Flexible Editor", \
+        "This will remove ALL elements in the XML and leave only a base Element. \n\
+Do you wish to continue?", QMessageBox::Yes|QMessageBox::No, QMessageBox::No);
+
+    if (vResult == QMessageBox::Yes) {
+        unloadXML();
+        Core.mXMLsource = "<drd>\r\n</drd>";
+        loadXML_L3();
+    }
+}
+
+
 void MainWindow::on_mdiArea_subWindowActivated(QMdiSubWindow *arg1)
 {
    /* ItemView *theItemView;
     theItemView = (ItemView*)arg1;
     */
 }
+
+void MainWindow::on_wUpdate_clicked()
+{
+    if (Core.mXMLEditIndex < 0) {return;}
+    QString vNew = ui->wXMLEdit->toPlainText();
+    int vFirstChar = Core.mItemElmTable[Core.mXMLEditIndex].mCharStart;
+    int vLastChar = Core.mItemElmTable[Core.mXMLEditIndex].mCharEnd+1;
+    Core.mXMLsource = Core.mXMLsource.replace(vFirstChar, vLastChar-vFirstChar, vNew);
+    unloadXML();
+    loadXML_L3();
+    
+}
+

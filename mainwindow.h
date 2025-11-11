@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QTreeWidget>
 #include <QDomNode>
+#include <QXmlStreamReader>
 #include <QScriptEngine>
 
 #include <QLineEdit>
@@ -28,7 +29,7 @@ class MainWindow;
 }
 
 enum { eElmRefRole = Qt::UserRole, eWindowRole} ;
-
+enum { eBufferSystem_Single = 0, eBufferSystem_WriteBuffer} ;
 
 class BitmapView : public QGraphicsView {
     Q_OBJECT
@@ -46,8 +47,9 @@ public:
     Q_INVOKABLE void init(int aWidth, int aHeight);
     
     //Note: This is repeated for every class.. I can't find a way to compress it.
-    //Things like Q_INVOKABLE and "public slot" is handled by moc, but moc does not expand macros.
-    //#include does not work either.
+    //Things like Q_INVOKABLE and "public slot" is handled by moc, but moc does not expand macros,
+    //so I can't use a macro for it.
+    
     Q_INVOKABLE void move(int x, int y) {QWidget::move(x, y);} 
     Q_INVOKABLE void setGeometry ( int x, int y, int w, int h ) {QWidget::setGeometry(x, y, w, h);}
     Q_INVOKABLE void resize(int w, int h) {QWidget::resize(w, h);}
@@ -125,6 +127,7 @@ public:
     Q_INVOKABLE void resize(int w, int h) {QWidget::resize(w, h);}
 
     Q_INVOKABLE void addItem(const QString &text) {QComboBox::addItem(text);} 
+
     Q_INVOKABLE void setItemData(int index, const QVariant &value, int role=Qt::UserRole) {QComboBox::setItemData(index, value, role);} 
 
     //Custom methods:
@@ -249,6 +252,7 @@ struct tItemElmType {
     int mArrayIndex;
     int mArrayByteSz;
     quint32 mCharStart;
+    quint32 mTrueCharStart;
     quint32 mCharEnd;
 };
 
@@ -262,13 +266,18 @@ public:
     tCore();
     ~tCore();
     
+    bool mXMLFileOpened;
     QString mXMLsource;
     QString mXMLFileName;
     QString mXMLFileBasePath;
+    
+    int mXMLEditIndex;
 
     bool mBinFileOpened;
     QString mBinFileName;
     
+    QDomDocument mMainXML;
+   
     QList<tItemElmType> mItemElmTable;
     
     QList<int> mCommonElmIndexTable;
@@ -276,8 +285,16 @@ public:
     
     QList<tIconTableItem> mIconTable;
     
-    QByteArray mEditFileFullBuffer;
+    //Binary Buffering ->
+    int mBufferSystem;
+    QByteArray mEditFileFullBuffer; //Contains the whole file for eBufferSystem_Single, otherwise empty.
+    quint32 mBufferBlockSize;
+    QList<quint32> mBufferBlockLocations;
+    QList<QByteArray*> mBufferBlockData;
+    QFile mLockedBinQFile;
+    //<-
     
+    QString mDefaultNESPALFile;
     QByteArray mNESPal;
   
     tEventForScript *mEventForScript;
@@ -288,6 +305,8 @@ public:
     int mVersionDate;
     
     QIcon mDefaultIcon;
+    
+    bool mLowLevelErrorFlag;
 
     void error(QString aMessage, int aLevel);
     void scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElmRefIndex);
@@ -305,7 +324,7 @@ public:
     QDomElement getEngineElmRef(QScriptEngine *aEngine);
     int getEngineElmIndex(QScriptEngine *aEngine);
     bool loadFileCommon(QString aFName, QByteArray *aByteArray);
-    
+    bool findIncludeFile(QString *aFName);
 
 };
 
@@ -322,38 +341,42 @@ public:
 
 private slots:
     void on_wTree_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
-    
     void on_wTree_itemClicked(QTreeWidgetItem *item, int column);
     void on_actionOpenXML_triggered();
-    
     void on_actionOpenBinary_triggered();
-    
     void on_actionSaveBinary_triggered();
-    
     void on_actionExit_triggered();
-    
     void on_mdiArea_subWindowActivated(QMdiSubWindow *arg1);
+    void on_wUpdate_clicked();
+    void on_actionSaveXML_triggered();
+    void on_actionInsertItem_triggered();
+    void on_actionDeleteItem_triggered();
+    void on_actionReloadXML_triggered();
+    void on_actionClearXML_triggered();
+    void on_actionInsertChild_triggered();
+    void on_actionNewXML_triggered();
     
 public:
-
     void dev_init_();
-    void dev_init_SRFX_();
-    void loadXML();
-    void loadXMLRecursive();
-    void loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus);
-    void loadBinFile(QString aFName, int aMode);
     void loadXMLFile(QString aFName);
+    void loadXML_L2(QString aFName);
+    void loadXML_L3();
+    void loadXML_L4();
+    void loadXMLRecursive();
+    void loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus, QXmlStreamReader *aReader);
+    void loadBinFile(QString aFName, int aMode);
+    void saveBinFile(QString aFName);
+    void saveXML();
     void dev_init_combo_(QString aXML, QString aBIN);
     void load_NES_Palette(QString aFName);
     void selectXMLfile();
     void selectBinFile();
-    void saveBinFile(QString aFName);
     void unloadXML();
     void init();
     void updateWindowTitle();
-    
+    void disableDirectEdit();
     void closeEvent(QCloseEvent *aCEvent);
-    
+    int calculateTabOrder(int aStart);
 
 private:
     Ui::MainWindow *ui;
