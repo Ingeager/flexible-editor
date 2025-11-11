@@ -709,11 +709,11 @@ void MainWindow::init() {
     dev_init_();
     #endif
     
-    #ifndef QT_DEBUG
+    /*#ifndef QT_DEBUG
         ui->wXMLEdit->hide();
         ui->wUpdate->hide();
         ui->verticalSpacer_2->setGeometry(QRect(0, 0, 0, 0));
-    #endif
+    #endif*/
     
     ui->centralWidget->setLayout( ui->horizontalLayout );
     ui->mainToolBar->hide();

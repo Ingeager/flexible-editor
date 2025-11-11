@@ -20,7 +20,7 @@ Introduction
 ------------
 !!! NOTE: This program is still in early development. Please make backups! !!!
 
-Flexible Editor is a project developed with the itention
+Flexible Editor is a project developed with the intention
 of creating a general data editor for ROMs, ISOs and other binaries.
 A general editor that is not restricted to one game or
 one system.
