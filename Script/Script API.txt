@@ -73,15 +73,15 @@ but I'm not sure there's any use for that possibility.
 
 The following Qt Widgets can currently be created:
 
-QLabel()
-QLineEdit()
-QPlainTextEdit()
-QComboBox()
-QPushButton()
-QFrame()
-QSlider()
-QCheckBox()
-QSpinBox()
+QLabel
+QLineEdit
+QPlainTextEdit
+QComboBox
+QPushButton
+QFrame
+QSlider
+QCheckBox
+QSpinBox
 
 These are all members of the global object.
 
@@ -139,7 +139,7 @@ Essential QWidget methods like move(x, y) and resize(w, h) are also available he
 In addition, BitmapView has these methods specific to it:
 
 void	init(aWidth, aHeight)		Use this to initialize the BitmapView after constructing it.
-void	refresh()				Use this whenever changes have been made to the bitmap.
+void	refresh()			Use this whenever changes have been made to the bitmap.
 void	setPixel(y, x, rgb24)
 void	drawLineX(y, x1, x2, rgb24)
 void	drawLineY(y1, y2, x, rgb24)
@@ -176,6 +176,10 @@ Object Core
 
 	Various essential functions and variables.
 
+Object Event
+
+	Object for global event dispatch and event function system.
+
 Core object members
 ===================
 
@@ -183,7 +187,7 @@ Number base_y
 Number base_x
 
 	Used to keep track of the next Y and X pixel locations to add a control.
-	This is reset when a new Item window is opened.
+	This is reset when a new Item window is opened to Y=12 and X=15 by default.
 	When adding controls, you probably want to use these when positioning the control.
 	Then you can add to these variables for your own purposes or to make things work
 	together with other script code.
@@ -247,6 +251,18 @@ Bool getFlag(String flagname)
 
 	Checks FLAG attribute in the Item element and returns true if 'flagname' is found in it. 
 
+void setArrayIndex(Number index) · · · (Added 250823)
+
+	Set current array index if Item element is an array.
+	
+Number getArrayIndex() · · · (Added 250823)
+
+	Get current array index if Item element is an array.
+
+void setArrayByteSize(Number bytes) · · · (Added 250823)
+
+	Set the byte size of each index in the array. The default is 1.
+
 Bool hasText()
 
 	Check if the item element has text. (If anything is contained within <item> </item>)
@@ -258,3 +274,52 @@ String getText()
 Array getList(String listname)
 
 	Retrieve LIST element with key "listname" as an array of strings.
+
+String loadTextFile(String filename) · · · (Added 250823)
+
+	Load a text file as a String. "filename" must be absolute, or relative
+	to the program folder, or relative to the currently open XML.
+
+Event object / Event object members
+===================================
+
+"Event" is an object a global event dispatch/handling system.
+It has a function "dispatch" for dispatching an event.
+It has one Qt Object signal simply named "signal", that can be connected to an event handler function.
+
+Through this mechanism, scripts can communicate internally without being limited to specific functions, variables or Qt Object signals, or having to know their names.
+
+When calling "dispatch" function, it takes one Value argument, containing event bits, from predefined or custum values.
+Also, handler functions must take one Value argument for the event bits.
+
+(For now, events is used by common_default.js when there is an Array index tuner and the
+Array index is changed, and it dispatches "Event.bit.changeIndex".)
+
+
+Dispatch example:
+
+	//Dispatch this event to any handler functions connected to the event mechanism.
+
+	Event.dispatch(Event.bit.changeIndex);
+
+Handler function example:
+
+	...
+	//Connect signal to handler function
+	Event.signal.connect(this, this.eventHandlerFunc);
+	...
+
+	//Handler function
+	MyObject.prototype.eventHandlerFunc = function(a_event_bits) {
+		if (a_event_bits & Event.bit.changeIndex) {
+			//Update all GUI elements relevant to arrays
+			...
+		}
+	}
+
+
+Values for Object "bit":
+
+	Event.bit.changeIndex = 1	Array index has been changed.
+	Event.bit.changeMajor = 2	Major change, the script should update all GUI.
+	Event.bit.user = 256		User bits can be defined from here (bit 8) and up.
