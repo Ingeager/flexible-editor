@@ -37,7 +37,7 @@ CommonInt = function(a_intSize) {
 	this.hasBitControls = false;
 	this.bitClass = {};
 
-	//Array support hack for v250813
+	//Array support hack for b250813
 	if (Core.versionDate < 250823) {
 		Core.arrayIndex = 0;
 		Core.arrayByteSize = 2;
@@ -48,7 +48,6 @@ CommonInt = function(a_intSize) {
 		Core.setByteWr = function(a_addr, a_val) {Core.setByte(a_addr, a_val);}
 	}
 
-	//Core.addFlag('SIGNED');
 	
 }
 
@@ -61,6 +60,16 @@ CommonInt.prototype.init = function() {
 	this.bitSize &= 0xFFF8;
 
 	this.byteSize = (this.bitSize >> 3);
+	
+	if (Core.getFlag("BIGENDIAN") == true) {
+		if (Core.versionDate >= 251117) {
+			//Use functionality in Flexible Editor
+			Core.setBigEndianByteSize(this.byteSize);
+		} else {
+			//Use internal functionality
+			this.bigEndian = true;
+		}
+	}
 
 	//Arrays 
 	if (Core.hasAttr("len") == true) {
@@ -172,6 +181,7 @@ CommonInt.prototype.init = function() {
 		Core.base_y += ctrlHeight + 10;
 
 	} else {
+		//Editing using List / QComboBox
 		this.listCtrl = new QComboBox(parentWnd);
 		this.listCtrl.move(Core.base_x, Core.base_y);
 		this.listCtrl.resize(600, 40);
@@ -184,7 +194,7 @@ CommonInt.prototype.init = function() {
 
 		this.listCtrl.editable = false;
 		this.listCtrl.styleSheet = "font: 25px";
-		this.listCtrl['currentIndexChanged(int)'].connect(this, this.listChangeFunc);
+		this.listCtrl['activated(int)'].connect(this, this.listChangeFunc);
 		this.listCtrl.show();
 
 		Core.base_y += 50;
@@ -197,6 +207,10 @@ CommonInt.prototype.init = function() {
 	
 	if (Core.hasAttr("bit") == true) {
 		this.bitClass = new CommonBit();
+		//Big Endian support for b251111 and earlier
+		if (this.bigEndian == true) {
+			this.bitClass.bigEndianByteSize = this.byteSize;
+		}
 		this.bitClass.initBitAttr(this.bitSize);
 		this.bitClass.parentIntClass = this;
 		this.bitClass.changeFunc = function(a_bit_index) {
@@ -280,10 +294,20 @@ CommonInt.prototype.editTextFunc = function(a_text) {
 
 CommonInt.prototype.listChangeFunc = function(a_index) {
 	var low = a_index & 0xFF;
-	Core.setByteWr(0, low);
-	if (this.bitSize > 8) {
-		var high = (a_index >> 8) & 0xFF;
+	var high = (a_index >> 8) & 0xFF;
+	
+	if ((this.bigEndian == false) || (this.bitSize <= 8)) {
+		//print("L->0");
+		Core.setByteWr(0, low);
+	}
+	if ((this.bigEndian == false) && (this.bitSize > 8)) {
+		//print("H->1");
 		Core.setByteWr(1, high);
+	}
+	if ((this.bigEndian == true) && (this.bitSize > 8) && (this.bitSize <= 16)) {
+		//print("H->0 + L->1");
+		Core.setByteWr(0, high);
+		Core.setByteWr(1, low);
 	}
   
 }
@@ -310,11 +334,24 @@ CommonInt.prototype.updateControl = function(a_sourceLength) {
 	
 	this.previousTextLength = this.editCtrl.text.length;
   } else {
-	var value;
-	value = Core.getByteWr(0);
-	if (this.bitSize > 8) {
-		value |= (Core.getByteWr(1) << 8);
+	//Using List
+	var value = 0;
+	if ((this.bigEndian == false) || (this.bitSize <= 8)) {
+		value = Core.getByteWr(0);
+		//print("L<-0");
 	}
+	if ((this.bigEndian == false) && (this.bitSize > 8)) {
+		value |= (Core.getByteWr(1) << 8);
+		//print("H<-1");
+	}
+	//if Big Endian and more than two bytes, do nothing.
+	 if ((this.bigEndian == true) && (this.bitSize > 8) && (this.bitSize <= 16)) {
+		value = Core.getByteWr(1);
+		value |= (Core.getByteWr(0) << 8);
+		//print("L<-1 + H<-0");
+
+	}
+
 	if (value < this.listCtrl.count) {
 		this.listCtrl.setCurrentIndex(value);
 	}
@@ -342,7 +379,8 @@ CommonInt.prototype.getString = function() {
 	var negative = false;
 	
 	 if (this.signed == true) {
-		var bytev = Core.getByteWr(this.byteSize-1);
+		index = (this.bigEndian == false) ? this.byteSize-1 : 0;
+		var bytev = Core.getByteWr(index);
 		if (bytev & 0x80) {
 			negative = true;
 			this.val_table[0] = 1;
@@ -540,21 +578,24 @@ CommonInt.prototype.addRelative = function(a_addVal) {
   var cap = 0;
 
   if (this.signed == true) {
-    val = Core.getByteWr(this.byteSize-1);
+    var index_b = (this.bigEndian == false) ? this.byteSize-1 : 0;
+    val = Core.getByteWr(index_b);
     negative = ((val & 0x80) > 0) ? true : false;
   }
   carry = a_addVal;
   for (index = 0; index < this.byteSize-1; index++) {
-    val = Core.getByteWr(index);
+    var index_b = (this.bigEndian == false) ? index : (this.byteSize-1-index);
+    val = Core.getByteWr(index_b);
     val += carry;
     carry = (val >> 8);
     if (val < 0) {
 	val += 256;
     }
     val = val & 0xFF;
-    Core.setByteWr(index, val);
+    Core.setByteWr(index_b, val);
   }
-  val = Core.getByteWr(this.byteSize-1);
+  var index_b = (this.bigEndian == false) ? this.byteSize-1 : 0;
+  val = Core.getByteWr(index_b);
   if (this.signed == true) {
 	val &= 0x7F;
   }
@@ -588,17 +629,18 @@ CommonInt.prototype.addRelative = function(a_addVal) {
     }
     val = val & 0xFF;
   }
-  Core.setByteWr(this.byteSize-1, val);
+  Core.setByteWr(index_b, val);
 
   if (cap != 0) {
     for (index = 0; index < this.byteSize; index++) {
-      val = Core.getByteWr(index);
+      var index_b = (this.bigEndian == false) ? index : (this.byteSize-1-index);
+      val = Core.getByteWr(index_b);
       if ((index == this.byteSize-1) && (this.signed == true)) {
         val = cap < 0 ? 0x80 : 0x7F;
       } else {
         val = cap < 0 ? 0 : 0xFF;
       }
-      Core.setByteWr(index, val);
+      Core.setByteWr(index_b, val);
     }
   }
 

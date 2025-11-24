@@ -6,6 +6,7 @@ CommonBit = function() {
 	this.v_spacing = 19;
 	this.ctrlRef = [];
 	this.changeFunc = function() {};
+	this.bigEndianByteSize = 0;
   
 	//Array support hack for v250813
 	if (Core.versionDate < 250823) {
@@ -18,7 +19,6 @@ CommonBit = function() {
 }
 
 CommonBit.prototype.initBitAttr = function(a_bitCount) {
-
   var str = Core.getAttr("bit");
   this.initString(str, ".", a_bitCount);
 }
@@ -64,6 +64,9 @@ CommonBit.prototype.addControl = function(a_caption, a_LSBpos) {
 CommonBit.prototype.updateCtrl = function(a_ix) {
   var byte_ix = this.bit_ix[a_ix] >> 3;
   var sub_bit = this.bit_ix[a_ix] & 7;
+  if (this.bigEndianByteSize > 0) {
+	byte_ix = (Math.floor(byte_ix / this.bigEndianByteSize)*this.bigEndianByteSize) + (this.bigEndianByteSize-1-(byte_ix % this.bigEndianByteSize));
+  }
   var v = ((Core.getByteWr(byte_ix) & (1<<sub_bit)) > 0);
   this.ctrl[a_ix].programChanged = true;
   this.ctrl[a_ix].setChecked(v);
@@ -83,6 +86,9 @@ CommonBit.prototype.setCheckFunc = function(a_state) {
   if (thisRef.ctrl[ix].programChanged == true) {return;}
   var bitv = (a_state > 0) ? 1 : 0;
   var byte_ix = thisRef.bit_ix[ix] >> 3;
+  if (thisRef.bigEndianByteSize > 0) {
+	byte_ix = (Math.floor(byte_ix / thisRef.bigEndianByteSize)*thisRef.bigEndianByteSize) + (thisRef.bigEndianByteSize-1-(byte_ix % thisRef.bigEndianByteSize));
+  }
   var sub_bit = thisRef.bit_ix[ix] & 7;
   var bytev = Core.getByteWr(byte_ix);
   bytev &= (0xFF ^ (1 << sub_bit));

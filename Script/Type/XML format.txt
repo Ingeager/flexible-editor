@@ -2,6 +2,9 @@
 Update Notes
 ============
 
+Upcoming Release:
+ - Added BIGENDIAN flag for Integer types.
+
 Release 2025-11-11:
  - Documented NAME Attribute for Item, which I forgot to add for the first release.
  - Added ICON Element.
@@ -241,6 +244,9 @@ int		General Integer, the bitsize is 16 by default and
 		If it's in the same element it changes the intsize for that Item.
 		If there's an INTSIZE attribute in the INFO element it sets it as a global default.
 
+All integers are by default edited in Unsigned Hexadecimal in Little-Endian byte order.
+This can be changed using the FLAG attribute and BASE attribute.
+
 Supported attributes for Integer Types:
 	INTSIZE		Decimal value. Change the Integer bitsize for any Integer type. This can be any
 			number divisible by 8. The actual upper limit hasn't been tested,
@@ -268,7 +274,10 @@ Supported attributes for Integer Types:
 
 Supported flags for all Integer Types:
 	SIGNED		Edit the integer as a Two's complement Signed value.
-	DECIMAL		Edit the integer as a decimal (Base 10) number. 
+	DECIMAL		Edit the integer as a decimal (Base 10) number.
+	BIGENDIAN	Edit the integer in Big-Endian mode.
+			This also works for Bit toggling with BIT attribute and editing
+			using a List.
 
 	Examples:
 
@@ -372,6 +381,7 @@ if supported (Currently the case for all Integers).
 A slider control will be added for changing the index.
 Attributes ARRINDEX_LABLIST or ARRINDEX_LABDEF can be defined to give the
 Array indexes labels from a List item, in this case the index is changed using a dropdown list.
+(See demo.xml for some examples.)
 
 Array-specific Attributes:
 
