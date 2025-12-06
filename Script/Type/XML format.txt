@@ -4,6 +4,7 @@ Update Notes
 
 Upcoming Release:
  - Added BIGENDIAN flag for Integer types.
+ - Added LAB Item attribute.
 
 Release 2025-11-11:
  - Documented NAME Attribute for Item, which I forgot to add for the first release.
@@ -110,13 +111,15 @@ Supported attributes for ITEM:
 	ICON	Use a graphical icon for this Item in the Item Tree.
 		Value must correspond to the KEY attribute from an ICON Element.
 		(See "ICON Element" section)
+	LAB	Display a comment. If present, it will be displayed in an edit control at the
+		top of the editing window.
 
 An Item for editing data will use either PTR or RELPTR.
 (They can both be used, but there's not much point)
 See the section on Pointers further on for more details.
 
-Text: ITEM elements can contain a text part that will function as a comment.
-If present, it will be displayed in an edit control in the editing window.
+Text: ITEM elements can contain a text part. This works exactly the same as the LAB attribute.
+If it's present, it will be displayed in an edit control at the top of the editing window.
 
 BRA
 ---
