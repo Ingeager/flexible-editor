@@ -22,7 +22,7 @@ CommonInt = function(a_intSize) {
 	this.signed = false;
 	this.usingList = false;
 	this.arrayEnable = true;
-
+	
 	this.arr_size = 0;
 	this.mul_table = [];
 	this.val_table = [];
@@ -33,10 +33,13 @@ CommonInt = function(a_intSize) {
 	this.mul_table2 = [];
 	this.mul_table2_size = 0;
 	this.val_table2_size = 0;
-	
+
+	this.editCtrl = 0;
+	this.listCtrl = 0;
+	this.statusCtrl = 0;
 	this.hasBitControls = false;
 	this.bitClass = {};
-
+	
 	//Array support hack for b250813
 	if (Core.versionDate < 250823) {
 		Core.arrayIndex = 0;
@@ -182,6 +185,7 @@ CommonInt.prototype.init = function() {
 
 	} else {
 		//Editing using List / QComboBox
+		
 		this.listCtrl = new QComboBox(parentWnd);
 		this.listCtrl.move(Core.base_x, Core.base_y);
 		this.listCtrl.resize(600, 40);
@@ -197,7 +201,16 @@ CommonInt.prototype.init = function() {
 		this.listCtrl['activated(int)'].connect(this, this.listChangeFunc);
 		this.listCtrl.show();
 
-		Core.base_y += 50;
+		Core.base_y += 45;
+		
+		this.statusCtrl = new QLabel(parentWnd);
+		this.statusCtrl.move(Core.base_x, Core.base_y);
+		this.statusCtrl.resize(600, 30);
+		this.statusCtrl.text = "";
+		this.statusCtrl.styleSheet = "font: 16px";
+		this.statusCtrl.show();
+		
+		Core.base_y += this.statusCtrl.height + 10;
 	  
 	}
 	
@@ -238,15 +251,15 @@ CommonInt.prototype.eventFunc = function(a_event_bits) {
 }
 
 CommonInt.prototype.upDownFunc = function(a_value) {
-  var v = a_value;
-  this.editSpin.value = 1;
-  if (v > 1) {
-	this.addRelative(1);
-  }
-  if (v < 1) {
-	this.addRelative(-1);
-  }
-  this.updateControl();
+	var v = a_value;
+	this.editSpin.value = 1;
+	if (v > 1) {
+		this.addRelative(1);
+	}
+	if (v < 1) {
+		this.addRelative(-1);
+	}
+	this.updateControl();
 	if (this.hasBitControls == true) {
 		this.bitClass.updateAll();
 	}
@@ -297,19 +310,17 @@ CommonInt.prototype.listChangeFunc = function(a_index) {
 	var high = (a_index >> 8) & 0xFF;
 	
 	if ((this.bigEndian == false) || (this.bitSize <= 8)) {
-		//print("L->0");
 		Core.setByteWr(0, low);
 	}
 	if ((this.bigEndian == false) && (this.bitSize > 8)) {
-		//print("H->1");
 		Core.setByteWr(1, high);
 	}
 	if ((this.bigEndian == true) && (this.bitSize > 8) && (this.bitSize <= 16)) {
-		//print("H->0 + L->1");
 		Core.setByteWr(0, high);
 		Core.setByteWr(1, low);
 	}
-  
+	this.statusCtrl.text = "";
+
 }
 
 CommonInt.prototype.updateControl = function(a_sourceLength) {
@@ -338,22 +349,22 @@ CommonInt.prototype.updateControl = function(a_sourceLength) {
 	var value = 0;
 	if ((this.bigEndian == false) || (this.bitSize <= 8)) {
 		value = Core.getByteWr(0);
-		//print("L<-0");
 	}
 	if ((this.bigEndian == false) && (this.bitSize > 8)) {
 		value |= (Core.getByteWr(1) << 8);
-		//print("H<-1");
 	}
 	//if Big Endian and more than two bytes, do nothing.
 	 if ((this.bigEndian == true) && (this.bitSize > 8) && (this.bitSize <= 16)) {
 		value = Core.getByteWr(1);
 		value |= (Core.getByteWr(0) << 8);
-		//print("L<-1 + H<-0");
-
 	}
 
 	if (value < this.listCtrl.count) {
 		this.listCtrl.setCurrentIndex(value);
+		this.statusCtrl.text = "";
+	} else {
+		this.listCtrl.setCurrentIndex(0);
+		this.statusCtrl.text = "Warning: Input value is larger than list size!";
 	}
   }
 }
