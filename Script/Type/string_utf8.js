@@ -7,6 +7,6 @@ function init() {
 	DefaultControls.init();
 	
 	stringHandler = new CommonString();
-	stringHandler.format = "";
+	stringHandler.format = "UTF-8";
 	stringHandler.init();
 }

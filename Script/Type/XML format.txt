@@ -2,9 +2,15 @@
 Update Notes
 ============
 
-Upcoming Release:
+Script Update Pack 2025-12-22:
  - Added BIGENDIAN flag for Integer types.
  - Added LAB Item attribute.
+ - Palette types now has a page selector and can be larger than 256 entries.
+ - Added PAL_32 Type (RGBA8888), also added PAL32_ABGR, PAL32_ARGB and PAL32_BGRA.
+ - Added PAL_24BGR Type (BGR888)
+ - Added PAL_15A Type (RGB555 with MSB as Transparency toggle)
+ - Added BGR Flag for all Palette types.
+ - Bugfix: Integers: Bit editing controls and List control now reflect each other's changes.
 
 Release 2025-11-11:
  - Documented NAME Attribute for Item, which I forgot to add for the first release.
@@ -302,7 +308,7 @@ Supported attributes:
 String Types
 ------------
 
-string		ANSI string. Can be fixed-size or character-terminated.
+string		ANSI/Windows-1252 or ASII string. Can be fixed-size or character-terminated.
 
 Supported attributes:
 
@@ -319,14 +325,23 @@ Types: Graphics - Palette
 pal_nes		NES Palette
 pal_15		15 bit palette, 5 bits each for R, G and B. (RGB555)
 		Use for SNES, GameBoy Color, GameBoy Advance.
-		Can probably also be used for palette contents of PlayStation1 CLUT
-		data but it hasn't been tested.
+pal_15a		Same as pal_15, but adds a 1-bit transparency toggle for the upper bit,
+		making it suitable for PlayStation1 CLUT data.
 pal_smd		Sega Mega Drive and Game Gear palette data. (RGB333)
 pal_6		Sega Master System palette (RGB222)
-pal_24		24 bit palette (RGB888)
+pal_24		24 bit palette (RGB888), Red is first byte and Blue is the 3rd.
+pal_24bgr	24 bit palette (BGR888), Blue is first byte and Red is the 3rd.
+pal_32		32 bit palette (RGBA8888), with channels in order Red, Green, Blue, Alpha.
+pal_32abgr	32 bit palette (ABGR8888), reverse of the above (Alpha, Blue, Green, Red)
+pal_32argb	32 bit palette (ARGB8888), with channels in order Alpha, Red, Green, Blue.
+pal_32bgra	32 bit palette (BGRA8888), with channels in order Blue, Green, Red, Alpha.
 
 Supported attributes for all Palette Types:
-	LEN	Number of palette entries in hexadecimal. The editor is currently limited to 256.
+	LEN	Number of palette entries in hexadecimal.
+		If it's higher than 0x100 (256), a page selector is added.
+
+Supported Flags for all Palette Types:
+	BGR	Swaps the position of Blue and Red channels.
 
 Types: Graphics - Other
 -----------------------
@@ -375,6 +390,8 @@ These are data types that was specified in the DRD standard from 2006,
 but has not yet been implemented in Flexible Editor.
 
 tbl_string	String editing using a .tbl file.
+		A work in progress script for this type is present, but it's early in development
+		and is not safe to use.
 
 Arrays
 ======
@@ -480,6 +497,11 @@ An Item element's attributes will have first priority. So if an attribute is fou
 itself, and a COMMON element, the one from the Item will be used.
 
 COMMON elements currently can't be nested (A COMMON element can't have a COMMON attribute.)
+
+Case Sensitivity
+================
+Generally speaking, Element tags are completely case insensitive. (You can do "ITem" and it should work)
+For attributes, they need to be either Lower case or Upper case.
 
 Customization / User Scripts for Data Types
 ===========================================

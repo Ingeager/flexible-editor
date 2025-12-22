@@ -3,7 +3,7 @@ CommonBit = function() {
 	this.ctrlCount = 0;
 	this.ctrl = [];
 	this.bit_ix = [];
-	this.v_spacing = 19;
+	this.v_spacing = 22;
 	this.ctrlRef = [];
 	this.changeFunc = function() {};
 	this.bigEndianByteSize = 0;
@@ -46,9 +46,10 @@ CommonBit.prototype.addControl = function(a_caption, a_LSBpos) {
   this.ctrlRef[ix].index = ix;
   var parent = Core.window;
   this.ctrl[ix] = new QCheckBox(parent);
-  this.ctrl[ix].text = a_caption;
-  this.ctrl[ix].move(Core.base_x, Core.base_y);
-  this.ctrl[ix].resize(200, 25);
+  this.ctrl[ix].text = " " + a_caption;
+  this.ctrl[ix].styleSheet = "font: 17px";
+  this.ctrl[ix].move(Core.base_x+5, Core.base_y);
+  this.ctrl[ix].resize(550, 25);
   this.ctrl[ix].programChanged = false;
   this.ctrl[ix].stateChanged.connect(this.ctrlRef[ix], this.setCheckFunc);
   this.ctrl[ix].show();

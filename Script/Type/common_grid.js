@@ -97,6 +97,15 @@ GridHandler.prototype.setCurrentIndex = function(a_index) {
 	this.current_x = a_index % this.width;
 }
 
+GridHandler.prototype.setPage = function(a_page) {
+	this.current_page = a_page;
+	var index = this.getIndex();
+	if (index >= this.entries) {
+		this.current_x = 0;
+		this.current_y = 0;
+	}
+}
+
 GridHandler.prototype.eventMousePress = function(a_buttons, a_y, a_x) {
 	var celly_click = 0;
 	var cellx_click = 0;

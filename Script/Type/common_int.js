@@ -1,5 +1,10 @@
 //FLEX_INCLUDE "common_bit.js"
 
+//Information for UI:
+//FLEX_FLAG "SIGNED" "Signed Integer"
+//FLEX_FLAG "BIGENDIAN" "Big-Endian Integer"
+//FLEX_FLAG "DECIMAL" "Decimal Value"
+
 CommonInt = function(a_intSize) {
 	//Set up defaults. 
 	//Important settings can be changed before calling "init".
@@ -210,7 +215,7 @@ CommonInt.prototype.init = function() {
 		this.statusCtrl.styleSheet = "font: 16px";
 		this.statusCtrl.show();
 		
-		Core.base_y += this.statusCtrl.height + 10;
+		Core.base_y += this.statusCtrl.height;
 	  
 	}
 	
@@ -221,14 +226,14 @@ CommonInt.prototype.init = function() {
 	if (Core.hasAttr("bit") == true) {
 		this.bitClass = new CommonBit();
 		//Big Endian support for b251111 and earlier
+		//(this.bigEndian = true only if version is old, so no need to check here)
 		if (this.bigEndian == true) {
 			this.bitClass.bigEndianByteSize = this.byteSize;
 		}
 		this.bitClass.initBitAttr(this.bitSize);
 		this.bitClass.parentIntClass = this;
 		this.bitClass.changeFunc = function(a_bit_index) {
-			var str = this.parentIntClass.getString();
-			this.parentIntClass.editCtrl.setText(str);
+			this.parentIntClass.updateControl();
 		}
 		this.hasBitControls = true;
 	}
@@ -321,6 +326,9 @@ CommonInt.prototype.listChangeFunc = function(a_index) {
 	}
 	this.statusCtrl.text = "";
 
+	if (this.hasBitControls == true) {
+		this.bitClass.updateAll();
+	}
 }
 
 CommonInt.prototype.updateControl = function(a_sourceLength) {

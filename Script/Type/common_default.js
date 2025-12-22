@@ -13,10 +13,11 @@ DefaultControls.ctrlRelPtrEdit = 0;
 DefaultControls.ctrlCommonEdit = 0;
 DefaultControls.ctrlArrayCombo = 0;
 DefaultControls.ctrlArraySpinBox = 0;
+DefaultControls.ctrlText = 0;
+DefaultControls.ctrlText2 = 0;
 DefaultControls.majorChangeFunc = 0;
 DefaultControls.textSpacingHeight = 24;
-DefaultControls.textCtrl = 0;
-DefaultControls.textCtrl2 = 0;
+DefaultControls.width = 600;
 
 DefaultControls.init = function() {
 	DefaultControls.addDefault();
@@ -383,12 +384,13 @@ DefaultControls.addText = function() {
 		var y = Core.base_y;
 		var x = Core.base_x;
 
-		DefaultControls.textCtrl = new QLineEdit(parentWnd);
-		DefaultControls.textCtrl.move(x, y);
-		DefaultControls.textCtrl.text = text;
-		DefaultControls.textCtrl.resize(600, 20);
-		DefaultControls.textCtrl.readOnly = true;
-		DefaultControls.textCtrl.show();
+		DefaultControls.ctrlText = new QLineEdit(parentWnd);
+		DefaultControls.ctrlText.move(x, y);
+		DefaultControls.ctrlText.text = text;
+		DefaultControls.ctrlText.resize(DefaultControls.width, 20);
+		DefaultControls.ctrlText.readOnly = true;
+		DefaultControls.ctrlText.styleSheet = "font: 12px";
+		DefaultControls.ctrlText.show();
 
 		Core.base_y = y + 28;
 	}
@@ -399,12 +401,13 @@ DefaultControls.addText = function() {
 		var y = Core.base_y;
 		var x = Core.base_x;
 
-		DefaultControls.textCtrl2 = new QLineEdit(parentWnd);
-		DefaultControls.textCtrl2.move(x, y);
-		DefaultControls.textCtrl2.text = text;
-		DefaultControls.textCtrl2.resize(600, 20);
-		DefaultControls.textCtrl2.readOnly = true;
-		DefaultControls.textCtrl2.show();
+		DefaultControls.ctrlText2 = new QLineEdit(parentWnd);
+		DefaultControls.ctrlText2.move(x, y);
+		DefaultControls.ctrlText2.text = text;
+		DefaultControls.ctrlText2.resize(DefaultControls.width, 20);
+		DefaultControls.ctrlText2.readOnly = true;
+		DefaultControls.ctrlText2.styleSheet = "font: 12px";
+		DefaultControls.ctrlText2.show();
 
 		Core.base_y = y + 28;
 	}
@@ -419,7 +422,7 @@ DefaultControls.addLine = function() {
 	ctrl = new QFrame(parentWnd);
 	ctrl.move(x, y);
 	ctrl.setFrameStyle(4);
-	ctrl.resize(600, 2);
+	ctrl.resize(DefaultControls.width, 2);
 	ctrl.show();
 
 	Core.base_y = y + 12;

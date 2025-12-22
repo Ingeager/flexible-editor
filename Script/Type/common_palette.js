@@ -1,4 +1,6 @@
 //FLEX_INCLUDE "common_grid.js"
+//FLEX_ATTR "LEN" "Number of entries" "HEX" "10"
+//FLEX_FLAG "BGR" "Swap Red and Blue channels"
 
 CommonPalette = function() {
 	this.indexed = false;
@@ -9,9 +11,12 @@ CommonPalette = function() {
 	this.channelBitSizes = [8, 8, 8];	//Channel bit sizes in order R, G, B.
 	this.channelBitLSBIndex = [0, 8, 16];  //LSB position in data of LSB bit of each channel in order: R, G, B.
 							//(Does not have to be in increasing value, you can do [16, 8, 0] for example.)
-	this.bigEndian = false;     // (To be implemented)
+	this.bigEndian = false;     // Big-endian setting
+	this.reverseRGB = false;
 	this.palGrid = 0;
+	this.palTableGrid = 0;
 	this.BMView = 0;
+	this.palTable_BMView = 0;
 	this.pageSpinCtrl = 0;
 	this.valueCtrl = 0;
 	this.rgbValueCtrl = 0;
@@ -31,6 +36,20 @@ CommonPalette = function() {
 
 CommonPalette.prototype.init = function () {
 
+	if (this.bigEndian == true) {
+		if (Core.versionDate >= 251117) {
+			var byteSize = this.bitSize >> 3;
+			Core.setBigEndianByteSize(byteSize);
+		}
+	}
+
+	if (Core.getFlag("BGR") == true) {
+		//this.reverseRGB = true;
+		var a = this.channelBitLSBIndex[0];
+		this.channelBitLSBIndex[0] = this.channelBitLSBIndex[2];
+		this.channelBitLSBIndex[2] = a;
+	}
+	
 	var parentWnd = Core.window;
 	this.BMView = new BitmapView(parentWnd);
 	this.BMView.move(Core.base_x, Core.base_y);
@@ -43,7 +62,7 @@ CommonPalette.prototype.init = function () {
 	if (entries > 0x100) {
 		cellsx = 16;
 		cellsy = 16;
-		pages = Math.floor(entries / 0x100);
+		pages = Math.floor((entries-1) / 0x100);
 	} else if (entries > 16) {
 		cellsy = ((entries-1) >> 4)+1;
 		cellsx = 16;
@@ -78,7 +97,7 @@ CommonPalette.prototype.init = function () {
 	this.BMView.refresh();
 	this.BMView.show();
 
-	/*if (pages > 0) {
+	if (pages > 0) {
 		var x2 = Core.base_x + wpixels + 15;
 		var ctrl = new QLabel(parentWnd);
 		ctrl.text = "Page:";
@@ -88,11 +107,15 @@ CommonPalette.prototype.init = function () {
 		ctrl = new QSpinBox(parentWnd);
 		this.pageSpinCtrl = ctrl;
 		ctrl.move(x2, Core.base_y+35);
-		ctrl.resize(35, 25);
+		ctrl.resize(45, 35);
+		ctrl.styleSheet = "font: 22px";
 		ctrl.minimum = 0;
 		ctrl.maximum = pages;
+		ctrl.value = 0;
+		ctrl.programChanged = false;
+		ctrl['valueChanged(int)'].connect(this, this.pageSpinEditFunc);
 		ctrl.show();
-	}*/
+	}
 
 	Core.base_y += (hpixels + 10);
 
@@ -273,8 +296,14 @@ CommonPalette.prototype.getColorBits = function(a_index, a_dataobj, a_chn_bits) 
 		 chn_state[chn] = -1;
 	}
 	while (subbitpos2 < this.bitSize) {
+		if (subbitpos >= 8) {
+			subbitpos = 0;
+			bytepos++;
+			bytev = Core.getByte(bytepos);
+		}
+
 		for (chn = 0; chn < this.channels; chn++) {
-			
+		
 			if ((a_chn_bits & (1 << chn)) >> 0) {
 				if (chn_state[chn] == -1) {
 					if (subbitpos2 >= this.channelBitLSBIndex[chn]) {
@@ -296,12 +325,6 @@ CommonPalette.prototype.getColorBits = function(a_index, a_dataobj, a_chn_bits) 
 		
 		subbitpos2++;
 		subbitpos++;
-		if (subbitpos >= 8) {
-			Core.getByte(bytepos, bytev);
-			subbitpos = 0;
-			bytepos++;
-			bytev = Core.getByte(bytepos);
-		}
 	}
 
 }
@@ -343,7 +366,9 @@ CommonPalette.prototype.setColorBits = function(a_index, a_dataobj, a_chn_bits) 
 			Core.setByte(bytepos, bytev);
 			subbitpos = 0;
 			bytepos++;
-			bytev = Core.getByte(bytepos);
+			if (subbitpos2 < this.bitSize) {
+				bytev = Core.getByte(bytepos);
+			}
 		}
 	}
 	
@@ -420,12 +445,15 @@ CommonPalette.prototype.palTableGridMousePressFunc = function(a_buttons, a_y, a_
 	this.BMView.refresh();
 }
 
-CommonPalette.prototype.pageSpinClickFunc = function() {
+CommonPalette.prototype.pageSpinEditFunc = function(a_value) {
+	if (this.pageSpinCtrl.programChanged == true) {
+		return;
+	}
+	
+	this.palGrid.setPage(a_value);
 
-}
-
-CommonPalette.prototype.pageSpinEditFunc = function() {
-
+	this.palGrid.redraw();
+	this.BMView.refresh();
 }
 
 CommonPalette.prototype.eventFunc = function(flags) {

@@ -8,11 +8,14 @@ function init() {
 	palObj.indexed = false;
 	palObj.bitSize = 16;
 	palObj.channelBitSizes = [3, 3, 3];
-	palObj.channelBitLSBIndex = [9, 13, 1];
-	palObj.bigEndian = false;
-	//^^^ Note: SMD/Genesis Palettes are basically Big-endian.
-	//CommonPalette will support that in the future.
-	//For now, do Little Endian but with the strange Bit order.
+	if (Core.versionDate >= 251117) {
+		palObj.channelBitLSBIndex = [1, 5, 9];
+		palObj.bigEndian = true;
+	} else {
+		//Temporary compatibility with b251111 and older
+		palObj.channelBitLSBIndex = [9, 13, 1];
+		palObj.bigEndian = false;
+	}
 	
 	palObj.init();
 }
