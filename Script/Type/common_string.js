@@ -84,9 +84,10 @@ CommonString.prototype.readString = function() {
 		} else {
 
 			if (Core.versionDate >= 251205) {
-				convertedStr = Core.stringDecode(buffer, len, this.format);
+				obj = Core.stringDecode(buffer, len, this.format);
+				convertedStr = obj.data;
 				
-				for (ccount = 0; ccount < convertedStr.length; ccount++) {
+				for (ccount = 0; ccount < obj.size; ccount++) {
 					ccode = convertedStr.charCodeAt(ccount);
 					if ((endCode >= 0) && (ccode == endCode)) {
 						break;
