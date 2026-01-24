@@ -1,4 +1,5 @@
 //FLEX_INCLUDE "common_grid.js"
+
 //FLEX_ATTR "LEN" "Number of entries" "HEX" "10"
 //FLEX_FLAG "BGR" "Swap Red and Blue channels"
 
@@ -90,6 +91,9 @@ CommonPalette.prototype.init = function () {
 	this.palGrid.drawItemFunc = this.drawItemFunc;
 	
 	this.BMView.mousePress.connect(this, this.entryGridMousePressFunc);
+	/*if (Core.versionDate >= 260109) {
+		this.BMView.mouseMove.connect(this, this.);
+	}*/
 	
 	event.signal.connect(this, this.eventFunc);
 	
@@ -255,7 +259,7 @@ CommonPalette.prototype.updateCurrentIndex = function() {
 		var data = new Array(1);
 		this.getColorBits(index, data, 1);
 		var indexedPaletteIndex = data[0];
-		this.palTableGrid.setCurrentIndex(indexedPaletteIndex);
+		this.palTableGrid.setIndex(indexedPaletteIndex);
 		this.updateIndexedValueText(indexedPaletteIndex);
 		this.updateRGBvalueText(index);
 		

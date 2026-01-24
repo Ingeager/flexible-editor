@@ -42,12 +42,18 @@ function GridHandler(argcellw, argcellh, argw, argh, arg_entries) {
 		this.entries = arg_entries;
 	}
 
+   this.bmvObject = 0;
+   this.drawCmd = [];
 	this.bgcolor = 0;
 	this.currentcolor = 0xCFCFCF;
+   this.rangecolor = 0x8F8F8F;
 	this.gridcolor = 0x2F2F2F;
-	this.bmvObject = 0;
 	this.selectable = true;
 	this.multiPage = false;
+   this.multiSelect = false;
+   this.rangeActive = false;
+   this.rangeStart = 0;
+   this.rangeEnd = 0;
 	this.current_y = 0;
 	this.current_x = 0;
 	this.current_page = 0;
@@ -62,7 +68,7 @@ function GridHandler(argcellw, argcellh, argw, argh, arg_entries) {
 	this.drawBox = function(y, y2, x, x2, color) {}
 	
 	this.drawItemFunc = function(cell_index, cell_page, cell_y, cell_x, y1, x1, y2, x2) {}
-	this.drawDisabledFunc = function(cell_index, cell_page, cell_y, cell_x, y1, x2, y2, x2) {
+	this.drawDisabledFunc = function(cell_index, cell_page, cell_y, cell_x, y1, x1, y2, x2) {
 		this.drawBox(y1, y2, x1, x2, Core.winpal.bgcolor);
 	}
 	
@@ -85,16 +91,38 @@ function GridHandler(argcellw, argcellh, argw, argh, arg_entries) {
 
 }
 
+GridHandler.prototype.setEntryCount = function(a_entries) {
+	var oldCount = this.entries;
+    this.entries = a_entries;
+
+    if (a_entries > oldCount) {
+       for (var ec = oldCount; ec < a_entries; ec++) {
+		    this.cell_enabled[ec] = true;
+	    }
+    }
+    if (oldCount > a_entries) {
+        if (this.getIndex() >= this.entries) {
+            this.setIndex(this.entries-1);
+        }
+    }
+}
+
 GridHandler.prototype.getIndex = function() {
 	var cell_index = (this.current_page*(this.width*this.height)) + (this.current_y * this.width) + this.current_x;
 	return cell_index;
 }
 
-GridHandler.prototype.setCurrentIndex = function(a_index) {
+GridHandler.prototype.setIndex = function(a_index) {
 	if (a_index >= this.entries) {return;}
 	this.current_page = Math.floor(a_index / (this.width*this.height));
 	this.current_y = Math.floor((a_index - (this.current_page * (this.width*this.height))) / this.width);
 	this.current_x = a_index % this.width;
+}
+
+GridHandler.prototype.setRange = function(a_first, a_last) {
+    this.rangeActive = true;
+    this.rangeStart = a_first;
+    this.rangeEnd = a_last;
 }
 
 GridHandler.prototype.setPage = function(a_page) {
@@ -106,9 +134,16 @@ GridHandler.prototype.setPage = function(a_page) {
 	}
 }
 
+GridHandler.prototype.eventMouseMove = function(a_buttons, a_y, a_x) {
+}
+
 GridHandler.prototype.eventMousePress = function(a_buttons, a_y, a_x) {
+   if (this.selectable == false) {return;}
+
 	var celly_click = 0;
 	var cellx_click = 0;
+	var celly, cellx;
+
 	for (celly = 0; celly < this.height; celly++) {
 		if (a_y >= this.cell_start_y[celly]) {
 			celly_click = celly;
@@ -125,16 +160,37 @@ GridHandler.prototype.eventMousePress = function(a_buttons, a_y, a_x) {
 	if (cell_index < this.entries) {
 		if (this.cell_enabled[cell_index] == true) {
 
-			var old_current_y = this.current_y;
-			var old_current_x = this.current_x;
-			this.current_y = celly_click;
-			this.current_x = cellx_click;
+			var range = false;
+			if ((this.multiSelect == false) || ((a_buttons & 1) == 1)) {
+				var old_current_y = this.current_y;
+				var old_current_x = this.current_x;
+				this.current_y = celly_click;
+				this.current_x = cellx_click;
+			} else if ((a_buttons & 2) == 2) {
+				var curIndex = this.getIndex();
+				if (cell_index == curIndex) {
+					this.rangeActive = false;
+				} else {
+					range = true;
+					 this.rangeActive = true;
+					 this.rangeStart = curIndex;
+					 this.rangeEnd = cell_index;
+				}
+			}
 	
 			if (this.redrawCellOnSelect == 2) {
 				this.redraw();
 			} else if (this.redrawCellOnSelect == 1) {
 				this.redrawCell(old_current_y, old_current_x);
-				this.redrawCell(this.current_y, this.current_x);
+				this.redrawCell(celly_click, cellx_click);
+
+				   if (range == true) {
+					for (var rangeCell = this.rangeStart; rangeCell < this.rangeEnd; rangeCell++) {
+					   var celly = 0;
+					   var cellx = 0;
+					   this.redrawCell(celly, cellx);
+					}
+				}
 				this.redrawGrid();
 			} else {
 				this.redrawGrid();
@@ -158,8 +214,17 @@ GridHandler.prototype.setBitmapView = function(a_bmvObject, a_handleMouse) {
 	this.drawLineY = function(y, y2, x, color) {this.bmvObject.drawLineY(y, y2, x, color);}
 	this.drawBox = function(y1, y2, x1, x2, color) {this.bmvObject.drawBox(y1, y2, x1, x2, color);}
 	
+/* test
+    this.drawBox = function(y1, y2, x1, x2, color) {
+        this.drawCmd.push(this.bmvObject.drawCmdBox, y1, y2, x1, x2, color);
+    }
+*/
+
 	if (a_handleMouse == true) {
 		this.bmvObject.mousePress.connect(this, this.eventMousePress);
+		/*if (Core.versionDate >= 260109) {
+			this.bmvObject.mouseMove.connect(this, this.eventMouseMove);
+		}*/
 	}
 	
 	//this.bmvObject.resize(this.cell_start_x[this.width]+this.gridline_w, this.cell_start_y[this.height]+this.gridline_h);
@@ -170,13 +235,12 @@ GridHandler.prototype.redrawCurrentCell = function() {
 }
 
 GridHandler.prototype.checkActiveCell = function(a_index) {
-	var activecell = true;
 	if (this.cell_enabled[a_index] == false) {
-		activecell = false;
+		return false;
 	} else if (a_index >= this.entries) {
-		activecell = false;
+		return false;
 	}
-	return activecell;
+	return true;
 }
 
 GridHandler.prototype.redrawCell = function(a_celly, a_cellx) {
@@ -188,16 +252,16 @@ GridHandler.prototype.redrawCell = function(a_celly, a_cellx) {
 		activecell = false;
 	}
 	if (activecell == false) {
-		x1 = this.cell_start_x[a_cellx];
-		x2 = this.cell_start_x[a_cellx+1]-1+this.gridline_w;
-		y1 = this.cell_start_y[a_celly];
-		y2 = this.cell_start_y[a_celly+1]-1+this.gridline_h;
+		var x1 = this.cell_start_x[a_cellx];
+		var x2 = this.cell_start_x[a_cellx+1]-1+this.gridline_w;
+		var y1 = this.cell_start_y[a_celly];
+		var y2 = this.cell_start_y[a_celly+1]-1+this.gridline_h;
 		this.drawDisabledFunc(this.calculateIndex(a_celly, a_cellx, this.current_page), this.current_page, a_celly, a_cellx, y1, x1, y2, x2);
 	} else {
-		x1 = this.cell_start_x[a_cellx] + this.gridline_w;
-		x2 = this.cell_start_x[a_cellx+1]-1;
-		y1 = this.cell_start_y[a_celly] + this.gridline_h;
-		y2 = this.cell_start_y[a_celly+1]-1;
+		var x1 = this.cell_start_x[a_cellx] + this.gridline_w;
+		var x2 = this.cell_start_x[a_cellx+1]-1;
+		var y1 = this.cell_start_y[a_celly] + this.gridline_h;
+		var y2 = this.cell_start_y[a_celly+1]-1;
 		this.drawItemFunc(this.calculateIndex(a_celly, a_cellx, this.current_page), this.current_page, a_celly, a_cellx, y1, x1, y2, x2);
 	}
 }
@@ -220,54 +284,127 @@ GridHandler.prototype.redrawGrid = function() {
 	if ((this.multiPage == false) || ((this.multiPage == true) && (this.current_page == (this.getPagesCount()-1)))) {
 		
 	}*/
+
+   var x, x2, y, y2;
+
+   var colortable = [0, this.gridcolor, this.rangecolor, this.currentcolor];
 	
 	var singleGridLineW = (this.gridline_w == 1);
 	var singleGridLineH = (this.gridline_h == 1);
-	for (celly = 0; celly < this.height; celly++) {
-	for (cellx = 0; cellx < this.width; cellx++) {
-		thisentry = this.calculateIndex(celly, cellx);
-		if (this.checkActiveCell(thisentry) == true) {
-			x = this.cell_start_x[cellx];
-			x2 = this.cell_start_x[cellx+1];
-			if (singleGridLineW == true) {
-				this.drawLineY(this.cell_start_y[celly]+this.gridline_h, this.cell_start_y[celly+1]-1, x, this.gridcolor);
-				this.drawLineY(this.cell_start_y[celly]+this.gridline_h, this.cell_start_y[celly+1]-1, x2, this.gridcolor);
-			} else {
-				this.drawBox(this.cell_start_y[celly]+this.gridline_h, this.cell_start_y[celly+1]-1, x, x+this.gridline_w-1, this.gridcolor);
-				this.drawBox(this.cell_start_y[celly]+this.gridline_h, this.cell_start_y[celly+1]-1, x2, x2+this.gridline_w-1, this.gridcolor);
-			}
-			y = this.cell_start_y[celly];
-			y2 = this.cell_start_y[celly+1];
-			if (singleGridLineH == true) {
-				this.drawLineX(y+suby, this.cell_start_x[cellx], this.cell_start_x[cellx+1]+this.gridline_w-1, this.gridcolor);
-				this.drawLineX(y2+suby, this.cell_start_x[cellx], this.cell_start_x[cellx+1]+this.gridline_w-1, this.gridcolor);
-			} else {
-				this.drawBox(y, y+this.gridline_h-1, this.cell_start_x[cellx], this.cell_start_x[cellx+1]+this.gridline_w-1, this.gridcolor);
-				this.drawBox(y2, y2+this.gridline_h-1, this.cell_start_x[cellx], this.cell_start_x[cellx+1]+this.gridline_w-1, this.gridcolor);
-			}
+   var previousType = 0;
+   var aboveType = 0;
+   var diagonalType = 0;
+  // var drawv = false;
+  // var drawh = false;
+   var typev = 0;
+   var typeh = 0;
+   var vert_y1;
+   var horz_x1;
+
+	for (var celly = 0; celly < this.height+1; celly++) {
+    previousType = 0;
+    aboveType = 0;
+	for (var cellx = 0; cellx < this.width+1; cellx++) {
+	
+    //  drawh = false;
+    //  drawv = false;
+      typev = 0;
+      typeh = 0;
+      diagonalType = aboveType;
+      aboveType = 0;
+      
+      if (previousType > 0) {
+     //     drawv = true;
+          typev = previousType;
+	   previousType = 0;
+      }
+
+      if (cellx < this.width) {
+      if (celly >= 1) {
+          var aboveEntry = this.calculateIndex(celly-1, cellx);
+          if (this.checkActiveCell(aboveEntry) == true) {
+      //        drawh = true;
+              if ((this.selectable == true) && (aboveEntry == this.getIndex())) {
+                  aboveType = 3;
+              } else if ((this.rangeActive == true) && (aboveEntry >= this.rangeStart) && (aboveEntry <= this.rangeEnd)) {
+                  aboveType = 2;
+             } else {
+                  aboveType = 1;
+             }
+             typeh = aboveType;
+          }
+      }
+
+     if (celly < this.height) {
+	       var thisentry = this.calculateIndex(celly, cellx);
+          var thisActive = this.checkActiveCell(thisentry);
+          if (thisActive) {
+       //      drawv = drawh = true;
+       
+             if ((this.selectable == true) && (thisentry ==  this.getIndex())) {
+                     typev = typeh = previousType = 3;
+             } else if ((this.rangeActive == true) && (thisentry >= this.rangeStart) && (thisentry <= this.rangeEnd)) {
+                 if (typev < 2) {
+                     typev = 2;
+                 }
+                 if (typeh < 2) {
+                     typeh = 2;
+                 }
+                previousType = 2;
+             } else {
+                 if (typev < 1) {
+                     typev = 1;
+                 }
+                 if (typeh < 1) {
+                     typeh = 1;
+                 }
+                 previousType = 1;
+             }
+             
+          }
+      }
+      }
+      
+      
+     if ((typev > typeh) && (typev > diagonalType)) {
+         vert_y1 = 0;
+         horz_x1 = this.gridline_w;
+     } else {
+         vert_y1 = this.gridline_h;
+         if (diagonalType > typeh) {
+             horz_x1 = this.gridline_w;
+         } else {
+             horz_x1 = 0;
+         }
+     }
+
+     if (typev > 0) {
+		x = this.cell_start_x[cellx];
+		colorv = colortable[typev];
+		if (singleGridLineW == true) {
+			this.drawLineY(this.cell_start_y[celly]+vert_y1, this.cell_start_y[celly+1]-1, x, colorv);
+		} else {
+			this.drawBox(this.cell_start_y[celly]+vert_y1, this.cell_start_y[celly+1]-1, x, x+this.gridline_w-1, colorv);
+		}
+      }
+      if (typeh > 0) {
+		y = this.cell_start_y[celly];
+		colorh = colortable[typeh];
+		if (singleGridLineH == true) {
+			this.drawLineX(y, this.cell_start_x[cellx]+horz_x1, this.cell_start_x[cellx+1]+this.gridline_w-1, colorh);
+		} else {
+			this.drawBox(y, y+this.gridline_h-1, this.cell_start_x[cellx]+horz_x1, this.cell_start_x[cellx+1]+this.gridline_w-1, colorh);
 		}
 	}
-	}
 
-	//var total_y = this.cell_start_y[this.height] + this.gridline_h;
-	//var total_x = this.cell_start_x[this.width] + this.gridline_w;
+    } // cell x loop
+    }  // cell y loop
 
-	x = this.cell_start_x[this.current_x];
-	x2 = this.cell_start_x[this.current_x+1];
-	for (subx = 0; subx < this.gridline_w; subx++) {
-		this.drawLineY(this.cell_start_y[this.current_y], this.cell_start_y[this.current_y+1]+this.gridline_h-1, x+subx, this.currentcolor);
-		this.drawLineY(this.cell_start_y[this.current_y], this.cell_start_y[this.current_y+1]+this.gridline_h-1, x2+subx, this.currentcolor);
-	}
-	y = this.cell_start_y[this.current_y];
-	y2 = this.cell_start_y[this.current_y+1];
-	for (suby = 0; suby < this.gridline_h; suby++) {
-		this.drawLineX(y+suby, this.cell_start_x[this.current_x], this.cell_start_x[this.current_x+1]+this.gridline_w-1, this.currentcolor);
-		this.drawLineX(y2+suby, this.cell_start_x[this.current_x], this.cell_start_x[this.current_x+1]+this.gridline_w-1, this.currentcolor);
-	}
 }
 
 GridHandler.prototype.redraw = function() {
 
+   //var bench1 = Core.getTimer();
 	for (var celly = 0; celly < this.height; celly++) {
 	for (var cellx = 0; cellx < this.width; cellx++) {
 		this.redrawCell(celly, cellx);
@@ -276,9 +413,17 @@ GridHandler.prototype.redraw = function() {
 	
 	this.redrawGrid();
 
+   /*this.bmView.drawCommand(this.drawCmd);
+   this.drawCmd = []; */
+
+   /*var bench2 = Core.getTimer();
+   print(bench2 - bench1);*/
+   
 }
 
 GridHandler.prototype.calculate = function() {
+   var celly, cellx;
+
 	for (cellx = 0; cellx < this.width; cellx++) {
 	  this.cell_size_w_arr[cellx] = this.cell_size_w;
 	}
