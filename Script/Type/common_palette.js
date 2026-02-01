@@ -35,8 +35,29 @@ CommonPalette = function() {
 	}
 }
 
-CommonPalette.prototype.init = function () {
+//Fetch palette data, each array index is 24-bit RGB value of a color.
 
+CommonPalette.prototype.fetch = function () {
+	this.initNonGUI();
+	
+	var entries = Core.getHexValueAttr("len");
+
+	var data = [];
+
+	if (entries < 1) {return data;}
+	
+	for (var index = 0; index < entries; index++) {
+		data.push(this.getRGB(index));
+	}
+	return data;
+}
+
+CommonPalette.prototype.render = function(a_bitmapView, a_y1, a_x1, a_y2, a_x2) {
+	this.initNonGUI();
+	//....
+}
+
+CommonPalette.prototype.initNonGUI = function () {
 	if (this.bigEndian == true) {
 		if (Core.versionDate >= 251117) {
 			var byteSize = this.bitSize >> 3;
@@ -50,11 +71,12 @@ CommonPalette.prototype.init = function () {
 		this.channelBitLSBIndex[0] = this.channelBitLSBIndex[2];
 		this.channelBitLSBIndex[2] = a;
 	}
-	
-	var parentWnd = Core.window;
-	this.BMView = new BitmapView(parentWnd);
-	this.BMView.move(Core.base_x, Core.base_y);
+}
 
+CommonPalette.prototype.init = function () {
+
+	this.initNonGUI();
+	
 	var entries = Core.getHexValueAttr("len");
 	var cellsx;
 	var cellsy;
@@ -79,8 +101,12 @@ CommonPalette.prototype.init = function () {
 	if (cellsy == 1) {
 		cellSize = 30;
 	}
+	
+	var parentWnd = Core.window;
+	this.BMView = new BitmapView(parentWnd);
+	this.BMView.move(Core.base_x, Core.base_y);
 
-	this.palGrid = new GridHandler(cellSize, cellSize, cellsx, cellsy, entries);
+	this.palGrid = new GridHandler(cellSize, cellSize, cellsx, cellsy, entries, "grid");
 	this.palGrid.redrawCellOnSelect = 0;
 	this.palGrid.parent = this;
 	this.palGrid.setBitmapView(this.BMView, false);
@@ -90,16 +116,17 @@ CommonPalette.prototype.init = function () {
 
 	this.palGrid.drawItemFunc = this.drawItemFunc;
 	
+	this.palGrid.redraw();
+	this.BMView.refresh();
+	this.BMView.show();
+
 	this.BMView.mousePress.connect(this, this.entryGridMousePressFunc);
 	/*if (Core.versionDate >= 260109) {
 		this.BMView.mouseMove.connect(this, this.);
 	}*/
 	
 	event.signal.connect(this, this.eventFunc);
-	
-	this.palGrid.redraw();
-	this.BMView.refresh();
-	this.BMView.show();
+
 
 	if (pages > 0) {
 		var x2 = Core.base_x + wpixels + 15;
@@ -203,7 +230,7 @@ CommonPalette.prototype.init = function () {
 				cellsy = 1;
 			}
 
-			this.palTableGrid = new GridHandler(26, 26, cellsx, cellsy, entries);
+			this.palTableGrid = new GridHandler(26, 26, cellsx, cellsy, entries, "indexedgrid");
 			this.palTableGrid.parent = this;
 			//this.palTableGrid.redrawCellOnSelect = 0;
 			this.palTableGrid.setBitmapView(this.palTable_BMView, false);

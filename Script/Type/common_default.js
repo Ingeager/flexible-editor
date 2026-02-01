@@ -73,6 +73,7 @@ DefaultControls.addType = function() {
 	DefaultControls.typeEdit.readOnly = true;
 	DefaultControls.typeEdit.move(x+55, y);
 	DefaultControls.typeEdit.resize(100, 20);
+	DefaultControls.typeEdit.styleSheet = Core.customize("edit.stylesheet", "");
 	DefaultControls.typeEdit.show();
 	
 	Core.base_y = y + DefaultControls.textSpacingHeight;
@@ -94,6 +95,7 @@ DefaultControls.addActivePointer = function() {
 	DefaultControls.ctrlAPtrEdit.readOnly = true;
 	DefaultControls.ctrlAPtrEdit.move(x+75, y);
 	DefaultControls.ctrlAPtrEdit.resize(80, 20);
+	DefaultControls.ctrlAPtrEdit.styleSheet = Core.customize("edit.stylesheet", "");
 	DefaultControls.ctrlAPtrEdit.show();
 	
 	DefaultControls.refreshActivePointer();
@@ -129,6 +131,7 @@ DefaultControls.addElementDefaults = function() {
 		DefaultControls.ctrlPtrEdit.text = "0x" + pointerString;
 		DefaultControls.ctrlPtrEdit.resize(80, 20);
 		DefaultControls.ctrlPtrEdit.readOnly = true;
+		DefaultControls.ctrlPtrEdit.styleSheet = Core.customize("edit.stylesheet", "");
 		DefaultControls.ctrlPtrEdit.show();
 
 		y = y + DefaultControls.textSpacingHeight;
@@ -145,6 +148,7 @@ DefaultControls.addElementDefaults = function() {
 		DefaultControls.ctrlRelPtrEdit.text = "0x" + pointerString;
 		DefaultControls.ctrlRelPtrEdit.resize(80, 20);
 		DefaultControls.ctrlRelPtrEdit.readOnly = true;
+		DefaultControls.ctrlRelPtrEdit.styleSheet = Core.customize("edit.stylesheet", "");
 		DefaultControls.ctrlRelPtrEdit.show();
 
 		y = y + DefaultControls.textSpacingHeight;
@@ -182,6 +186,7 @@ DefaultControls.addFlags = function() {
 	showStr = flagStr.replace(".", "\n");
 	ctrl.setPlainText(showStr);
 	ctrl.readOnly = true;
+	ctrl.styleSheet = Core.customize("edit.stylesheet", "");
 	ctrl.show();
 
 	Core.base_y += 65;
@@ -265,7 +270,7 @@ DefaultControls.addArrayTuner = function() {
 	var ctrl = new QComboBox(parentWnd);
 	DefaultControls.ctrlArrayCombo = ctrl;
 	ctrl.move(Core.base_x, Core.base_y);
-	ctrl.styleSheet = "font: 25px";
+	ctrl.styleSheet = Core.customize("edit.stylesheet", "") + "; font: 25px";
 	ctrl.resize(550, 40);
 	var listArray;
 	if (Core.hasAttr("arrindex_lablist") == true) {
@@ -389,7 +394,7 @@ DefaultControls.addText = function() {
 		DefaultControls.ctrlText.text = text;
 		DefaultControls.ctrlText.resize(DefaultControls.width, 20);
 		DefaultControls.ctrlText.readOnly = true;
-		DefaultControls.ctrlText.styleSheet = "font: 12px";
+		DefaultControls.ctrlText.styleSheet = Core.customize("edit.stylesheet", "") + "; font: 12px";
 		DefaultControls.ctrlText.show();
 
 		Core.base_y = y + 28;
@@ -406,7 +411,7 @@ DefaultControls.addText = function() {
 		DefaultControls.ctrlText2.text = text;
 		DefaultControls.ctrlText2.resize(DefaultControls.width, 20);
 		DefaultControls.ctrlText2.readOnly = true;
-		DefaultControls.ctrlText2.styleSheet = "font: 12px";
+		DefaultControls.ctrlText2.styleSheet = Core.customize("edit.stylesheet", "") + "; font: 12px";
 		DefaultControls.ctrlText2.show();
 
 		Core.base_y = y + 28;

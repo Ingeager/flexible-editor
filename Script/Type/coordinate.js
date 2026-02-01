@@ -6,18 +6,23 @@ Coord.hasX = false;
 Coord.hasY = false;
 Coord.pointerX = 0;
 Coord.pointerY = 1;
-Coord.bmW = 256*2,
+Coord.bmW = 256*2;
 Coord.bmH = 256*2;
 Coord.fieldW = 256;
 Coord.fieldH = 256;
-Coord.lineColorV = 0x40DFFF;
-Coord.lineColorH = 0xFFFF40;
+Coord.bgColor = 0;
+Coord.lineColorV = 0xC0C0C0;
+Coord.lineColorH = 0x606060;
 Coord.bmView = {}
 Coord.editY = {}
 Coord.editX = {}
 
 function init() {
 	DefaultControls.init();
+
+	Coord.lineColorV = Number("0x" + Core.customize("color1", "C0C0C0"));
+	Coord.lineColorH = Number("0x" + Core.customize("color2", "606060"));
+	Coord.bgColor = Number("0x" + Core.customize("bgcolor", "0"));
 	
     var parentWnd = Core.window;
     Coord.bmView = new BitmapView(parentWnd);
@@ -102,7 +107,13 @@ Coord.mouseFunc = function(a_btn, a_y, a_x) {
 
 Coord.redraw = function() {
     //Coord.bmView.fill(0);
-    Coord.bmView.drawBox(0, Coord.bmH-1, 0, Coord.bmH-1, 1);
+/*    for (var y = 0; y < Coord.bmH; y++) {
+	var c = Math.floor((y / Coord.bmH)*255);
+	Coord.bmView.drawLineX(y, 0, Coord.bmW-1, c);
+    }*/
+    
+	
+	Coord.bmView.drawBox(0, Coord.bmH-1, 0, Coord.bmW-1, Coord.bgColor);
 
   if (Coord.hasX == true) {
         var stepX = Coord.bmW / Coord.fieldW;

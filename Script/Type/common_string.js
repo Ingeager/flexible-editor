@@ -10,8 +10,7 @@ CommonString.prototype.init = function() {
 	var parent = Core.window;
 	this.textEdit = new QPlainTextEdit(parent);
 	this.textEdit.move(Core.base_x, Core.base_y);
-	this.textEdit.setStyleSheet("font-size: " + 15 + "px");
-	this.textEdit.resize(600, 65);
+	this.textEdit.styleSheet = Core.customize("edit.stylesheet", "") + "; font-size: " + 15 + "px";
 	this.textEdit.show();
 	
 	var len = this.getLen();

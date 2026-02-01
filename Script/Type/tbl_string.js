@@ -37,7 +37,7 @@ tblString = function() {
     this.tblName = "";
     this.registeredEntry = false;      //Used to detect 2nd logical table
     this.currentLogicalTable = 0;
-    this.sizeArr = [];               //  Contains all possible byte sizes from large to small
+    this.eeArr = [];               //  Contains all possible byte sizes from large to small
     this.textCtrl = 0;
     this.logCtrl = 0;
     this.currentEntry = 0;
@@ -61,11 +61,13 @@ tblString.prototype.init = function() {
   this.textCtrl = new QPlainTextEdit(Core.window);
   this.textCtrl.move(Core.base_x, Core.base_y);
   this.textCtrl.resize(600, 200);
+  this.textCtrl.styleSheet = Core.customize("edit.stylesheet", "");
   this.textCtrl.show();
 
   this.logCtrl = new QPlainTextEdit(Core.window);
   this.logCtrl.move(Core.base_x, Core.base_y+240);
   this.logCtrl.resize(600, 300);
+  this.logCtrl.styleSheet = Core.customize("edit.stylesheet", "");
   this.logCtrl.show();
 
   this.convertBtn = new QPushButton(Core.window);

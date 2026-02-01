@@ -167,9 +167,8 @@ CommonInt.prototype.init = function() {
 			ctrlWidth = 600;
 		}
 
-		var styleSheet = "font-size: " + fontpx + "px";
-		styleSheet = Core.customize("stylesheet", styleSheet);
-		this.editCtrl.setStyleSheet(styleSheet);
+		var addtext = "; font-size: " + fontpx + "px";
+		this.editCtrl.setStyleSheet(Core.customize("edit.stylesheet", "") + addtext);
 		this.editCtrl.setAlignment(2);
 		this.editCtrl.resize(ctrlWidth, ctrlHeight);
 		this.editCtrl.textEdited.connect(this, this.editTextFunc);
@@ -202,7 +201,7 @@ CommonInt.prototype.init = function() {
 		}
 
 		this.listCtrl.editable = false;
-		this.listCtrl.styleSheet = "font: 25px";
+		this.listCtrl.styleSheet = Core.customize("edit.stylesheet", "") + "; font: 25px";
 		this.listCtrl['activated(int)'].connect(this, this.listChangeFunc);
 		this.listCtrl.show();
 

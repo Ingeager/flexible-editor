@@ -15,7 +15,7 @@
 //You can set up method drawDisabledFunc(cell_index, cell_page, cell_y, cell_x, y1, x2, y2, x2)
 //to draw the contents of a disabled or out-of-boundary cell. By default, it tries to fill the box with the parent window's background color.
 
-function GridHandler(argcellw, argcellh, argw, argh, arg_entries) {
+function GridHandler(argcellw, argcellh, argw, argh, arg_entries, a_accessname) {
 	if (argcellw == undefined) {
 		this.cell_size_w = 24;
 	} else {
@@ -41,13 +41,16 @@ function GridHandler(argcellw, argcellh, argw, argh, arg_entries) {
 	} else {
 		this.entries = arg_entries;
 	}
+	if (a_accessname == undefined) {
+		a_accessname = "grid";
+	}
 
    this.bmvObject = 0;
    this.drawCmd = [];
 	this.bgcolor = 0;
-	this.currentcolor = 0xCFCFCF;
+	this.currentcolor = Number("0x" + Core.customize(a_accessname+".selcolor", "CFCFCF", "grid.selcolor"));
    this.rangecolor = 0x8F8F8F;
-	this.gridcolor = 0x2F2F2F;
+	this.gridcolor = Number("0x" + Core.customize(a_accessname+".color", "2F2F2F", "grid.color"));
 	this.selectable = true;
 	this.multiPage = false;
    this.multiSelect = false;
@@ -89,6 +92,37 @@ function GridHandler(argcellw, argcellh, argw, argh, arg_entries) {
 
 	this.calculate();
 
+	this.lockflag = false;
+	this.fadestate = -1;
+	this.fadestateAdd = 220;
+	if (Core.versionDate >= 260131) {
+		this.animate = true;
+		this.animateTimer = new QTimer();
+		this.animateTimer.start(33);
+		this.animateTimer.timeout.connect(this, this.timerFunc);
+		
+	} else {
+		this.animate = false;
+	}
+
+}
+
+GridHandler.prototype.timerFunc = function() {
+	if ((this.fadestate >= 0)  && (this.lockflag == false)){
+		this.lockflag = true;
+		if (this.fadestate >= 1000) {
+			this.fadestate = 1000;
+		}
+		this.redrawGrid();
+		this.bmvObject.refresh();
+		if (this.fadestate >= 1000) {
+			this.fadestate = -1;
+		} else {
+			this.fadestate += this.fadestateAdd;
+		}
+		this.lockflag = false;
+	}
+	
 }
 
 GridHandler.prototype.setEntryCount = function(a_entries) {
@@ -178,6 +212,7 @@ GridHandler.prototype.eventMousePress = function(a_buttons, a_y, a_x) {
 				}
 			}
 	
+			this.fadestate = 0;
 			if (this.redrawCellOnSelect == 2) {
 				this.redraw();
 			} else if (this.redrawCellOnSelect == 1) {
@@ -285,25 +320,36 @@ GridHandler.prototype.redrawGrid = function() {
 		
 	}*/
 
-   var x, x2, y, y2;
+	var currentcolor = this.currentcolor;
+	if (this.animate == true) {
+		if ((this.fadestate < 1000) && (this.fadestate >= 0)) {
+			var degree = this.fadestate / 1000;
+			var b = ((this.gridcolor & 0xFF) * (1-degree)) + ((this.currentcolor & 0xFF) * degree);
+			var g = (((this.gridcolor >> 8) & 0xFF) * (1-degree)) + (((this.currentcolor >> 8) & 0xFF) * degree);
+			var r = (((this.gridcolor >> 16) & 0xFF) * (1-degree)) + (((this.currentcolor >> 16) & 0xFF) * degree);
+			currentcolor = Math.floor(b) + (Math.floor(g) << 8) + (Math.floor(r) << 16);
+		}
+	}
 
-   var colortable = [0, this.gridcolor, this.rangecolor, this.currentcolor];
+	var x, x2, y, y2;
+
+	var colortable = [0, this.gridcolor, this.rangecolor, currentcolor];
 	
 	var singleGridLineW = (this.gridline_w == 1);
 	var singleGridLineH = (this.gridline_h == 1);
-   var previousType = 0;
-   var aboveType = 0;
-   var diagonalType = 0;
-  // var drawv = false;
-  // var drawh = false;
-   var typev = 0;
-   var typeh = 0;
-   var vert_y1;
-   var horz_x1;
+	var previousType = 0;
+	var aboveType = 0;
+	var diagonalType = 0;
+	// var drawv = false;
+	// var drawh = false;
+	var typev = 0;
+	var typeh = 0;
+	var vert_y1;
+	var horz_x1;
 
 	for (var celly = 0; celly < this.height+1; celly++) {
-    previousType = 0;
-    aboveType = 0;
+	previousType = 0;
+	aboveType = 0;
 	for (var cellx = 0; cellx < this.width+1; cellx++) {
 	
     //  drawh = false;
