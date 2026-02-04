@@ -12,10 +12,12 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    itemview.cpp
+    itemview.cpp \
+    script.cpp
 
 HEADERS  += mainwindow.h \
-    itemview.h
+    itemview.h \
+    script.h
 
 FORMS    += mainwindow.ui \
     itemview.ui
