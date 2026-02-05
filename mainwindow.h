@@ -7,22 +7,13 @@
 #include <QXmlStreamReader>
 #include <QScriptEngine>
 
-#include <QLineEdit>
-#include <QPlainTextEdit>
-#include <QLabel>
-#include <QComboBox>
-#include <QPushButton>
-#include <QFrame>
 #include <QGraphicsView>
 #include <QGraphicsScene>
 #include <QByteArray>
-#include <QCheckBox>
-#include <QSpinBox>
-//#include <QBitmap>
-//#include <QPixmap>
-//#include <QImage>
+#include <QTime>
 
 #include "itemview.h"
+#include "script.h"
 
 namespace Ui {
 class MainWindow;
@@ -31,209 +22,6 @@ class MainWindow;
 enum { eElmRefRole = Qt::UserRole, eWindowRole} ;
 enum { eBufferSystem_Single = 0, eBufferSystem_WriteBuffer} ;
 
-class BitmapView : public QGraphicsView {
-    Q_OBJECT
-
-public:
-    BitmapView(QWidget *parent) : QGraphicsView(parent) {}
-    //~BitmapView();
-
-    QPixmap mPixmap;
-    QImage mImage;
-    QGraphicsScene mScene;
-    
-    void mousePressEvent(QMouseEvent *event);
-
-    Q_INVOKABLE void init(int aWidth, int aHeight);
-    
-    //Note: This is repeated for every class.. I can't find a way to compress it.
-    //Things like Q_INVOKABLE and "public slot" is handled by moc, but moc does not expand macros,
-    //so I can't use a macro for it.
-    
-    Q_INVOKABLE void move(int x, int y) {QWidget::move(x, y);} 
-    Q_INVOKABLE void setGeometry ( int x, int y, int w, int h ) {QWidget::setGeometry(x, y, w, h);}
-    Q_INVOKABLE void resize(int w, int h) {QWidget::resize(w, h);}
-    
-    
-   // Q_INVOKABLE int height() {return QWidget::height();}
-   
-    Q_INVOKABLE void setPixel(int aY, int aX, int aValue);
-    Q_INVOKABLE void drawLineX(int aY, int aX1, int aX2, int aValue);
-    Q_INVOKABLE void drawLineY(int aY1, int aY2, int aX, int aValue);
-    Q_INVOKABLE void drawBox(int aY1, int aY2, int aX1, int aX2, int aValue);
-    
-    Q_INVOKABLE void refresh();
-
-signals:
-    void mousePress(int aButtons, int aY, int aX);
-};
-
-Q_SCRIPT_DECLARE_QMETAOBJECT(BitmapView, QWidget*)
-
-class QLabelSC : public QLabel {
-    Q_OBJECT
-public:
-    QLabelSC(QWidget *parent, Qt::WindowFlags f = 0) : QLabel(parent, f) {}
-    QLabelSC(const QString & text, QWidget * parent = 0, Qt::WindowFlags f = 0 ) :
-        QLabel(text, parent, f) {}
-
-    Q_INVOKABLE void move(int x, int y) {QWidget::move(x, y);} 
-    Q_INVOKABLE void setGeometry ( int x, int y, int w, int h ) {QWidget::setGeometry(x, y, w, h);}
-    Q_INVOKABLE void resize(int w, int h) {QWidget::resize(w, h);}
-};
-
-Q_SCRIPT_DECLARE_QMETAOBJECT(QLabelSC, QWidget*)
-
-
-class QLineEditSC : public QLineEdit {
-    Q_OBJECT
-public:
-    QLineEditSC(QWidget *parent) : QLineEdit(parent) {}
-    QLineEditSC(const QString & contents, QWidget * parent = 0) :
-        QLineEdit(contents, parent) {}
-
-    Q_INVOKABLE void move(int x, int y) {QWidget::move(x, y);} 
-    Q_INVOKABLE void setGeometry ( int x, int y, int w, int h ) {QWidget::setGeometry(x, y, w, h);}
-    Q_INVOKABLE void resize(int w, int h) {QWidget::resize(w, h);}
-
-    Q_INVOKABLE void setAlignment(int flag) {QLineEdit::setAlignment((Qt::Alignment)flag);} 
-  
-   // Q_INVOKABLE void setReadOnly ( bool a ) {QLineEdit::setReadOnly(a);}
-
-};
-
-Q_SCRIPT_DECLARE_QMETAOBJECT(QLineEditSC, QWidget*)
-
-class QPlainTextEditSC : public QPlainTextEdit {
-    Q_OBJECT
-public:
-    QPlainTextEditSC(QWidget *parent) : QPlainTextEdit(parent) {}
-    QPlainTextEditSC(const QString &contents, QWidget *parent = 0) : QPlainTextEdit(contents, parent) {}
-    
-    Q_INVOKABLE void move(int x, int y) {QWidget::move(x, y);} 
-    Q_INVOKABLE void setGeometry ( int x, int y, int w, int h ) {QWidget::setGeometry(x, y, w, h);}
-    Q_INVOKABLE void resize(int w, int h) {QWidget::resize(w, h);}
-};
-
-Q_SCRIPT_DECLARE_QMETAOBJECT(QPlainTextEditSC, QWidget*)
-
-class QComboBoxSC : public QComboBox {
-    Q_OBJECT
-public:
-    QComboBoxSC(QWidget *parent) : QComboBox(parent) {}
-
-    Q_INVOKABLE void move(int x, int y) {QWidget::move(x, y);} 
-    Q_INVOKABLE void setGeometry ( int x, int y, int w, int h ) {QWidget::setGeometry(x, y, w, h);}
-    Q_INVOKABLE void resize(int w, int h) {QWidget::resize(w, h);}
-
-    Q_INVOKABLE void addItem(const QString &text) {QComboBox::addItem(text);} 
-
-    Q_INVOKABLE void setItemData(int index, const QVariant &value, int role=Qt::UserRole) {QComboBox::setItemData(index, value, role);} 
-
-    //Custom methods:
-    Q_INVOKABLE void setItemBGColor(int index, int color) {
-        QComboBox::setItemData(index, QBrush(QRgb(color)), Qt::BackgroundRole);
-    }
-    Q_INVOKABLE void setItemFGColor(int index, int color) {
-        QComboBox::setItemData(index, QBrush(QRgb(color)), Qt::ForegroundRole);
-    }
-
-};
-
-Q_SCRIPT_DECLARE_QMETAOBJECT(QComboBoxSC, QWidget*)
-
-class QPushButtonSC : public QPushButton {
-    Q_OBJECT
-public:
-    QPushButtonSC(QWidget *parent) : QPushButton(parent) {}
-
-    Q_INVOKABLE void move(int x, int y) {QWidget::move(x, y);} 
-    Q_INVOKABLE void setGeometry ( int x, int y, int w, int h ) {QWidget::setGeometry(x, y, w, h);}
-    Q_INVOKABLE void resize(int w, int h) {QWidget::resize(w, h);}
-};
-
-Q_SCRIPT_DECLARE_QMETAOBJECT(QPushButtonSC, QWidget*)
-
-class QFrameSC : public QFrame {
-    Q_OBJECT
-public:
-    QFrameSC(QWidget *parent) : QFrame(parent) {}
-
-    Q_INVOKABLE void move(int x, int y) {QWidget::move(x, y);} 
-    Q_INVOKABLE void setGeometry ( int x, int y, int w, int h ) {QWidget::setGeometry(x, y, w, h);}
-    Q_INVOKABLE void resize(int w, int h) {QWidget::resize(w, h);}
-    
-    Q_INVOKABLE void setFrameStyle(int style) {QFrame::setFrameStyle(style);}
-};
-
-Q_SCRIPT_DECLARE_QMETAOBJECT(QFrameSC, QWidget*)
-
-class QSliderSC : public QSlider {
-    Q_OBJECT
-public:
-    QSliderSC(QWidget *parent) : QSlider(parent) {programChanged = false;}
-    
-    bool programChanged;
-    
-    Q_INVOKABLE void move(int x, int y) {QWidget::move(x, y);} 
-    Q_INVOKABLE void setGeometry ( int x, int y, int w, int h ) {QWidget::setGeometry(x, y, w, h);}
-    Q_INVOKABLE void resize(int w, int h) {QWidget::resize(w, h);}
-    
-    Q_INVOKABLE void setRange(int min, int max) {QAbstractSlider::setRange(min, max);}
-    Q_INVOKABLE void setSingleStep(int value) {QAbstractSlider::setSingleStep(value);}
-    Q_INVOKABLE void setPageStep(int value) {QAbstractSlider::setPageStep(value);}
-    Q_INVOKABLE void setOrientation(int orientation) {QAbstractSlider::setOrientation((Qt::Orientation)orientation);}
-    Q_INVOKABLE void setValue(int value);
-};
-
-Q_SCRIPT_DECLARE_QMETAOBJECT(QSliderSC, QWidget*)
-
-class QCheckBoxSC : public QCheckBox {
-    Q_OBJECT
-public:
-    QCheckBoxSC(QWidget *parent) : QCheckBox(parent) {}
-    
-    Q_INVOKABLE void move(int x, int y) {QWidget::move(x, y);} 
-    Q_INVOKABLE void setGeometry ( int x, int y, int w, int h ) {QWidget::setGeometry(x, y, w, h);}
-    Q_INVOKABLE void resize(int w, int h) {QWidget::resize(w, h);}
-};
-
-Q_SCRIPT_DECLARE_QMETAOBJECT(QCheckBoxSC, QWidget*)
-
-class QSpinBoxSC : public QSpinBox {
-    Q_OBJECT
-public:
-    QSpinBoxSC(QWidget *parent) : QSpinBox(parent) {}
-
-    Q_INVOKABLE void move(int x, int y) {QWidget::move(x, y);} 
-    Q_INVOKABLE void setGeometry (int x, int y, int w, int h) {QWidget::setGeometry(x, y, w, h);}
-    Q_INVOKABLE void resize(int w, int h) {QWidget::resize(w, h);}
-};
-
-Q_SCRIPT_DECLARE_QMETAOBJECT(QSpinBoxSC, QWidget*)
-
-
-class tEventForScript : public QObject {
-    Q_OBJECT
-
-public:
-    tEventForScript(QWidget *parent) : QObject(parent) {
-    //    bits.changeindex = 1;
-    }
-
-    //tEventForScript(QWidget *parent);
-    //~tEventForScript();
-/*    struct {
-        int changeindex;
-    } bits;*/
-public:
-    //int changeindex;
-    
-    Q_INVOKABLE void dispatch(int aEventCode);
-    
-signals:
-    void signal(int aEventCode);
-};
 
 struct XMLReadStatus {
     int mItemCount;
@@ -242,6 +30,7 @@ struct XMLReadStatus {
     int mListFloorCounter;
     int mCurrentSrcLine;
     int mCharPos;
+    bool mValidCharPos;
     int mParentIndex;
 };
 
@@ -249,8 +38,11 @@ struct tItemElmType {
     QDomElement mElmRef;
     ItemView *mItemViewRef;
     int mParentIndex;
+    QList<int> mChildIndexes;
     int mArrayIndex;
     int mArrayByteSz;
+    int mBigEndianByteSz;
+    bool mHasCharPos;
     quint32 mCharStart;
     quint32 mTrueCharStart;
     quint32 mCharEnd;
@@ -267,9 +59,11 @@ public:
     ~tCore();
     
     bool mXMLFileOpened;
-    QString mXMLsource;
+    QString mXMLSource;
     QString mXMLFileName;
     QString mXMLFileBasePath;
+    bool mXMLSourceHasEditBackup;
+    QString mXMLSourceRevertBackup;
     
     int mXMLEditIndex;
 
@@ -290,7 +84,7 @@ public:
     QByteArray mEditFileFullBuffer; //Contains the whole file for eBufferSystem_Single, otherwise empty.
     quint32 mBufferBlockSize;
     QList<quint32> mBufferBlockLocations;
-    QList<QByteArray*> mBufferBlockData;
+    QList<QByteArray> mBufferBlockData;
     QFile mLockedBinQFile;
     //<-
     
@@ -299,6 +93,7 @@ public:
   
     tEventForScript *mEventForScript;
     
+    QString mProgramTitle;
     QString mTypeScriptPath;
     
     int mDRD_intSize;
@@ -306,15 +101,24 @@ public:
     
     QIcon mDefaultIcon;
     
+    QStringList mCustomizeId;
+    QStringList mCustomizeString;
+    
     bool mLowLevelErrorFlag;
+    
+    #ifdef QT_DEBUG
+    QTime mBenchmarkTime;
+    #endif
 
     void error(QString aMessage, int aLevel);
+    void themeChange();
     void scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElmRefIndex);
+    void initTypeScript(int aElementRef, QScriptEngine *aEngine);
     void scriptLoad(QString aFileName, QScriptEngine *aEngine);
     bool qElementGetHasAttribute(QDomElement aElement, QString aName, QString *aReturnStr);
-    quint32 getItemByte(qint64 aPtr, QDomElement aElmRef, int aElmIndex = -1);
-    void setItemByte(qint64 aPtr, quint32 aValue, QDomElement aElmRef, int aElmIndex = -1);
-    qint64 calcItemPtr(qint64 aPtr, QDomElement aElmRef, int aElmIndex = -1);
+    quint32 getItemByte(qint32 aPtr, QDomElement aElmRef, int aElmIndex = -1);
+    void setItemByte(qint32 aPtr, quint32 aValue, QDomElement aElmRef, int aElmIndex = -1);
+    qint64 calcItemPtr(qint32 aPtr, QDomElement aElmRef, int aElmIndex = -1, bool aCheckBigEndian = true);
     bool itemHasAttr(QString aName, QDomElement aElmRef, bool aCheckCommon = true, bool aCheckRegular = true);
     QString getItemAttr(QString aName, QDomElement aElmRef);
     bool getItemFlag(QString aFlagName, QDomElement aElmRef);
@@ -323,9 +127,13 @@ public:
     int getCommonElementIndex(QDomElement aElmRef);
     QDomElement getEngineElmRef(QScriptEngine *aEngine);
     int getEngineElmIndex(QScriptEngine *aEngine);
+
+    void saveXML();
+    bool loadDocument(QString aFileName, QString *aDocument);
     bool loadFileCommon(QString aFName, QByteArray *aByteArray);
     bool findIncludeFile(QString *aFName);
-
+   
+ 
 };
 
 extern tCore Core;
@@ -337,7 +145,6 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
-    
 
 private slots:
     void on_wTree_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
@@ -356,6 +163,14 @@ private slots:
     void on_actionInsertChild_triggered();
     void on_actionNewXML_triggered();
     
+    void on_actionOpenBinBufMode_triggered();
+    
+    void on_actionViewWBufferStats_triggered();
+    
+    void on_actionThemeIceDragon_triggered();
+    
+    void on_actionThemeNormal_triggered();
+    
 public:
     void dev_init_();
     void loadXMLFile(QString aFName);
@@ -364,20 +179,20 @@ public:
     void loadXML_L4();
     void loadXMLRecursive();
     void loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus, QXmlStreamReader *aReader);
+    void loadXMLRecursive_findReaderToken(int aToken, XMLReadStatus *aStatus, QXmlStreamReader *aReader);
     void loadBinFile(QString aFName, int aMode);
     void saveBinFile(QString aFName);
-    void saveXML();
-    void dev_init_combo_(QString aXML, QString aBIN);
+    void dev_init_combo_(QString aXML, QString aBIN, int aBufferMode = eBufferSystem_Single);
     void load_NES_Palette(QString aFName);
     void selectXMLfile();
-    void selectBinFile();
+    void selectBinFile(bool aForceBufferMode = false);
     void unloadXML();
     void init();
     void updateWindowTitle();
     void disableDirectEdit();
     void closeEvent(QCloseEvent *aCEvent);
     int calculateTabOrder(int aStart);
-
+    
 private:
     Ui::MainWindow *ui;
 };

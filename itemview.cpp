@@ -1,5 +1,6 @@
 #include "itemview.h"
 #include "ui_itemview.h"
+#include "script.h"
 
 #include "mainwindow.h"
 
@@ -14,7 +15,7 @@ ItemView::ItemView(QWidget *parent) :
 {
     mElementRef = -1;
     ui->setupUi(this);
-
+    
 }
 
 void ItemView::focusInEvent(QFocusEvent *aEventData) {
@@ -34,7 +35,25 @@ void ItemView::closeEvent(QCloseEvent *aEventData) {
 
 void ItemView::initTypeScript() {
     
-    QString vType;
+    if (Core.itemHasAttr("window.stylesheet", Core.mItemElmTable[mElementRef].mElmRef, true, true) == true) {
+        setStyleSheet(Core.getItemAttr("window.stylesheet", Core.mItemElmTable[mElementRef].mElmRef));
+    } else {
+        int vStyleIx = Core.mCustomizeId.indexOf("window.stylesheet");
+        if (vStyleIx >= 0) {
+           setStyleSheet(Core.mCustomizeString[vStyleIx]);
+        }
+    }
+    
+    setLayout(ui->verticalLayout);
+    
+    QString vNiceText;
+    int vA = Core.mItemElmTable[mElementRef].mCharStart;
+    int vB = Core.mItemElmTable[mElementRef].mCharEnd;
+    vNiceText = Core.mXMLSource.mid(vA, vB-vA);
+    ui->wXMLedit->setPlainText(vNiceText);
+    ui->wXMLedit->hide();
+    
+ /*   QString vType;
     
     if (Core.itemHasAttr("type", Core.mItemElmTable[mElementRef].mElmRef) == true) {
         vType = Core.getItemAttr("type", Core.mItemElmTable[mElementRef].mElmRef);
@@ -57,9 +76,11 @@ void ItemView::initTypeScript() {
 
 
     Core.scriptLoad(vTypeFileFull, &mScriptEngine);
+    */
     
-    Core.scriptEnvSetup(&mScriptEngine, this->ui->widget, mElementRef);
-    
+    Core.initTypeScript(mElementRef, &mScriptEngine);
+    scriptEnvSetup(&mScriptEngine, this->ui->widget, mElementRef);
+        
     QScriptValue vGlob = mScriptEngine.globalObject();
     QScriptValue vInitFunc = vGlob.property("init");
    
@@ -72,21 +93,11 @@ void ItemView::initTypeScript() {
         vErrorBox.exec();
         return;
     }
-    
-    setLayout(ui->verticalLayout);
-    
-    QString vNiceText;
-    int vA = Core.mItemElmTable[mElementRef].mCharStart;
-    int vB = Core.mItemElmTable[mElementRef].mCharEnd;
-    vNiceText = Core.mXMLsource.mid(vA, vB-vA);
-    ui->wXMLedit->setPlainText(vNiceText);
-    ui->wXMLedit->hide();
+   
    
 }
 
 ItemView::~ItemView()
 {
     delete ui;
-
-
 }
