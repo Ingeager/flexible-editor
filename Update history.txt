@@ -1,0 +1,28 @@
+
+Release 2025-11-11:
+ - Added more file management actions under File menu.
+ - Added XML editing actions under Edit menu.
+ - XML database Items can be directly edited in the text box at the bottom.
+ - Files 1GB and above can be opened in a "Read Only" mode.
+   (Has been tested to work on a 2GB file)
+ - Bugfix: Parent Items no longer displays text belonging to Child Items
+ - Script API additions: Core.setArrayIndex, Core.getArrayIndex,
+   Core.setArrayByteSize, Core.loadTextFile
+ - XML subfolder: Added XML for Magic Sword (SNES)
+XML format additions:
+ - Documented NAME Attribute for Item, which I forgot to add for the first release.
+ - Added ICON Element.
+ - Added ICON Item attribute.
+ - Added HEADICON Attribute for INFO element.
+ - Added Array for Parent Items/blank data type Items.
+ - Added NESPAL Element.
+
+Script Update Pack 2025-09-12:
+ - Array support for INT types.
+ - UI Improvements for Integer, Palette and String types.
+ - Integers: Support for BASE attribute.
+ - common_default.js adds controls showing flags, if defined, and "common" attribute if defined.
+ - Added deprecated Array types from DRDHack.
+
+Release 2025-08-13:
+  (Initial release)
