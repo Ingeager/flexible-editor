@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'itemview.ui'
 **
-** Created: Thu 14. Aug 00:59:48 2025
+** Created: Fri 30. Jan 03:05:57 2026
 **      by: Qt User Interface Compiler version 4.8.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -40,6 +40,7 @@ public:
         sizePolicy.setHeightForWidth(ItemView->sizePolicy().hasHeightForWidth());
         ItemView->setSizePolicy(sizePolicy);
         ItemView->setBaseSize(QSize(0, 0));
+        ItemView->setStyleSheet(QString::fromUtf8(""));
         verticalLayoutWidget = new QWidget(ItemView);
         verticalLayoutWidget->setObjectName(QString::fromUtf8("verticalLayoutWidget"));
         verticalLayoutWidget->setGeometry(QRect(30, 40, 451, 161));

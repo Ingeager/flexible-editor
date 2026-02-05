@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Tue 28. Oct 22:20:32 2025
+** Created: Sun 1. Feb 02:22:47 2026
 **      by: Qt User Interface Compiler version 4.8.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -46,6 +46,10 @@ public:
     QAction *actionClearXML;
     QAction *actionInsertChild;
     QAction *actionNewXML;
+    QAction *actionOpenBinBufMode;
+    QAction *actionViewWBufferStats;
+    QAction *actionThemeNormal;
+    QAction *actionThemeIceDragon;
     QWidget *centralWidget;
     QWidget *horizontalLayoutWidget;
     QHBoxLayout *horizontalLayout;
@@ -60,6 +64,8 @@ public:
     QMenuBar *menuBar;
     QMenu *menuFile;
     QMenu *menuEdit;
+    QMenu *menuView;
+    QMenu *menuThemes;
     QToolBar *mainToolBar;
     QStatusBar *statusBar;
 
@@ -94,11 +100,22 @@ public:
         actionInsertChild->setObjectName(QString::fromUtf8("actionInsertChild"));
         actionNewXML = new QAction(MainWindow);
         actionNewXML->setObjectName(QString::fromUtf8("actionNewXML"));
+        actionOpenBinBufMode = new QAction(MainWindow);
+        actionOpenBinBufMode->setObjectName(QString::fromUtf8("actionOpenBinBufMode"));
+        actionViewWBufferStats = new QAction(MainWindow);
+        actionViewWBufferStats->setObjectName(QString::fromUtf8("actionViewWBufferStats"));
+        actionThemeNormal = new QAction(MainWindow);
+        actionThemeNormal->setObjectName(QString::fromUtf8("actionThemeNormal"));
+        actionThemeNormal->setCheckable(true);
+        actionThemeNormal->setChecked(true);
+        actionThemeIceDragon = new QAction(MainWindow);
+        actionThemeIceDragon->setObjectName(QString::fromUtf8("actionThemeIceDragon"));
+        actionThemeIceDragon->setCheckable(true);
         centralWidget = new QWidget(MainWindow);
         centralWidget->setObjectName(QString::fromUtf8("centralWidget"));
         horizontalLayoutWidget = new QWidget(centralWidget);
         horizontalLayoutWidget->setObjectName(QString::fromUtf8("horizontalLayoutWidget"));
-        horizontalLayoutWidget->setGeometry(QRect(20, 10, 841, 561));
+        horizontalLayoutWidget->setGeometry(QRect(20, 10, 841, 662));
         horizontalLayout = new QHBoxLayout(horizontalLayoutWidget);
         horizontalLayout->setSpacing(6);
         horizontalLayout->setContentsMargins(11, 11, 11, 11);
@@ -142,8 +159,9 @@ public:
         verticalLayout->addWidget(mdiArea);
 
         horizontalLayout_2 = new QHBoxLayout();
-        horizontalLayout_2->setSpacing(6);
+        horizontalLayout_2->setSpacing(5);
         horizontalLayout_2->setObjectName(QString::fromUtf8("horizontalLayout_2"));
+        horizontalLayout_2->setSizeConstraint(QLayout::SetDefaultConstraint);
         wXMLEdit = new QPlainTextEdit(horizontalLayoutWidget);
         wXMLEdit->setObjectName(QString::fromUtf8("wXMLEdit"));
         QSizePolicy sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -152,22 +170,27 @@ public:
         sizePolicy2.setHeightForWidth(wXMLEdit->sizePolicy().hasHeightForWidth());
         wXMLEdit->setSizePolicy(sizePolicy2);
         wXMLEdit->setMinimumSize(QSize(0, 0));
-        wXMLEdit->setMaximumSize(QSize(16777215, 50));
+        wXMLEdit->setMaximumSize(QSize(16777215, 53));
         wXMLEdit->setBaseSize(QSize(0, 0));
+        QFont font;
+        font.setPointSize(9);
+        wXMLEdit->setFont(font);
 
         horizontalLayout_2->addWidget(wXMLEdit);
 
         verticalLayout_2 = new QVBoxLayout();
-        verticalLayout_2->setSpacing(6);
+        verticalLayout_2->setSpacing(0);
         verticalLayout_2->setObjectName(QString::fromUtf8("verticalLayout_2"));
+        verticalLayout_2->setContentsMargins(0, -1, 4, -1);
         wUpdate = new QPushButton(horizontalLayoutWidget);
         wUpdate->setObjectName(QString::fromUtf8("wUpdate"));
-        wUpdate->setMinimumSize(QSize(55, 0));
+        wUpdate->setMinimumSize(QSize(55, 26));
         wUpdate->setMaximumSize(QSize(55, 16777215));
+        wUpdate->setFont(font);
 
         verticalLayout_2->addWidget(wUpdate);
 
-        verticalSpacer_2 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        verticalSpacer_2 = new QSpacerItem(1, 26, QSizePolicy::Minimum, QSizePolicy::Ignored);
 
         verticalLayout_2->addItem(verticalSpacer_2);
 
@@ -188,6 +211,10 @@ public:
         menuFile->setObjectName(QString::fromUtf8("menuFile"));
         menuEdit = new QMenu(menuBar);
         menuEdit->setObjectName(QString::fromUtf8("menuEdit"));
+        menuView = new QMenu(menuBar);
+        menuView->setObjectName(QString::fromUtf8("menuView"));
+        menuThemes = new QMenu(menuBar);
+        menuThemes->setObjectName(QString::fromUtf8("menuThemes"));
         MainWindow->setMenuBar(menuBar);
         mainToolBar = new QToolBar(MainWindow);
         mainToolBar->setObjectName(QString::fromUtf8("mainToolBar"));
@@ -198,7 +225,10 @@ public:
 
         menuBar->addAction(menuFile->menuAction());
         menuBar->addAction(menuEdit->menuAction());
+        menuBar->addAction(menuView->menuAction());
+        menuBar->addAction(menuThemes->menuAction());
         menuFile->addAction(actionOpenBinary);
+        menuFile->addAction(actionOpenBinBufMode);
         menuFile->addAction(actionSaveBinary);
         menuFile->addSeparator();
         menuFile->addAction(actionOpenXML);
@@ -213,6 +243,9 @@ public:
         menuEdit->addAction(actionDeleteItem);
         menuEdit->addSeparator();
         menuEdit->addAction(actionClearXML);
+        menuView->addAction(actionViewWBufferStats);
+        menuThemes->addAction(actionThemeNormal);
+        menuThemes->addAction(actionThemeIceDragon);
 
         retranslateUi(MainWindow);
 
@@ -234,9 +267,15 @@ public:
         actionClearXML->setText(QApplication::translate("MainWindow", "Reset XML", 0, QApplication::UnicodeUTF8));
         actionInsertChild->setText(QApplication::translate("MainWindow", "Insert Child Item", 0, QApplication::UnicodeUTF8));
         actionNewXML->setText(QApplication::translate("MainWindow", "New XML file..", 0, QApplication::UnicodeUTF8));
+        actionOpenBinBufMode->setText(QApplication::translate("MainWindow", "Open in W-Buffer mode..", 0, QApplication::UnicodeUTF8));
+        actionViewWBufferStats->setText(QApplication::translate("MainWindow", "WBuffer stats", 0, QApplication::UnicodeUTF8));
+        actionThemeNormal->setText(QApplication::translate("MainWindow", "None", 0, QApplication::UnicodeUTF8));
+        actionThemeIceDragon->setText(QApplication::translate("MainWindow", "Ice Dragon", 0, QApplication::UnicodeUTF8));
         wUpdate->setText(QApplication::translate("MainWindow", "Update", 0, QApplication::UnicodeUTF8));
         menuFile->setTitle(QApplication::translate("MainWindow", "File", 0, QApplication::UnicodeUTF8));
         menuEdit->setTitle(QApplication::translate("MainWindow", "Edit", 0, QApplication::UnicodeUTF8));
+        menuView->setTitle(QApplication::translate("MainWindow", "View", 0, QApplication::UnicodeUTF8));
+        menuThemes->setTitle(QApplication::translate("MainWindow", "Themes", 0, QApplication::UnicodeUTF8));
     } // retranslateUi
 
 };
