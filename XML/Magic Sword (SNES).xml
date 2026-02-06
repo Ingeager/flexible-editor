@@ -14,8 +14,12 @@
 	<item name="Palette (Floor 01-50)" icon="palette" ptr="F8450" arr_indexwidth="C0" len="32">
 		<item name="Palette Data" icon="palette" type="pal_15" len="60"/>
 	</item>
-	<item name="Stats Palette" icon="palette" ptr="F8410" len="20" type="pal_15"/>
-	<item name="Starting Floor data" ptr="3FA1" type="byte" len="8" icon="value" flag="DECIMAL"/>
+	<item name="HUD Palette" icon="palette" ptr="F8410" len="20" type="pal_15"/>
+	<item name="Starting Floor data" ptr="3FA1" type="byte" len="8" icon="value" flag="DECIMAL">
+	<item name="HUD Tiles" ptr="FC000" type="chr_snes" len="D0" palette="0.0010A4.00A4D5.D5D5D5.947352.D5C5A4.83D5D5.A40000.D55200.0073D5.414141.D5D573.D59452.391800.6A4A20.0">
+		<palette ptr="F8410" len="10" type="pal_15"/>
+	</item>
+	</item>
 	<list>
 		<item key="bgm">
 		"Intro" "Floor Select" "Floor 00" "Floor 01" "Common (04)" "Floor 14" "Common (Vegetation)" "Common (Upper)" "Boss (Dragon A)" "Boss (Chimera)" "Boss (Worms)" "Boss (Dragon B)" "Boss (Drokmar)" "Common (Burning)" "Common (Toxic)" "Common (15)"

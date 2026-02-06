@@ -1,0 +1,17 @@
+<drd>
+	<item ptr="4" type="byte" name="Header Bits" bit="....CLUT is present..BPP Upper Bit.BPP Lower Bit" list="header"/>
+	<item ptr="8" name="CLUT (If present)">
+		<item relptr="0" name="CLUT byte length" type="int32"/>
+		<item relptr="4" type="int16" name="Frame Buffer X Coordinate"/>
+		<item relptr="6" type="int16" name="Frame Buffer Y Coordinate"/>
+		<item relptr="8" type="int16" name="Frame Buffer Width"/>
+		<item relptr="A" type="int16" name="Frame Buffer Height"/>
+		<item relptr="C" type="pal_15a" name="Palette Data" len="10">WARNING: Length is 0x10 by default. Please change LEN attribute as needed (to Frame Buffer Width)</item>
+	</item>
+	<list>
+		<item key="header"> "4-bit (No CLUT)" "8-bit (No CLUT)" "16-bit (No CLUT)" "24-bit (No CLUT)"
+		"" "" "" ""
+		"4-bit (CLUT)" "8-bit (CLUT)" "16-bit (CLUT)" "24-bit (CLUT)"
+		</item>
+	</list>
+</drd>
