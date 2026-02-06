@@ -5,6 +5,9 @@
 //	setPixel(Y, X, 24BitColor)
 //	drawLineX(Y, X, X2, 24BitColor)
 //	drawLineY(Y, Y2, X, 24BitColor)
+//	drawBox(Y, Y2, X, X2, 24BitColor)
+//	drawBuffer(Y, Y2, X, X2, 24BitColorArray)
+
 //These functions do nothing if there's nothing to draw to.
 
 //You can override method drawItemFunc(cell_index, cell_page, cell_y, cell_x, y1, x1, y2, x2)
@@ -60,8 +63,8 @@ function GridHandler(argcellw, argcellh, argw, argh, arg_entries, a_accessname) 
 	this.current_y = 0;
 	this.current_x = 0;
 	this.current_page = 0;
-	this.gridline_w = 2;
-	this.gridline_h = 2;
+	this.gridline_w = Number(Core.customize(a_accessname+".linewidth", "2", "grid.linewidth"));
+	this.gridline_h = Number(Core.customize(a_accessname+".lineheight", "2", "grid.lineheight"));
 	this.redrawCellOnSelect = 0;	//0 = None (Grid Only), 1 = Old cell and new cell, 2 = Redraw all cells on select (slow)
 	//this.redrawGridOnSelect = 1; (To be implemented) //0 = Do nothing. 1 = Draw relevant parts. 2 = Redraw whole grid.
 	
@@ -69,6 +72,7 @@ function GridHandler(argcellw, argcellh, argw, argh, arg_entries, a_accessname) 
 	this.drawLineX = function(y, x, x2, color) {}
 	this.drawLineY = function(y, y2, x, color) {}
 	this.drawBox = function(y, y2, x, x2, color) {}
+	this.drawBuffer = function(y, y2, x, x2, buffer) {}
 	
 	this.drawItemFunc = function(cell_index, cell_page, cell_y, cell_x, y1, x1, y2, x2) {}
 	this.drawDisabledFunc = function(cell_index, cell_page, cell_y, cell_x, y1, x1, y2, x2) {
@@ -248,7 +252,9 @@ GridHandler.prototype.setBitmapView = function(a_bmvObject, a_handleMouse) {
 	this.drawLineX = function(y, x, x2, color) {this.bmvObject.drawLineX(y, x, x2, color);}
 	this.drawLineY = function(y, y2, x, color) {this.bmvObject.drawLineY(y, y2, x, color);}
 	this.drawBox = function(y1, y2, x1, x2, color) {this.bmvObject.drawBox(y1, y2, x1, x2, color);}
-	
+	this.drawBuffer = function(y1, y2, x1, x2, buffer) {this.bmvObject.drawBuffer(y1, y2, x1, x2, buffer);}
+
+
 /* test
     this.drawBox = function(y1, y2, x1, x2, color) {
         this.drawCmd.push(this.bmvObject.drawCmdBox, y1, y2, x1, x2, color);

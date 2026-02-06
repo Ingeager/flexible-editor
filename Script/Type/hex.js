@@ -38,7 +38,7 @@ function init() {
 	    var hsize = (label.length*11)+2;
             ctrl.resize(hsize, 20);
             ctrl.text = label;
-	    ctrl.styleSheet = "font: 16px";
+	    ctrl.styleSheet = "font: 16px ";
             ctrl.show();
 	    edit_control_x_base += hsize;
         }
@@ -48,8 +48,8 @@ function init() {
         Hex.editCtrl[rowCount] = ctrl;
         ctrl.textChanged.connect(Hex.editCtrl[rowCount], editFunc);
         ctrl.move(edit_control_x_base, Core.base_y+(rowCount*verticalSpacing));
-	ctrl.styleSheet = Core.customize("edit.stylesheet", "") + "; font: 18px";
-        ctrl.resize(460, 28);
+	ctrl.styleSheet = Core.customize("edit.stylesheet", "") + "; font: 18px  \"Terminal\" ";
+        ctrl.resize(500, 28);
         buildString(rowCount);
         ctrl.show();
     }
@@ -129,7 +129,6 @@ function editFunc(a_newStr) {
         sub = subchar >> 1;
     }
     var dataByteIndex = byteIndex + (ctrlIndex*16);
-    print(dataByteIndex);
     var value = Core.getByte(dataByteIndex);
 
    var ccode = this.text.charCodeAt(lineChar);
@@ -137,14 +136,13 @@ function editFunc(a_newStr) {
    var newval = 0;
 	if ((ccode >= 0x30) && (ccode <= 0x39)) {
 		newval = (ccode-0x30);
-	} else if ((ccode >= 0x41) && (ccode <= 0x5A)) {
+	} else if ((ccode >= 0x41) && (ccode <= 0x46)) {
 		newval = (ccode-0x41)+10;
-	} else if ((ccode >= 0x61) && (ccode <= 0x7A)) {
+	} else if ((ccode >= 0x61) && (ccode <= 0x66)) {
 		newval = (ccode-0x61)+10;
     } else {
       valid = false;
     }
- 
     if (valid == true) {
         value &= (0xF << (sub * 4));
         value |= (newval << ((1 - sub) * 4));

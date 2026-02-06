@@ -77,7 +77,9 @@ CommonString.prototype.readString = function() {
 					break;
 				}
 				
-				makeString += String.fromCharCode(ccode);
+				//if (ccode > 31) {
+					makeString += String.fromCharCode(ccode);
+				//}
 			}
 			
 		} else {

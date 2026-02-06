@@ -183,7 +183,8 @@ DefaultControls.addFlags = function() {
 	ctrl.move(Core.base_x+35, Core.base_y+0);
 	ctrl.resize(100, 55);
 
-	showStr = flagStr.replace(".", "\n");
+	//Fixed 02-04-2026 to replace all dots, not just the first one.
+	showStr = flagStr.replace(/[.]/g, "\n");
 	ctrl.setPlainText(showStr);
 	ctrl.readOnly = true;
 	ctrl.styleSheet = Core.customize("edit.stylesheet", "");
@@ -260,7 +261,7 @@ DefaultControls.addArrayTuner = function() {
 	ctrl.value = currentIndex;
 	ctrl.programChanged = false;
 	ctrl.resize(55, 25);
-	ctrl.styleSheet = "font: 15px";
+	ctrl.styleSheet = Core.customize("edit.stylesheet", "") + "; font: 15px";
 	ctrl.move(Core.base_x+DefaultControls.arrayTuner.width + 15, Core.base_y);
 	ctrl['valueChanged(int)'].connect(this, this.arraySpinBoxFunc);
 	ctrl.show();
@@ -373,6 +374,7 @@ DefaultControls.addCommon = function() {
 		ctrl.move(Core.base_x + 48, Core.base_y);
 		ctrl.resize(100, 20);
 		ctrl.readOnly = true;
+		ctrl.styleSheet = Core.customize("edit.stylesheet", "");
 		ctrl.show();
 
 		Core.base_y += DefaultControls.textSpacingHeight;

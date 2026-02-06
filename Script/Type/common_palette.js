@@ -106,7 +106,7 @@ CommonPalette.prototype.init = function () {
 	this.BMView = new BitmapView(parentWnd);
 	this.BMView.move(Core.base_x, Core.base_y);
 
-	this.palGrid = new GridHandler(cellSize, cellSize, cellsx, cellsy, entries, "grid");
+	this.palGrid = new GridHandler(cellSize, cellSize, cellsx, cellsy, entries, "entrygrid");
 	this.palGrid.redrawCellOnSelect = 0;
 	this.palGrid.parent = this;
 	this.palGrid.setBitmapView(this.BMView, false);
@@ -144,6 +144,7 @@ CommonPalette.prototype.init = function () {
 		ctrl.maximum = pages;
 		ctrl.value = 0;
 		ctrl.programChanged = false;
+		ctrl.styleSheet = Core.customize("edit.stylesheet", "");
 		ctrl['valueChanged(int)'].connect(this, this.pageSpinEditFunc);
 		ctrl.show();
 	}
@@ -161,6 +162,7 @@ CommonPalette.prototype.init = function () {
 	ctrl.move(Core.base_x+30, Core.base_y);
 	ctrl.resize(60, 20);
 	ctrl.readOnly = true;
+	ctrl.styleSheet = Core.customize("edit.stylesheet", "");
 	ctrl.show();
 
 	ctrl = new QLabel(parentWnd);
@@ -174,6 +176,7 @@ CommonPalette.prototype.init = function () {
 	ctrl.move(Core.base_x+180, Core.base_y);
 	ctrl.resize(60, 20);
 	ctrl.readOnly = true;
+	ctrl.styleSheet = Core.customize("edit.stylesheet", "");
 	ctrl.show();
 
 	Core.base_y += 25;
@@ -206,13 +209,26 @@ CommonPalette.prototype.init = function () {
 		this.cslider[0].styleSheet = "background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 0), stop:1 rgba(255, 150, 150, 255))";
 		this.cslider[1].styleSheet = "background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 0), stop:1 rgba(150, 255, 150, 255))";
 		this.cslider[2].styleSheet = "background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 0), stop:1 rgba(150, 150, 255, 255))";
-		this.valueEdit[0].styleSheet = "color: rgb(191, 0, 0)";
-		this.valueEdit[1].styleSheet = "color: rgb(0, 127, 0)";
-		this.valueEdit[2].styleSheet = "color: rgb(0, 0, 255)";
 	      if (this.channels == 4) {
 			this.cslider[3].styleSheet = "background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 0), stop:1 rgba(255, 255, 255, 255))";
-			this.valueEdit[3].styleSheet = "color: rgb(40, 40, 40)";
 	       }
+		var styles = Core.customize("edit.stylesheet", "");
+		if (styles != "") {
+			this.valueEdit[0].styleSheet = styles;
+			this.valueEdit[1].styleSheet = styles;
+			this.valueEdit[2].styleSheet = styles;
+			if (this.channels == 4) {
+				this.valueEdit[3].styleSheet = styles;
+			}
+		} else {
+			this.valueEdit[0].styleSheet = "color: rgb(191, 0, 0)";
+			this.valueEdit[1].styleSheet = "color: rgb(0, 127, 0)";
+			this.valueEdit[2].styleSheet = "color: rgb(0, 0, 255)";
+			if (this.channels == 4) {
+				this.valueEdit[3].styleSheet = "color: rgb(40, 40, 40)";
+			}
+		}
+
 
 		this.updateCurrentIndex();
 	} else {
