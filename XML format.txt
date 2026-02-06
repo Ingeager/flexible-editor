@@ -2,34 +2,30 @@
 Update Notes
 ============
 
-Release 2025-11-11:
- - Documented NAME Attribute for Item, which I forgot to add for the first release.
- - Added ICON Element.
- - Added ICON Item attribute.
- - Added HEADICON Attribute for INFO element.
- - Added Array for Parent Items/blank data type Items.
- - Added NESPAL Element.
+Release 2026-02-05:
+ - Added CHR_NES and CHR_SNES data types.
+ - Added PALETTE Element, that can be placed as child elements of CHR data types.
+ - Added STRING_UTF8 data type.
+ - Added SNAPX, SNAPY, GRIDX and GRIDY attributes for COORDINATE data type.
 
-Script Update Pack 2025-09-12:
- - Array support for INT types.
- - UI Improvements for Integer, Palette and String types.
- - Integers: Support for BASE attribute.
- - common_default.js adds controls showing flags, if defined, and "common" attribute if defined.
- - Added deprecated Array types from DRDHack.
+Script Update Pack 2025-12-22:
+ - Added BIGENDIAN flag for Integer types.
+ - Added LAB Item attribute.
+ - Palette types now has a page selector and can be larger than 256 entries.
+ - Added PAL_32 Type (RGBA8888), also added PAL32_ABGR, PAL32_ARGB and PAL32_BGRA.
+ - Added PAL_24BGR Type (BGR888)
+ - Added PAL_15A Type (RGB555 with MSB as Transparency toggle)
+ - Added BGR Flag for all Palette types.
+ - Bugfix: Integers: Bit editing controls and List control now reflect each other's changes.
 
 DRDXML format - Introduction
 ============================
 
 Flexible Editor makes use of "data-reference databases" (DRD) written in XML format.
-These databases basically describe the location and types of datas in a binary file.
-It's based on a format developed about 20 years ago for the program called "DRDHack".
-Flexible Editor doesn't support everything that editor did yet, but the plan
-is to make it fully compatible with .XML documents written for that.
-The format as it was then will be referenced to as "2006 standard" some places
-in this document.
+These databases basically describe the location and types of datas in a file.
 
-For now, XML files can be written outside the editor and then loaded, but it may
-be possible to edit them inside the editor in the future.
+XML files can be written outside the editor and then loaded, it also has some
+simple features for creating and editing them.
 As required by the XML standard, the XML must have a root element that contains all
 elements in the document.
 
@@ -43,7 +39,7 @@ Here's a basic example of a XML file that Flexible Editor can load:
 whatever you like.
 An "item" element describes one item in the database, or the database tree, or
 a parent for other items.
-The "ptr" attribute in the item element is the hexadecimal location of the data.
+The "ptr" attribute in the item element is the location of the data, in hexadecimal.
 "type" describes the type of data.
 Most attributes that have a numerical value is written in hexadecimal without a prefix.
 But there are exceptions, where a decimal value is expected instead.
@@ -72,6 +68,11 @@ If you want to write an XML and want more examples, check out demo.xml.
 It demonstrates an example for all data types.
 Also, the "XML" subfolder will contain demos and examples.
 
+The XML format is based on a format developed about 20 years ago for the program called "DRDHack".
+Flexible Editor doesn't support everything that editor did yet, but the plan
+is to make it fully compatible with .XML documents written for that.
+That format will be referenced to as "2006 standard" some places in this document.
+
 Supported Elements
 ==================
 
@@ -79,16 +80,17 @@ ITEM
 ----
 
 ITEM is used to describe one item of data, or function as a
-parent element for other item elements.
+parent element for other Item elements.
 It can describe various data types, or none (blank).
 All attributes are optional, including the NAME attribute.
 
-In a different case, an ITEM element also describes a List Item element, see further down in the document.
+In an alternative case, an ITEM element describes a List Item element, this will be
+described further down in the document.
 
 Supported attributes for ITEM:
 
 	NAME	Display name describing the Item, shown in the Item tree and window titles.
-	TYPE	Data type. See further below for specifics, and which extra attributes
+	TYPE	Data type. See further on for specifics, and which extra attributes
 		you can specify depending on the Data type.
 	PTR	Hexadecimal pointer to data (without prefix).
 	RELPTR	Relative pointer to data, in Hexadecimal (without prefix).
@@ -107,13 +109,15 @@ Supported attributes for ITEM:
 	ICON	Use a graphical icon for this Item in the Item Tree.
 		Value must correspond to the KEY attribute from an ICON Element.
 		(See "ICON Element" section)
+	LAB	Display a comment. If present, it will be displayed in an edit control at the
+		top of the editing window.
 
 An Item for editing data will use either PTR or RELPTR.
 (They can both be used, but there's not much point)
 See the section on Pointers further on for more details.
 
-Text: ITEM elements can contain a text part that will function as a comment.
-If present, it will be displayed in an edit control in the editing window.
+Text: ITEM elements can contain a text part. This works exactly the same as the LAB attribute.
+If it's present, it will be displayed in an edit control at the top of the editing window.
 
 BRA
 ---
@@ -191,6 +195,31 @@ A full example of a document using a list:
 
 You'll have 4 values to choose between corresponding to the 4 entries in the list named "example".
 
+PALETTE
+-------
+
+"PALETTE" elements can be placed as a child of ITEM elements with CHR_NES and CHR_SNES data types,
+to describe a source of Palette data to view and edit the tiles.
+These Elements works like regular ITEM elements, except that only attributes related to retrieving the
+data is relevant. (Attributes like "name" is ignored)
+
+Examples 1 - NES - This will show the tiles using the palette data at 0x550-0x553.
+
+	<item ptr="1800" type="chr_nes" len="100">
+		<palette ptr="550" type="pal_nes" len="4">
+	</item>
+
+
+Examples 2 - SNES - This will show the tiles using the palette data at 0x66A00-0x66A1F.
+
+	<item ptr="40200" type="chr_snes" len="100">
+		<palette ptr="66A00" type="pal_15" len="10">
+	</item>
+
+In both cases, palette data is fetched as an array of 24-bit RGB color values.
+
+(Note: This particular feature was added just before release and may have bugs)
+
 Pointers (PTR/RELPTR/Arrays)
 ============================
 
@@ -241,6 +270,9 @@ int		General Integer, the bitsize is 16 by default and
 		If it's in the same element it changes the intsize for that Item.
 		If there's an INTSIZE attribute in the INFO element it sets it as a global default.
 
+All integers are by default edited in Unsigned Hexadecimal in Little-Endian byte order.
+This can be changed using the FLAG attribute and BASE attribute.
+
 Supported attributes for Integer Types:
 	INTSIZE		Decimal value. Change the Integer bitsize for any Integer type. This can be any
 			number divisible by 8. The actual upper limit hasn't been tested,
@@ -268,7 +300,10 @@ Supported attributes for Integer Types:
 
 Supported flags for all Integer Types:
 	SIGNED		Edit the integer as a Two's complement Signed value.
-	DECIMAL		Edit the integer as a decimal (Base 10) number. 
+	DECIMAL		Edit the integer as a decimal (Base 10) number.
+	BIGENDIAN	Edit the integer in Big-Endian mode.
+			This also works for Bit toggling with BIT attribute and editing
+			using a List.
 
 	Examples:
 
@@ -278,28 +313,33 @@ Supported flags for all Integer Types:
 Raw data types
 --------------
 
-hex	Edit bytes in hexadecimal. Basic and limited for now.
+hex	Edit bytes in hexadecimal, with 16 bytes on each row.
 
 Supported attributes:
-	LEN	Number of bytes in hex. The hex editor is limited for now and can only
-		be done on one row. Also, for now, hex strings use the same engine as
-		integers and is actually treated as Big-endian integers with a
-		variable size, so large ones may make the editor slow.
-		The upper limit of LEN here hasn't been tested.
+	LEN	Number of bytes in hex. For now, it is limited to somewhere around 1A0,
+		depending on the screen resolution and how many rows will fit in the window.
 
 String Types
 ------------
 
-string		ANSI string. Can be fixed-size or character-terminated.
+string		ANSI/Windows-1252 or ASCII string. Can be fixed-size or character code-terminated.
+string_utf8	UTF-8 encoded string. Can have a fixed byte size or, the string can end at a
+		specific character code.
 
 Supported attributes:
 
-	LEN		Sets character length for fixed-size in Hexadecimal.
-			For character-terminated strings, this defines the maximum length (including the end character).
+	LEN		Sets byte size of data in Hexadecimal. For "string" type this is the
+			same as the number of characters.
+			For character code-terminated strings, this defines the maximum byte size
+			of the input string + end character bytes.
+			If the resulting data doesn't fit, characters from the input string are cut.
 
-	ENDCODE		Defines the character code of the end/termination character.
+	ENDCODE		Defines the character code that ends/terminates the string.
 			Decimal value.
-			(For example: endcode="0")
+			(Example: endcode="0")
+
+Known bugs: There is a bug I've been unable to fix for now where the editor will crash, at least for
+"string" in certain cases, though it seems related to unusual character codes.
 
 Types: Graphics - Palette
 -------------------------
@@ -307,14 +347,71 @@ Types: Graphics - Palette
 pal_nes		NES Palette
 pal_15		15 bit palette, 5 bits each for R, G and B. (RGB555)
 		Use for SNES, GameBoy Color, GameBoy Advance.
-		Can probably also be used for palette contents of PlayStation1 CLUT
-		data but it hasn't been tested.
+pal_15a		Same as pal_15, but adds a 1-bit transparency toggle for the upper bit,
+		making it suitable for PlayStation1 CLUT data.
 pal_smd		Sega Mega Drive and Game Gear palette data. (RGB333)
 pal_6		Sega Master System palette (RGB222)
-pal_24		24 bit palette (RGB888)
+pal_24		24 bit palette (RGB888), Red is first byte and Blue is the 3rd.
+pal_24bgr	24 bit palette (BGR888), Blue is first byte and Red is the 3rd.
+pal_32		32 bit palette (RGBA8888), with channels in order Red, Green, Blue, Alpha.
+pal_32abgr	32 bit palette (ABGR8888), reverse of the above (Alpha, Blue, Green, Red)
+pal_32argb	32 bit palette (ARGB8888), with channels in order Alpha, Red, Green, Blue.
+pal_32bgra	32 bit palette (BGRA8888), with channels in order Blue, Green, Red, Alpha.
 
 Supported attributes for all Palette Types:
-	LEN	Number of palette entries in hexadecimal. The editor is currently limited to 256.
+	LEN	Number of palette entries in hexadecimal.
+		If it's higher than 0x100 (256), a page selector is added.
+
+Supported Flags for all Palette Types:
+	BGR	Swaps the position of Blue and Red channels.
+
+Supported objects for customization attributes, all CHR types (See "GUI Cusomization"):
+	Type		Name
+
+	GRID		grid		(all grids)
+	GRID		entrygrid
+	GRID		indexedgrid	Grid displaying indexed palette, such as for PAL_NES.
+
+	(Example: entrygrid.selcolor="70C070" grid.color="007000")
+
+
+Types: Graphics - CHR (Tiles)
+-----------------------------
+
+chr_nes		NES CHR (4 color 2bpp)
+chr_snes	SNES CHR (limited to 16 color 4bpp for now)
+
+Supported Attributes for all CHR Types:
+	LEN		Number of tiles. For now, limited to the number of tiles
+			that can be displayed in the window.
+	PALETTE		Palette provided as 24-bit RGB values for each color.
+			Each color value is written in hexadecimal and seperated by a dot,
+			with channels in Red->Green->Blue order. Example:
+			(palette="000000.FF0000.00FF00.0000FF")
+			^ Provides a 4 color palette fit for NES CHR, with colors
+			Black, Red, Green, Blue, in that order.
+	SCALE		Set scaling of tile selector. Default is 3.
+			The bigger, the larger. "1" will draw 1 screen pixel for each tile pixel,
+			"2" will draw 2x2 pixels for each tile pixel, and so on.
+			This must be an integer value.
+	ROWLENGTH	Number of tiles in a row for the tile selector. Default is 16.
+			(Decimal value)
+
+Supported Child Elements for all CHR types:
+	PALETTE		Use data from the binary as a palette source.
+			Functions the same way as an Item element.
+			Palette info is described using PTR, TYPE and LEN attributes.
+			TYPE can be PAL_NES or PAL_15.
+
+Supported objects for customization attributes, all CHR types (See "GUI Cusomization"):
+	Type		Name
+
+	GRID		grid		(all grids)
+	GRID		tilegrid
+	GRID		editgrid
+	GRID		colorgrid
+
+	(Example: tilegrid.selcolor="70C070" grid.color="007000")
 
 Types: Graphics - Other
 -----------------------
@@ -339,6 +436,10 @@ Supported attributes for COORDINATE:
 	(You can define "y" to edit only Y coordinate,
 	"x" to edit only X coordinate, or you can define both.)
 
+	SNAPY	Decimal value. If set, Y coordinate will be rounded to values divisible by this value.
+	SNAPX	Decimal value. If set, X coordinate will be rounded to values divisible by this value.
+	GRIDY	Decimal value. If set, horizontal lines will be shown for every GRIDY pixel.
+	GRIDX	Decimal value. If set, vertical lines will be shown for every GRIDX pixel.
 
 
 Deprecated but Supported Data Types 
@@ -363,15 +464,18 @@ These are data types that was specified in the DRD standard from 2006,
 but has not yet been implemented in Flexible Editor.
 
 tbl_string	String editing using a .tbl file.
+		A work in progress script for this type is present, but it's early in development.
+
 
 Arrays
 ======
 
-Setting the LEN attribute for a fixed-length data type will turn it into an Array of that data
-if supported (Currently the case for all Integers).
+If supported, setting the LEN attribute for a fixed-length data type will turn it into an Array.
+(Currently the case for all Integers only).
 A slider control will be added for changing the index.
 Attributes ARRINDEX_LABLIST or ARRINDEX_LABDEF can be defined to give the
-Array indexes labels from a List item, in this case the index is changed using a dropdown list.
+Array indexes string labels. In this case the index is changed using a dropdown list.
+(See demo.xml for some examples.)
 
 Array-specific Attributes:
 
@@ -420,7 +524,7 @@ ICON Element
 ============
 The "icon" element loads a bitmap for use either as icons to represent Items in the tree structure,
 or setting up a program icon in place of the default one.
-KEY attribute defines the Key to reference to it from Item elements, and FILENAME is the file name.
+The KEY attribute defines the Key to reference to it from Item elements, and FILENAME is the file name.
 A variety of file types are supported, such as BMP and PNG.
 The image files don't have to be a suitable size (they are stretched)
 But for the Item Tree, the idea size is 16x16 pixels. They can also be transparent.
@@ -430,7 +534,7 @@ These are parsed before everything else.
 "filename" can be relative or absolute.
 If it's relative, the editor will look in the same folder as the XML,
 then relative to the program folder, in that order of prority.
-You can use files in the \Icons subfolder if you want.
+The \Icons subfolder has some icons that could be used.
 
 Document Example:
 
@@ -467,6 +571,73 @@ An Item element's attributes will have first priority. So if an attribute is fou
 itself, and a COMMON element, the one from the Item will be used.
 
 COMMON elements currently can't be nested (A COMMON element can't have a COMMON attribute.)
+
+
+GUI Customization
+=================
+Some GUI elements in the editing window can be customized using attributes.
+Some of these can be placed for all data types, and others are common between types or specific to
+one data type.
+(Note that all this is optional!)
+
+List of general attributes:
+---------------------------
+
+window.stylesheet	Set a Style Sheet for the editing window. This will generally affect all
+			controls in the window. If there's currently a theme active, this will
+			override the theme.
+color1			Theme color 1 in format "RRGGBB", channel values in hexadecimal.
+			Currently changes the Horizontal line in Coordinate data types.
+color2			Theme color 2 in format "RRGGBB", channel values in hexadecimal.
+			Currently changes the Vertical line in Coordinate data types.
+bgcolor			Theme bacground color 1 in format "RRGGBB", channel values in hexadecimal.
+			Currently changes the background color of the display in Coordinate data type.
+
+
+There are also "classes" where similar GUI elements are used for multiple data types,
+some times with one instance and some times with multiple instances in the same window.
+They can be customized through setting an attribute
+for a specific property, in this format: instance.property="data"
+The first part of the attribute describes the instance, followed by a period,
+then the last part describes the property. (For example "tilegrid.color").
+You can also use the general class name to change a property for all instances.
+(For example "grid.color").
+
+List of general classes:
+------------------------
+
+	EDIT
+
+stylesheet	Set Style Sheet for all text editor controls.
+		Setting the "edit.stylesheet" attribute will generally set a stylesheet for all
+		controls in the window related to editing or displaying text.
+		Currently, you can't set this for any specific instances anywhere.
+
+	GRID
+
+selcolor	Color of rectangle around selected entry in format "RRGGBB"
+		where each channel is described with a Hexadecimal value between 00-FF.
+color		Color of grid in format "RRGGBB"
+		where each channel is described with a Hexadecimal value between 00-FF.
+linewidth	Width of grid lines, in pixels.
+lineheight	Height of grid lines, in pixels.
+
+Style Sheets
+------------
+
+Style Sheets follow the convention in Qt 4.8 when the styleSheet property is set for a control.
+General properties you can usually set is "background" for setting the background color or
+background graphics, "color" for text color, and "font".
+
+Example: edit.stylesheet="background: #203040; color: #6080A0; font: 18px"
+
+Complete documentation for Qt Style Sheets can be found here:
+https://doc.qt.io/archives/qt-4.8/stylesheet.html
+
+Case Sensitivity
+================
+Generally speaking, Element tags are completely case insensitive. (You can do "ITem" and it should work)
+For attributes, they need to be either Lower case or Upper case.
 
 Customization / User Scripts for Data Types
 ===========================================
