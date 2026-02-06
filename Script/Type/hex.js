@@ -24,7 +24,7 @@ function init() {
 
     var edit_control_x_base = 0;
     var placeAddrLabels = false;
-    if (Core.versionDate >= 251111) {
+    if (Core.versionDate >= 251202) {
         placeAddrLabels = true;
     }
 
