@@ -30,7 +30,6 @@ FLEX_INCLUDE = "file2.js"
 
 It needs to be within "" quotes.
 
-
 Data type scripts
 =================
 
@@ -51,6 +50,30 @@ function init() {
 Instead of writing everything from scratch you may be able to use one of the scripts that already exists as template or example, if the core idea is similar.
 You can include scripts for some general handlers. These all start with "common_" in the filenames.
 For example, for palettes, Check out "common_palette.js" or the scripts that includes it.
+
+initFetch / Data fetch function
+-------------------------------
+
+The script can have a function, initFetch, that returns an array of data based on an XML element,
+for that data to be used by other scripts. In this environment, all "Core" functions and other
+works the same way, except that GUI elements can't be created.
+An example of this functionality being used is when a PALETTE element is placed under an ITEM element
+with "CHR_" data type.
+
+Example:
+
+function initFetch() {
+
+	//Return an array of 10 elements where each contains a byte of data
+
+	var returnArray = [];
+	for (var a = 0; a < 10; a++) {
+		var byteData = Core.getByte(a);
+		returnArray.push(byteData);
+	}
+
+	return returnArray;
+} 
 
 Creating Q widgets (controls)
 -----------------------------
@@ -82,6 +105,7 @@ QFrame
 QSlider
 QCheckBox
 QSpinBox
+QTimer . . . (added for 260205)
 
 These are all members of the global object.
 
@@ -144,12 +168,19 @@ void	setPixel(y, x, rgb24)
 void	drawLineX(y, x1, x2, rgb24)
 void	drawLineY(y1, y2, x, rgb24)
 void	drawBox(y1, y2, x1, x2, rgb24)
+void	drawBuffer(y1, y2, x1, x2, buffer)	Draws data from the array "buffer" where each element represents a
+						rgb24 pixel, in order from top-left to bottom-right.
+						Using this is much faster than calling setPixel or
+						drawBox a dozen times to draw the same thing.
+						(Added 260131)
 
 (rgb24 is an int containing all 24 bits of the RGB values combined.)
 
-The control has one specific Signal, emitted upon mouse clicks:
+The control has the following Signals that can be connected to functions:
 
 void	mousePress(button, y, x)
+void	mouseMove(button, y, x) . . . (Added 260109)
+					Note: mouseMove is only emitted if a button is held down.
 
 Connecting functions to signals
 -------------------------------
@@ -168,6 +199,20 @@ myObject.prototype.createEdit = function() {
 myObject.prototype.editTextFunc = function(a_newtext) {
 	//handle edit event
 }
+
+Element Index
+-------------
+
+Scripts are usually tied to the XML Element with ITEM tag that the user just opened in the editor.
+Functions like Core.getByte() and Core.setByte() are available that reads and writes data
+from and to the binary relative to the pointer described by PTR and RELPTR attributes and so on.
+
+Often the script only needs to concern itself with that XML Element, but some times references
+to other elements in the XML is involved.
+Most elements in the XML will get an unique Index when it is parsed.
+(This is not related to "id" attribute, if present any any Element)
+When "Element Index" is mentioned in this document, it refers to this index.
+
 
 Global Objects
 ==============
@@ -209,7 +254,7 @@ Number elmRefIndex
 
 Number versionDate
 
-	Date for the build of Flexbile Editor in the format YYMMDD as an Int.
+	Date for the build of Flexbile Editor in the format YYMMDD as a Number.
 	The idea is that scripts can check this in order to skip code that makes use of API features not
 	supported by an earlier (or not yet released) build.
 	This number corresponds to the "build" number shown in the title bar.
@@ -227,13 +272,29 @@ Number winpal.bgcolor
 	Get the window (background) color of the editing window, represented as a 24 bit (8+8+8) value.
 	(You can't set it however)
 
-void setByte(Number index)
+void setByte(Number index, Number value)
 
 	Write byte for the current Item, at active pointer + index.
 
 Number getByte(Number index)
 
 	Get byte for the current Item, at active pointer + index.
+
+void setByteAbs(Number pointer, Number value) · · · (Added 251112)
+
+	Write byte to binary at absolute pointer.
+
+Number getByteAbs(Number pointer) · · · (Added 251112)
+
+	Get byte from binary at absolute pointer.
+
+Number getBinarySize() . . . (Added 251201)
+
+	Get the file size of the loaded binary.
+
+Number getActivePtr() . . . (Added 251202)
+
+	Get the calculated active pointer for current Item (position read/written by getByte() and setByte())
 
 Bool hasAttr(String name)
 
@@ -271,6 +332,21 @@ String getText()
 
 	Obtain the element's text.
 
+Number childElementIndex(String tagName) · · · (Added 260129)
+
+	Find first child element of current Item element that has the tag name (tagName),
+	then return its Element Index.
+
+Array fetchElementData(Number elmRefIndex) · · · (Added 260129)
+
+	Get data from binary as described by an XML Element, with elmRefIndex as Element Index.
+	(This is used by CHR_NES and CHR_SNES data types to get palette data through a PALETTE element)
+	The Element must have a TYPE attribute and the TYPE must have an "initFetch" function
+	in its corresponding script that returns an array of data.
+	(Currently PAL_NES and PAL_15).
+	You can use the "childElementIndex" function as a way to get the element index of a
+	child element.
+
 Array getList(String listname)
 
 	Retrieve LIST element with key "listname" as an array of strings.
@@ -279,6 +355,54 @@ String loadTextFile(String filename) · · · (Added 250823)
 
 	Load a text file as a String. "filename" must be absolute, or relative
 	to the program folder, or relative to the currently open XML.
+
+String stringDecode(Array byte_array, Number array_size, String encoding) . . . (Added 251205)
+
+	Converts "byte_array" to a string of type "encoding".
+	For "encoding", "UTF-8" is supported.
+	"array_size" must contain the size of "byte_array".
+	The function returns an object with two members:
+		Object.data <- Resulting string
+		Object.size <- Number of characters in string "data".
+
+Object stringEncode(String string, Number string_size, String encoding) . . . (Added 251205)
+
+	Converts "string" to an array of byte values encoded as "encoding".
+	For "encoding", "UTF-8" is supported.
+	"string_size" must contain the number of characters in "string".
+	The function returns an object with two members:
+		Object.data <- Array of resulting byte values.
+		Object.size <- Number of elements (bytes) in "data".
+
+String customize(String attributeName, String defaultValue, String 2ndPrioAttributeName) . . . (Added 260129)
+
+	Convenience function for allowing users to customize the editing environment through XML attributes,
+	usually graphically.	
+	This also checks settings in the current Theme, so it's not good for other purposes.
+
+	The logic is as follows:
+	If the ITEM element has "attributeName" then the function will return that attribute, otherwise:
+	If the ITEM element has "2ndPrioAttributeName" then the function will return that attribute, otherwise:
+	If the current Theme has "attributeName" in its settings the function will return that value, otherwise:
+	If the current Theme has "2ndPrioAttributeName" in its settings, the function will return that value..
+	Otherwise, return "defaultValue".
+
+	The distinction between the two attribute names is implemented in the case that this function is called
+	from multiple instances or objects based on the same code, and that it should be possible to customize
+	either ONE of the instances or all of them.
+	For an abstract example:
+
+	leftTextControl.color = Core.customize("lefttext.color", "FFBBAA", "text.color");
+	rightTextControl.color = Core.customize("righttext.color", "AABBFF", "text.color");
+
+	^ This allows the user to customize the "color" property of the left control and right controls
+	individually through "lefttext.color" and "righttext.color" attributes respectively,
+	but also both at the same time through the "text.color" attribute.
+	If "text.color" is a setting set in the theme and none of the attributes are present in the Element,
+	the function returns that setting.
+
+	(Earlier version of this function is available undocumented since
+	b250813 but the 3rd argument was added 260129).
 
 Event object / Event object members
 ===================================
