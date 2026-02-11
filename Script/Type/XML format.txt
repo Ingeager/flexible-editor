@@ -2,6 +2,10 @@
 Update Notes
 ============
 
+GitHub updates:
+ - HEX data type now has a page selector if data length is more than 256 bytes
+   (No LEN restriction)
+
 Release 2026-02-05:
  - Added CHR_NES and CHR_SNES data types.
  - Added PALETTE Element, that can be placed as child elements of CHR data types.
@@ -316,8 +320,8 @@ Raw data types
 hex	Edit bytes in hexadecimal, with 16 bytes on each row.
 
 Supported attributes:
-	LEN	Number of bytes in hex. For now, it is limited to somewhere around 1A0,
-		depending on the screen resolution and how many rows will fit in the window.
+	LEN	Number of bytes in hex. No limit. If it's more than 256 (0x100),
+		the page selector will be shown.
 
 String Types
 ------------
