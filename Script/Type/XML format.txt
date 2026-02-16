@@ -3,6 +3,7 @@ Update Notes
 ============
 
 GitHub updates:
+ - Added CHR_GB
  - HEX data type now has a page selector if data length is more than 256 bytes
    (No LEN restriction)
 
@@ -384,6 +385,7 @@ Types: Graphics - CHR (Tiles)
 
 chr_nes		NES CHR (4 color 2bpp)
 chr_snes	SNES CHR (limited to 16 color 4bpp for now)
+chr_gb		GameBoy / GameBoy Color CHR (4 color 2bpp)
 
 Supported Attributes for all CHR Types:
 	LEN		Number of tiles. For now, limited to the number of tiles

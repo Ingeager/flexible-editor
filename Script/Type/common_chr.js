@@ -3,8 +3,8 @@
 CommonTile = function() {
 	this.palette = [0, 0xFFFFFF, 0xBBBBBB, 0x777777];
 	this.numOfColors = 4;
+	this.setTileFunc = function(a_index) {}
 	this.getPixFunc = function(y, x) {return 0;}
-	this.changeReadTileFunc = function(a_index) {}
 	this.setPixFunc = function(y, x, color) {}
 	this.tileGrid = 0;
 	this.tileBMview = 0;
@@ -25,32 +25,32 @@ CommonTile.prototype.init = function() {
 		this.proportion = Number(Core.getAttr("scale"));
 	}
 
-    var numOf = Core.getHexValueAttr("len");
-    var gw = 16;
-    var gh = 20;
-    	if (Core.hasAttr("rowlength") == true) {
+	var numOf = Core.getHexValueAttr("len");
+	var gw = 16;
+	var gh = 20;
+	if (Core.hasAttr("rowlength") == true) {
 		gw = Number(Core.getAttr("rowlength"));
 	}
-   gh = Math.ceil(numOf/gw);
-    /*if (gh > 20) {
+	gh = Math.ceil(numOf/gw);
+	/*if (gh > 20) {
 	gh = 20
-    };*/
+	};*/
     	
-    var cellw = this.tilePixelWidth*this.proportion;
-    var cellh = this.tilePixelHeight*this.proportion;
-    this.tileBMview = new BitmapView(Core.window);
-    this.tileBMview.move(Core.base_x, Core.base_y);
-    this.tileGrid = new GridHandler(cellw, cellh, gw, gh, numOf, "tilegrid");
-    this.tileGrid.redrawCellOnSelect = 0;
-    this.tileGrid.parent = this;
-   this.tileGrid.setBitmapView(this.tileBMview, false);
-   	this.tileBMview.mousePress.connect(this, this.tileBMviewClickFunc);
-   var wpixels = this.tileGrid.getTotalWidth();
-   var hpixels = this.tileGrid.getTotalHeight();
-   this.tileBMview.init(wpixels, hpixels);
-    this.tileGrid.drawItemFunc = this.drawSelectorFunc;
+	var cellw = this.tilePixelWidth*this.proportion;
+	var cellh = this.tilePixelHeight*this.proportion;
+	this.tileBMview = new BitmapView(Core.window);
+	this.tileBMview.move(Core.base_x, Core.base_y);
+	this.tileGrid = new GridHandler(cellw, cellh, gw, gh, numOf, "tilegrid");
+	this.tileGrid.redrawCellOnSelect = 0;
+	this.tileGrid.parent = this;
+	this.tileGrid.setBitmapView(this.tileBMview, false);
+	this.tileBMview.mousePress.connect(this, this.tileBMviewClickFunc);
+	var wpixels = this.tileGrid.getTotalWidth();
+	var hpixels = this.tileGrid.getTotalHeight();
+	this.tileBMview.init(wpixels, hpixels);
+	this.tileGrid.drawItemFunc = this.drawSelectorFunc;
 
-   // this.buffer = [this.unitByteSz];
+	// this.buffer = [this.unitByteSz];
 	if (Core.hasAttr("palette") == true) {
 		var palstring = Core.getAttr("palette");
 		var pal_arr = palstring.split(".");
@@ -82,10 +82,10 @@ CommonTile.prototype.init = function() {
 	//print(bench2 - bench1);
 	this.tileBMview.refresh();
 	this.tileBMview.show();
-
+	
+	this.setTileFunc(0);
 
 	var local_base_y = Core.base_y;
-	this.changeReadTileFunc(0);
 	cellw = 18;
 	cellh = 18;
 	this.editBMview = new BitmapView(Core.window);
@@ -134,21 +134,10 @@ CommonTile.prototype.init = function() {
 	this.colorBMview.show();
 }
 
-/*CommonTile.prototype.initMode = function() {
-
-    this.unitByteSz = 1;
-    if (this.mode.toUpperCase().trim() === "NES") {
-        this.getPixFunc = CommonTile.prototype.getPixNES;
-        this.unitByteSz = 16;
-        this.palette = [0, 0xFFFFFF, 0xBBBBBB, 0x777777];
-    }
-    this.buffer = [this.unitByteSz];
-}*/
-
 CommonTile.prototype.tileBMviewClickFunc = function(a_buttons, a_y, a_x) {
 	this.tileGrid.eventMousePress(a_buttons, a_y, a_x);
 
-	this.changeReadTileFunc(this.tileGrid.getIndex());
+	this.setTileFunc(this.tileGrid.getIndex());
 	this.editGrid.redraw();
 	this.editBMview.refresh();
 }
@@ -165,7 +154,7 @@ CommonTile.prototype.editBMviewClickFunc = function(a_buttons, a_y, a_x) {
 
 	this.editGrid.redrawCurrentCell();
 	this.editBMview.refresh();
-	
+
 	this.tileGrid.redrawCurrentCell();
 	this.tileBMview.refresh();
 }
@@ -183,8 +172,8 @@ CommonTile.prototype.drawSelectorFunc = function(a_index, a_page, a_cell_y, a_ce
     var color;
     var y, x;
     var parent = this.parent;
-	 var prop = parent.proportion;
-    parent.changeReadTileFunc(a_index);
+    var prop = parent.proportion;
+    parent.setTileFunc(a_index);
     if (prop == 1) {
 	if (Core.versionDate >= 260131) {
 		var buffer = new Array(64);
@@ -240,86 +229,11 @@ CommonTile.prototype.drawSelectorFunc = function(a_index, a_page, a_cell_y, a_ce
 }
 
 CommonTile.prototype.drawEditorFunc = function(a_index, a_page, a_cell_y, a_cell_x, a_y, a_x, a_y2, a_x2) {
-    var doty = Math.floor(a_index / 8);
-    var dotx = Math.floor(a_index & 7);
-    var color = this.parent.getPixFunc(doty, dotx);
-    this.drawBox(a_y, a_y2, a_x, a_x2, this.parent.palette[color]);
+	var color = this.parent.getPixFunc(a_cell_y, a_cell_x);
+	this.drawBox(a_y, a_y2, a_x, a_x2, this.parent.palette[color]);
 }
 
 CommonTile.prototype.drawColorsFunc = function(a_index, a_page, a_cell_y, a_cell_x, a_y, a_x, a_y2, a_x2) {
 	var RGBcolor = this.parent.palette[a_index];
 	this.drawBox(a_y, a_y2, a_x, a_x2, RGBcolor);
 }
-
-/*CommonTile.prototype.loadBuffer = function(a_ptr) {
-    var ix;
-    for (ix = 0; ix < this.unitByteSz; ix++) {
-        this.buffer[ix] = Core.getByte(a_ptr + ix);
-    }
-}*/
-
-/*
-CommonTile.prototype.getPixNES = function(a_y, a_x) {
-   var b = 7 - a_x;
-    return(
-    ((this.buffer[a_y] >> b) & 1) |
-    (((this.buffer[a_y + 8] >> b) & 1) << 1)
-    );
-}*/
-
-/*
-transcode = function(chn_depth, plane_depth, y_depth, x_depth, a_chn_count, a_plane_count, a_y_count, a_x_count) {
- var doloop = true;
- var mode = 0;
- var depth = 0;
- var channel = 0;
-
- while (doloop) {
-
- if (depth == deepest) {
-   var x = position[x_depth];
-   var y = position[y_depth];
-   var channel = position[chn_depth];
-   var plane = position[plane_depth];
-   var biv = (byv >> bitp) & 1;
-   result[channel].p[plane].y[y].x[x] |= (biv << plane);
-   mode = 3;
- }
-
- switch (mode) {
- case 0: //init
-   if (move[depth] > 0) {
-     position[depth] = 0;
-   } else {
-     position[depth] = last[depth];
-   }
-   mode = 2;
-   break;
- case 1: //crawl
-   position[depth] += move[depth];
-
-   if ((move[depth] < 0) && (point[depth] < 0)) {
-     mode = 3;
-   } elseif ((move[depth] > 0) && (point[depth] >= last[depth])) {
-     mode = 3;
-   } else {
-     mode = 2;
-   }
-   break;
- case 2: //descend
-   depth++;
-   mode = 0;
-   break;
- case 3: //ascend
-   depth--;
-   mode = 1;
-   if (depth < 0) {
-     doloop = false;
-   }
-   break;
- }
- 
- }
-
-}
-*/

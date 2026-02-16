@@ -6,16 +6,28 @@
 function init() {
 	DefaultControls.init();
 	tileHandler = new CommonTile();
-	tileHandler.buffer = [32];
+	//tileHandler.bufferBig = Core.getByteArray(0, 32*256);
+	tileHandler.buffer = new Array(32);
 	tileHandler.tilePixelWidth = 8;
 	tileHandler.tilePixelHeight = 8;
 	tileHandler.numOfColors = 16;
-	tileHandler.changeReadTileFunc = function(a_index) {
+	tileHandler.tileIndex = 0;
+	
+	tileHandler.setTileFunc = function(a_index) {
+		this.tileIndex = a_index;
 		var ptr = (a_index*32);
-		for (var ix = 0; ix < 32; ix++) {
-			this.buffer[ix] = Core.getByte(ptr + ix);
+		if (Core.versionDate >= 260206) {
+			this.buffer = Core.getByteArray(ptr, 32);
+		} else {
+			for (var ix = 0; ix < 32; ix++) {
+				this.buffer[ix] = Core.getByte(ptr + ix);
+			}
 		}
+		/*for (var ix = 0; ix < 32; ix++) {
+			this.buffer[ix] = this.bufferBig[ptr+ix];
+		}*/
 	}
+	
 	tileHandler.getPixFunc = function(a_y, a_x) {
 		   var b = 7 - a_x;
 		    return(
@@ -26,22 +38,25 @@ function init() {
 		);
 	}
 	
+	/*tileHandler.setWriteTileFunc = function(a_index) {
+		this.writeTileIndex = a_index;
+		this.setReadTileFunc(a_index);
+	}*/
 	tileHandler.setPixFunc = function(a_y, a_x, a_color) {
+	
+		var ptr = (this.tileIndex*32);
 		var b = 7 - a_x;
+		var c = a_y*2;
 		var mask = (~(1<<b));
-		this.buffer[(a_y*2)] = this.buffer[(a_y*2)] & mask | ((a_color & 1)<<b);
-		this.buffer[(a_y*2)+1] = this.buffer[(a_y*2)+1] & mask | (((a_color & 2)>>1)<<b);
-		this.buffer[(a_y*2)+16] = this.buffer[(a_y*2)+16] & mask | (((a_color & 4)>>2)<<b);
-		this.buffer[(a_y*2)+17] = this.buffer[(a_y*2)+17] & mask | (((a_color & 8)>>3)<<b);
-		var tileIndex = this.tileGrid.getIndex();
-		var ptr = (tileIndex*32);
-		for (var ix = 0; ix < 32; ix++) {
-			Core.setByte(ptr + ix, this.buffer[ix]);
-		}
+		Core.setByte(ptr+c, this.buffer[c]=(this.buffer[c] & mask | ((a_color & 1)<<b)));
+		Core.setByte(ptr+c+1, this.buffer[c+1]=(this.buffer[c+1] & mask | (((a_color & 2)>>1)<<b)));
+		Core.setByte(ptr+c+16, this.buffer[c+16]=(this.buffer[c+16] & mask | (((a_color & 4)>>2)<<b)));
+		Core.setByte(ptr+c+17, this.buffer[c+17]=(this.buffer[c+17] & mask | (((a_color & 8)>>3)<<b)));
 	}
 	
-	tileHandler.palette = [0, 0xFFFFFF, 0xEEEEEE, 0xDDDDDD, 0xCCCCCC, 0xBBBBBB, 0xAAAAAA, 0x999999,
-	0x888888, 0x777777, 0x666666, 0x555555, 0x444444, 0x333333, 0x222222, 0x111111];
+	tileHandler.palette = [0x1F170F, 0x3F2F1F, 0x5F472F, 0x7F5F3F, 0x9F774F, 0xBF8F5F, 0xDFA76F, 0xFFBF7F,
+					0x0F171F, 0x1F2F3F, 0x2F475F, 0x3F5F7F, 0x4F779F, 0x5F8FBF, 0x6FA7DF, 0x7FBFFF];
 	
-    tileHandler.init();
+	tileHandler.init();
+
 }
