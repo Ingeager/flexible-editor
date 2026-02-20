@@ -4,6 +4,7 @@ Update Notes
 
 GitHub updates:
  - Added CHR_GB
+ - Data Type for PALETTE Element can now also be: PAL_6, PAL_15A, PAL_24
  - HEX data type now has a page selector if data length is more than 256 bytes
    (No LEN restriction)
 
@@ -404,10 +405,10 @@ Supported Attributes for all CHR Types:
 			(Decimal value)
 
 Supported Child Elements for all CHR types:
-	PALETTE		Use data from the binary as a palette source.
+	PALETTE		Use data from the file as a palette source.
 			Functions the same way as an Item element.
 			Palette info is described using PTR, TYPE and LEN attributes.
-			TYPE can be PAL_NES or PAL_15.
+			TYPE can be PAL_NES, PAL_15, PAL_6, PAL_15A, PAL_24
 
 Supported objects for customization attributes, all CHR types (See "GUI Cusomization"):
 	Type		Name
