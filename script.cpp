@@ -49,7 +49,6 @@ static QScriptValue scriptF_hasAttr(QScriptContext *aContext, QScriptEngine *aEn
 static QScriptValue scriptF_getByte(QScriptContext *aContext, QScriptEngine *aEngine) {
 
     if (aContext->argumentCount() > 0) {
-        //quint64 vArgPointer = aContext->argument(0).toVariant().toULongLong();
         qint32 vArgPointer = aContext->argument(0).toUInt32();
         int vIndex = Core.getEngineElmIndex(aEngine);
        
@@ -91,6 +90,43 @@ static QScriptValue scriptF_setByteAbs(QScriptContext *aContext, QScriptEngine *
     }
     return 0;
 }
+
+static QScriptValue scriptF_getByteArray(QScriptContext *aContext, QScriptEngine *aEngine) {
+
+    if (aContext->argumentCount() >= 2) {
+        qint32 vArgPointer = aContext->argument(0).toUInt32();
+        qint32 vArgArrSize = aContext->argument(1).toUInt32();
+        int vIndex = Core.getEngineElmIndex(aEngine);
+        QDomElement vElmRef = Core.mItemElmTable[vIndex].mElmRef;
+        QList<int> vByteArray;
+        for (int vIx = 0; vIx < vArgArrSize; vIx++) {
+            vByteArray.append(Core.getItemByte(vArgPointer+vIx, vElmRef, vIndex));
+        }
+        return(qScriptValueFromSequence(aEngine, vByteArray));
+    }
+    return 0;
+}
+
+static QScriptValue scriptF_setByteArray(QScriptContext *aContext, QScriptEngine *aEngine) {
+
+    if (aContext->argumentCount() >= 3) {
+        qint32 vArgPointer = aContext->argument(0).toUInt32();
+        QScriptValue vArray = aContext->argument(1);
+        qint32 vArgArrSize = aContext->argument(2).toUInt32();
+        
+        if (vArray.isArray() == true) {
+            int vIndex = Core.getEngineElmIndex(aEngine);
+            QDomElement vElmRef = Core.mItemElmTable[vIndex].mElmRef;
+
+            for (int vIx = 0; vIx < vArgArrSize; vIx++) {
+                Core.setItemByte(vArgPointer+vIx, vArray.property(vIx).toInt32(), vElmRef, vIndex);
+            }
+
+        }
+    }
+    return 0;
+}
+
 
 static QScriptValue scriptF_getAttr(QScriptContext *aContext, QScriptEngine *aEngine) {
 
@@ -599,6 +635,8 @@ void scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElmRefInde
     vCore.setProperty("setByte", aEngine->newFunction(&scriptF_setByte, 2));
     vCore.setProperty("getByteAbs", aEngine->newFunction(&scriptF_getByteAbs, 1));
     vCore.setProperty("setByteAbs", aEngine->newFunction(&scriptF_setByteAbs, 2));
+    vCore.setProperty("getByteArray", aEngine->newFunction(&scriptF_getByteArray, 2));
+    vCore.setProperty("setByteArray", aEngine->newFunction(&scriptF_setByteArray, 3));
     vCore.setProperty("getElementIndex", aEngine->newFunction(&scriptF_getElementIndex, 0));
     vCore.setProperty("getBinarySize", aEngine->newFunction(&scriptF_getBinarySize, 0));
     vCore.setProperty("getActivePtr", aEngine->newFunction(&scriptF_getActivePtr, 0));
