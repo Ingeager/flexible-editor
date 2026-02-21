@@ -213,6 +213,13 @@ Most elements in the XML will get an unique Index when it is parsed.
 (This is not related to "id" attribute, if present any any Element)
 When "Element Index" is mentioned in this document, it refers to this index.
 
+Speed optimizations
+-------------------
+
+If speed is important, the fewer calls to the API, the better. It really is the bottleneck.
+It is probably worth storing datas in buffers even though JS uses 8 bytes to store every Number value.
+For example, call Core.getByteArray instead of Core.getByte, and BitmapView.drawBuffer as few
+times as possible instead of multiple calls to its other methods.
 
 Global Objects
 ==============
@@ -287,6 +294,18 @@ void setByteAbs(Number pointer, Number value) · · · (Added 251112)
 Number getByteAbs(Number pointer) · · · (Added 251112)
 
 	Get byte from binary at absolute pointer.
+
+Array getByteArray(Number bytePointer, Number numOfBytes) . . . (Added 260206)
+
+	Get array of bytes for current Item, starting from "bytePointer".
+	In operations that includes reading and handling a lot of data,
+	this is going to be much faster.
+
+void setByteArray(Number bytePointer, Array byteArray, Number numOfBytes) . . . (Added 260221)
+
+	Set array of bytes "byteArray" for current Item, starting from "bytePointer".
+	"numOfBytes" is the number of bytes to write, the array must contain at least that many values.
+	In operations that includes writing a lot of data, calling this is going to be much faster.
 
 Number getBinarySize() . . . (Added 251201)
 
