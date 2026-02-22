@@ -4,6 +4,7 @@ Update Notes
 
 GitHub updates:
  - Added CHR_GB
+ - CHR data types: Added support for selection between multiple sub-palettes.
  - Data Type for PALETTE Element can now also be: PAL_6, PAL_15A, PAL_24
  - HEX data type now has a page selector if data length is more than 256 bytes
    (No LEN restriction)
@@ -409,6 +410,13 @@ Supported Child Elements for all CHR types:
 			Functions the same way as an Item element.
 			Palette info is described using PTR, TYPE and LEN attributes.
 			TYPE can be PAL_NES, PAL_15, PAL_6, PAL_15A, PAL_24
+
+Sub-Palette selection:
+
+Palettes can be larger than the number of colors per pixel, to provide alternative sub-palettes.
+In this case, all colors are shown in the color selector, then when the user picks a color from a
+different sub-palette than the current one, the tile selector and editor will be redrawn showing
+the tiles with that sub-palette.
 
 Supported objects for customization attributes, all CHR types (See "GUI Cusomization"):
 	Type		Name

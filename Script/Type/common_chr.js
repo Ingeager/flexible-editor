@@ -50,7 +50,6 @@ CommonTile.prototype.init = function() {
 	this.tileBMview.init(wpixels, hpixels);
 	this.tileGrid.drawItemFunc = this.drawSelectorFunc;
 
-	// this.buffer = [this.unitByteSz];
 	if (Core.hasAttr("palette") == true) {
 		var palstring = Core.getAttr("palette");
 		var pal_arr = palstring.split(".");
@@ -76,15 +75,7 @@ CommonTile.prototype.init = function() {
 	
 	
 	this.tileGrid.setIndex(0);
-	//var bench1 = Core.getMSTimer();
-	this.tileGrid.redraw();
-	//var bench2 = Core.getMSTimer();
-	//print(bench2 - bench1);
-	this.tileBMview.refresh();
-	this.tileBMview.show();
-	
-	this.setTileFunc(0);
-
+	  
 	var local_base_y = Core.base_y;
 	cellw = 18;
 	cellh = 18;
@@ -95,7 +86,7 @@ CommonTile.prototype.init = function() {
 	this.editGrid.selectable = true;
 	this.editGrid.currentcolor = this.editGrid.gridcolor;	//Temporary cheat
 	this.editGrid.parent = this;
-	this.editGrid.setBitmapView(this.editBMview, true);
+	this.editGrid.setBitmapView(this.editBMview, true);	//Todo: Set to false?
    	this.editBMview.mousePress.connect(this, this.editBMviewClickFunc);
 	if (Core.versionDate >= 260109) {
 		this.editBMview.mouseMove.connect(this, this.editBMviewMoveFunc);
@@ -104,34 +95,66 @@ CommonTile.prototype.init = function() {
 	hpixels = this.editGrid.getTotalHeight();
 	this.editBMview.init(wpixels, hpixels);
 	this.editGrid.drawItemFunc = this.drawEditorFunc;
-	this.editGrid.redraw();
-	this.editBMview.refresh();
-	this.editBMview.show();
+
 
 	local_base_y += this.editBMview.height + 15;
 
-	cellw = 38;
-	cellh = 24;
-	var rows = 1;
-	var cols = 4;
-	rows = Math.ceil(this.numOfColors / 4);
-	if (rows == 1) {
-		cols = this.numOfColors;
-	}
+   var totalColors = this.palette.length;
+	var cellw = 38;
+
+	var cols;
+   if (totalColors <= 4) {
+       cols = totalColors;
+   } else if (totalColors <= 32) {
+       cols = 4;
+   } else {
+       cols = 16;
+       cellw = 12;
+   } 
+   var cellh = Math.round(cellw * 1);
+   var rows = Math.ceil(totalColors / cols);
+
 	this.colorBMview = new BitmapView(Core.window);
 	this.colorBMview.move(Core.base_x+this.tileBMview.width+15, local_base_y);
-	this.colorGrid = new GridHandler(cellw, cellh, rows, cols, this.numOfColors, "colorgrid");
+	this.colorGrid = new GridHandler(cellw, cellh, cols, rows, totalColors, "colorgrid");
 	this.colorGrid.redrawCellOnSelect = 0;
 	this.colorGrid.selectable = true;
 	this.colorGrid.parent = this;
-	this.colorGrid.setBitmapView(this.colorBMview, true);
+	this.colorGrid.setBitmapView(this.colorBMview, false);
+	this.colorBMview.mousePress.connect(this, this.colorBMviewClickFunc);
 	wpixels = this.colorGrid.getTotalWidth();
 	hpixels = this.colorGrid.getTotalHeight();
 	this.colorBMview.init(wpixels, hpixels);
 	this.colorGrid.drawItemFunc = this.drawColorsFunc;
+
 	this.colorGrid.redraw();
 	this.colorBMview.refresh();
 	this.colorBMview.show();
+
+	var benchMark = false;
+	if (benchMark == false) {
+		this.tileGrid.redraw();
+	} else {
+		var rounds = 15;
+		var avg = 0;
+		for (var round = 0; round < rounds; round++) {
+
+			var bench1 = Core.getMSTimer();
+			this.tileGrid.redraw();
+			var bench2 = Core.getMSTimer();
+			avg += (bench2 / rounds);
+		}
+		print(avg);
+	}
+	
+	this.tileBMview.refresh();
+	this.tileBMview.show();
+
+	this.setTileFunc(0);
+	this.editGrid.redraw();
+	this.editBMview.refresh();
+	this.editBMview.show();
+
 }
 
 CommonTile.prototype.tileBMviewClickFunc = function(a_buttons, a_y, a_x) {
@@ -167,32 +190,44 @@ CommonTile.prototype.editBMviewMoveFunc = function(a_buttons, a_y, a_x) {
 	}
 }
 
+CommonTile.prototype.colorBMviewClickFunc = function(a_buttons, a_y, a_x) {
+      var prevSubPal = Math.floor(this.colorGrid.getIndex() / this.numOfColors);
+
+    	this.colorGrid.eventMousePress(a_buttons, a_y, a_x);
+
+      var subPal =  Math.floor(this.colorGrid.getIndex() / this.numOfColors);
+
+      if (subPal != prevSubPal) {
+		this.setTileFunc(this.tileGrid.getIndex());
+		this.editGrid.redraw();
+		this.editBMview.refresh();
+
+		this.tileGrid.redraw();
+		this.tileBMview.refresh();
+      }
+}
 
 CommonTile.prototype.drawSelectorFunc = function(a_index, a_page, a_cell_y, a_cell_x, a_y, a_x, a_y2, a_x2) {
     var color;
     var y, x;
     var parent = this.parent;
     var prop = parent.proportion;
+    var subPalBase = (Math.floor(parent.colorGrid.getIndex() / parent.numOfColors) * parent.numOfColors);
     parent.setTileFunc(a_index);
     if (prop == 1) {
 	if (Core.versionDate >= 260131) {
-		var buffer = new Array(64);
+		var buffer = new Array(parent.tilePixelWidth*parent.tilePixelHeight);
 		var pointer = 0;
-		for (var pixY = 0; pixY < 8; pixY++) {
-			buffer[pointer++] =  parent.palette[parent.getPixFunc(pixY, 0)];
-			buffer[pointer++] =  parent.palette[parent.getPixFunc(pixY, 1)];
-			buffer[pointer++] =  parent.palette[parent.getPixFunc(pixY, 2)];
-			buffer[pointer++] =  parent.palette[parent.getPixFunc(pixY, 3)];
-			buffer[pointer++] =  parent.palette[parent.getPixFunc(pixY, 4)];
-			buffer[pointer++] =  parent.palette[parent.getPixFunc(pixY, 5)];
-			buffer[pointer++] =  parent.palette[parent.getPixFunc(pixY, 6)];
-			buffer[pointer++] =  parent.palette[parent.getPixFunc(pixY, 7)];
+		for (var pixY = 0; pixY < parent.tilePixelHeight; pixY++) {
+	   for (var pixX = 0; pixX < parent.tilePixelWidth; pixX++) {
+			buffer[pointer++] =  parent.palette[subPalBase + parent.getPixFunc(pixY, pixX)];
 		}
+      }
 		this.drawBuffer(a_y, a_y+7, a_x, a_x+7, buffer);
 	} else {
-		for (var pixY = 0; pixY < 8; pixY++) {
-		for (var pixX = 0; pixX < 8; pixX++) {
-		color = parent.getPixFunc(pixY, pixX);
+		for (var pixY = 0; pixY < parent.tilePixelHeight; pixY++) {
+		for (var pixX = 0; pixX < parent.tilePixelWidth; pixX++) {
+		color = subPalBase + parent.getPixFunc(pixY, pixX);
 		var RGBcolor = parent.palette[color];
 		this.setPixel(a_y + pixY, a_x + pixX, RGBcolor);
 		}
@@ -200,27 +235,27 @@ CommonTile.prototype.drawSelectorFunc = function(a_index, a_page, a_cell_y, a_ce
 	}
     } else {
 	if (Core.versionDate >= 260131) {
-		var buffer = new Array((8*prop)*(8*prop));
-		for (var pixY = 0; pixY < 8; pixY++) {
-		var base2 = ((pixY*prop)*(prop*8));
-		for (var pixX = 0; pixX < 8; pixX++) {
+		var buffer = new Array((parent.tilePixelHeight*prop)*(parent.tilePixelWidth*prop));
+		for (var pixY = 0; pixY < parent.tilePixelHeight; pixY++) {
+		var base2 = ((pixY*prop)*(prop*parent.tilePixelWidth));
+		for (var pixX = 0; pixX < parent.tilePixelWidth; pixX++) {
 			var base = base2 + (pixX*prop);
-			var RGBcolor = parent.palette[parent.getPixFunc(pixY, pixX)];
+			var RGBcolor = parent.palette[subPalBase+parent.getPixFunc(pixY, pixX)];
 			for (var suby = 0; suby < prop; suby++) {
 			for (var subx = 0; subx < prop; subx++) {
 				buffer[base++] = RGBcolor;
 			}
-			base += (prop*7);
+			base += (prop*(parent.tilePixelWidth-1));
 			}
 		}
 		}
-		this.drawBuffer(a_y, a_y+(8*prop)-1, a_x, a_x+(8*prop)-1, buffer);
+		this.drawBuffer(a_y, a_y+(parent.tilePixelHeight*prop)-1, a_x, a_x+(parent.tilePixelWidth*prop)-1, buffer);
 	} else {
-		for (var pixY = 0; pixY < 8; pixY++) {
-		for (var pixX = 0; pixX < 8; pixX++) {
+		for (var pixY = 0; pixY < parent.tilePixelHeight; pixY++) {
+		for (var pixX = 0; pixX < parent.tilePixelWidth; pixX++) {
 		y = a_y + (pixY * prop);
 		x = a_x + (pixX * prop);
-		color = parent.getPixFunc(pixY, pixX);
+		color = subPalBase + parent.getPixFunc(pixY, pixX);
 		this.drawBox(y, y+prop-1, x, x+prop-1,  parent.palette[color]);
 		}
 		}
@@ -229,7 +264,8 @@ CommonTile.prototype.drawSelectorFunc = function(a_index, a_page, a_cell_y, a_ce
 }
 
 CommonTile.prototype.drawEditorFunc = function(a_index, a_page, a_cell_y, a_cell_x, a_y, a_x, a_y2, a_x2) {
-	var color = this.parent.getPixFunc(a_cell_y, a_cell_x);
+	var subPalBase = (Math.floor(this.parent.colorGrid.getIndex() / this.parent.numOfColors) * this.parent.numOfColors);
+	var color = this.parent.getPixFunc(a_cell_y, a_cell_x) + subPalBase;
 	this.drawBox(a_y, a_y2, a_x, a_x2, this.parent.palette[color]);
 }
 
