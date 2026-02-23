@@ -13,8 +13,10 @@ CommonTile = function() {
 	this.colorGrid = 0;
 	this.colorBMview = 0;
 	this.proportion = 3;
+	this.pageSelectSpinCtrl = 0;
 	this.tilePixelWidth = 8;
 	this.tilePixelHeight = 8;
+	this.pageSize = 256;
 	this.previousEditPixelX = -1;
 	this.previousEditPixelY = -1;
 }
@@ -26,15 +28,18 @@ CommonTile.prototype.init = function() {
 	}
 
 	var numOf = Core.getHexValueAttr("len");
+	var numOfPages = 1;
 	var gw = 16;
 	var gh = 20;
 	if (Core.hasAttr("rowlength") == true) {
 		gw = Number(Core.getAttr("rowlength"));
 	}
-	gh = Math.ceil(numOf/gw);
-	/*if (gh > 20) {
-	gh = 20
-	};*/
+	if (numOf > this.pageSize) {
+		gh = Math.ceil(this.pageSize/gw);
+		numOfPages = Math.ceil(numOf / this.pageSize);
+	} else {
+		gh = Math.ceil(numOf/gw);
+	}
     	
 	var cellw = this.tilePixelWidth*this.proportion;
 	var cellh = this.tilePixelHeight*this.proportion;
@@ -86,7 +91,7 @@ CommonTile.prototype.init = function() {
 	this.editGrid.selectable = true;
 	this.editGrid.currentcolor = this.editGrid.gridcolor;	//Temporary cheat
 	this.editGrid.parent = this;
-	this.editGrid.setBitmapView(this.editBMview, true);	//Todo: Set to false?
+	this.editGrid.setBitmapView(this.editBMview, false);	//Todo: Set to false?
    	this.editBMview.mousePress.connect(this, this.editBMviewClickFunc);
 	if (Core.versionDate >= 260109) {
 		this.editBMview.mouseMove.connect(this, this.editBMviewMoveFunc);
@@ -99,20 +104,20 @@ CommonTile.prototype.init = function() {
 
 	local_base_y += this.editBMview.height + 15;
 
-   var totalColors = this.palette.length;
+	var totalColors = this.palette.length;
 	var cellw = 38;
 
 	var cols;
-   if (totalColors <= 4) {
-       cols = totalColors;
-   } else if (totalColors <= 32) {
-       cols = 4;
-   } else {
-       cols = 16;
-       cellw = 12;
-   } 
-   var cellh = Math.round(cellw * 1);
-   var rows = Math.ceil(totalColors / cols);
+	if (totalColors <= 4) {
+		cols = totalColors;
+	} else if (totalColors <= 32) {
+		cols = 4;
+	} else {
+		cols = 16;
+		cellw = 12;
+	} 
+	var cellh = Math.round(cellw * 1);
+	var rows = Math.ceil(totalColors / cols);
 
 	this.colorBMview = new BitmapView(Core.window);
 	this.colorBMview.move(Core.base_x+this.tileBMview.width+15, local_base_y);
@@ -126,6 +131,29 @@ CommonTile.prototype.init = function() {
 	hpixels = this.colorGrid.getTotalHeight();
 	this.colorBMview.init(wpixels, hpixels);
 	this.colorGrid.drawItemFunc = this.drawColorsFunc;
+
+	local_base_y = Core.base_y + this.tileBMview.height + 10;
+	if (numOfPages > 1) {
+  
+		var ctrl = new QLabel(Core.window);
+		ctrl.text = "Page:";
+		ctrl.styleSheet = "font: 15px";
+		ctrl.move(Core.base_x+5, local_base_y+6);
+		ctrl.show();
+
+		ctrl = new QSpinBox(Core.window);
+		this.pageSelectSpinCtrl = ctrl;
+		ctrl.move(Core.base_x+50, local_base_y);
+		ctrl.styleSheet = Core.customize("edit.stylesheet", "") + "; font: 22px ";
+		ctrl.resize(60, 32);
+		ctrl.minimum = 0;
+		ctrl.maximum = numOfPages-1;
+		ctrl.programChanged = true;
+		ctrl.value = 0;
+		ctrl.programChanged = false;
+		ctrl['valueChanged(int)'].connect(this, this.pageChangeFunc);
+		ctrl.show();
+	}
 
 	this.colorGrid.redraw();
 	this.colorBMview.refresh();
@@ -198,12 +226,13 @@ CommonTile.prototype.colorBMviewClickFunc = function(a_buttons, a_y, a_x) {
       var subPal =  Math.floor(this.colorGrid.getIndex() / this.numOfColors);
 
       if (subPal != prevSubPal) {
-		this.setTileFunc(this.tileGrid.getIndex());
-		this.editGrid.redraw();
-		this.editBMview.refresh();
 
 		this.tileGrid.redraw();
 		this.tileBMview.refresh();
+
+		this.setTileFunc(this.tileGrid.getIndex());
+		this.editGrid.redraw();
+		this.editBMview.refresh();
       }
 }
 
@@ -213,6 +242,7 @@ CommonTile.prototype.drawSelectorFunc = function(a_index, a_page, a_cell_y, a_ce
     var parent = this.parent;
     var prop = parent.proportion;
     var subPalBase = (Math.floor(parent.colorGrid.getIndex() / parent.numOfColors) * parent.numOfColors);
+    //a_index contains the total index (page base included)
     parent.setTileFunc(a_index);
     if (prop == 1) {
 	if (Core.versionDate >= 260131) {
@@ -272,4 +302,17 @@ CommonTile.prototype.drawEditorFunc = function(a_index, a_page, a_cell_y, a_cell
 CommonTile.prototype.drawColorsFunc = function(a_index, a_page, a_cell_y, a_cell_x, a_y, a_x, a_y2, a_x2) {
 	var RGBcolor = this.parent.palette[a_index];
 	this.drawBox(a_y, a_y2, a_x, a_x2, RGBcolor);
+}
+
+CommonTile.prototype.pageChangeFunc = function(a_value) {
+	this.tileGrid.setPage(a_value);
+
+	this.tileGrid.redraw();
+	this.tileBMview.refresh();
+
+	this.setTileFunc(this.tileGrid.getIndex());
+
+	this.editGrid.redraw();
+	this.editBMview.refresh();
+
 }

@@ -4,7 +4,8 @@ Update Notes
 
 GitHub updates:
  - Added CHR_GB
- - CHR data types: Added support for selection between multiple sub-palettes.
+ - CHR types: Unlimited LEN (page selector if more than 256).
+ - CHR types: Added support for selection between multiple sub-palettes.
  - Data Type for PALETTE Element can now also be: PAL_6, PAL_15A, PAL_24
  - HEX data type now has a page selector if data length is more than 256 bytes
    (No LEN restriction)
