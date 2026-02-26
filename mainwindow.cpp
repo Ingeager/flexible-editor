@@ -12,6 +12,7 @@
 #include <QMessageBox>
 #include <qmath.h>
 #include <QTextCodec>
+#include <QMetaProperty>
 
 
 tCore Core;
@@ -20,33 +21,26 @@ tCore Core;
 tCore::tCore() {
     mEventForScript = new tEventForScript(0);
     
-    mProgramTitle = "Flexible Editor";
-    mTypeScriptPath = "Script/Type/";
-    mDefaultNESPALFile = "fr_nesB.pal";
-    
     mDRD_intSize = 16;
     
-    mVersionDate = 260205;
+    mVersionDate = 260226;
     
     mBinFileOpened = false;
     mBinFileName = "";
     mBufferSystem = eBufferSystem_Single; //Overwritten on file open
-    mBufferBlockSize = 4096;
 
     mXMLFileOpened = false;
     mXMLEditIndex = -1;
     mXMLSourceHasEditBackup = false;
     
     mLowLevelErrorFlag = false;
-
     
+
 }
 
 tCore::~tCore() { }
 
-void tCore::themeChange() {
-    
-}
+
 
 void tCore::error(QString aMessage, int aLevel) {
     if (aLevel == 1) {
@@ -57,7 +51,7 @@ void tCore::error(QString aMessage, int aLevel) {
     }
     
     QMessageBox vErrorBox;
-    vErrorBox.setWindowTitle(Core.mProgramTitle);
+    vErrorBox.setWindowTitle(Core.mConfig.property("programTitle").toString());
     vErrorBox.setWindowIcon(Core.mDefaultIcon);
     vErrorBox.setText(aMessage);
     vErrorBox.setIcon(aLevel < 3 ? QMessageBox::Warning : QMessageBox::Critical);
@@ -207,7 +201,7 @@ void tCore::initTypeScript(int aElementRef, QScriptEngine *aEngine) {
     }
     
     QString vTypeFile = vType + ".js";
-    QString vTypeFileFull = Core.mTypeScriptPath + vTypeFile;
+    QString vTypeFileFull = Core.mConfig.property("typeScriptPath").toString() + vTypeFile;
     
     QFileInfo vFI;
     vFI.setFile(vTypeFileFull);
@@ -216,7 +210,7 @@ void tCore::initTypeScript(int aElementRef, QScriptEngine *aEngine) {
         QString vError = "Couldn't find script file for data type: " + vTypeFile;
         vErrorBox.setText(vError);
         vErrorBox.exec();
-        vTypeFileFull = Core.mTypeScriptPath + "blank.js";
+        vTypeFileFull = Core.mConfig.property("typeScriptPath").toString() + "blank.js";
     }
 
 
@@ -238,7 +232,7 @@ void tCore::scriptLoad(QString aFileName, QScriptEngine *aEngine) {
         int vCPA = vContents.indexOf('"', vIncludeTag) + 1;
         int vCPB = vContents.indexOf('"', vCPA);
         QString vFile = vContents.mid(vCPA, vCPB - vCPA);
-        vFile.prepend(Core.mTypeScriptPath);
+        vFile.prepend(Core.mConfig.property("typeScriptPath").toString());
         Core.scriptLoad(vFile, aEngine);
         vIncludeTag = vContents.indexOf(vIncludeTagStr, vCPB);
     }
@@ -413,7 +407,7 @@ bool tCore::findIncludeFile(QString *aFName) {
         *aFName = vRelativeFile;
         return true;
     }
-    QString vScriptRelativeFile = Core.mTypeScriptPath + *aFName;
+    QString vScriptRelativeFile = Core.mConfig.property("typeScriptPath").toString() + *aFName;
     vFI.setFile(vScriptRelativeFile);
     if (vFI.exists()) {
         //Relative to Script path
@@ -427,6 +421,76 @@ bool tCore::findIncludeFile(QString *aFName) {
     }
 
     return false;
+}
+
+void tCore::loadConfig() {
+
+    //Set default settings
+    mConfig.setProperty("programTitle", "Flexible Editor");
+    mConfig.setProperty("typeScriptPath", "Script/Type/");
+    mConfig.setProperty("theme", "icedragon");
+    mConfig.setProperty("NESPaletteFile", "fr_nesB.pal");
+    mConfig.setProperty("autoLoadXMLFile", "demo.xml");
+    mConfig.setProperty("autoLoadBINFile", "demo.bin");
+    mConfig.setProperty("bufferBlockSize", 4096);
+    
+    bool vOk = false;
+    QFile vCfgFile("FlexibleEdit.cfg");
+    
+    if (vCfgFile.exists() == true) {
+        if (vCfgFile.open(QIODevice::ReadOnly|QIODevice::Text) == true) {
+            vOk = true;
+        } else {
+            Core.error("Failed to open existing config file.", 3);
+        }
+    }
+    
+    if (vOk == true) {
+        vCfgFile.seek(0);
+        
+        QTextStream vStream(&vCfgFile);
+        
+        while (vStream.atEnd() == false) {
+            QString vLine = vStream.readLine();
+            int vEqPos = vLine.indexOf('=');
+            if ((vEqPos > 0) && ((vEqPos+1) < vLine.length())) {
+                QString vLeftSide = vLine;
+                vLeftSide.truncate(vEqPos);
+                QString vRightSide = vLine.mid(vEqPos+1, -1);
+                if ((vLeftSide.trimmed().isEmpty() == false) && (vRightSide.trimmed().isEmpty() == false)) {
+                    Core.mConfig.setProperty(vLeftSide.toAscii(), vRightSide);
+                }
+            }
+        }
+        vCfgFile.close();
+            
+    } else {
+
+        
+    }
+}
+
+void tCore::saveConfig() {
+    
+    QFile vCfgFile("FlexibleEdit.cfg");
+    if (vCfgFile.open(QIODevice::WriteOnly|QIODevice::Text) == true) {
+        vCfgFile.seek(0);
+
+        QTextStream vStream(&vCfgFile);
+        QList<QByteArray> vList = mConfig.dynamicPropertyNames();
+        
+        for (int index = 0; index < vList.count(); index++) {
+            QByteArray vLeftSide = vList.at(index);
+            QString vRightSide = mConfig.property(vLeftSide).toString();
+            QString vConfigLine = vLeftSide + "=" + vRightSide + "\n";
+            vStream << vConfigLine;
+        }
+        vCfgFile.close();
+        
+    } else {
+        Core.error("Failed to save config.", 3);
+    }
+    
 }
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -451,7 +515,7 @@ void MainWindow::disableDirectEdit() {
 }
 
 void MainWindow::updateWindowTitle() {
-    QString vTitle = Core.mProgramTitle + " (build " + QString::number(Core.mVersionDate) + ")";
+    QString vTitle = Core.mConfig.property("programTitle").toString() + " (build " + QString::number(Core.mVersionDate) + ")";
     if (Core.mBinFileOpened == true) {
         vTitle += " - " + Core.mBinFileName; 
     }
@@ -465,6 +529,8 @@ void MainWindow::closeEvent(QCloseEvent *aCEvent) {
     if (Core.mBufferSystem == eBufferSystem_WriteBuffer) {
         Core.mLockedBinQFile.close();
     }
+    
+    Core.saveConfig();
 }
 
 void MainWindow::init() {
@@ -475,15 +541,22 @@ void MainWindow::init() {
     Core.mBenchmarkTime.start(); 
     #endif
     
-    load_NES_Palette(Core.mDefaultNESPALFile);
+    Core.loadConfig();
+    
+    Core.mBufferBlockSize = Core.mConfig.property("bufferBlockSize").toInt();
+    
+    themeChange();
+    
+    load_NES_Palette(Core.mConfig.property("NESPaletteFile").toString());
     
     Core.mDefaultIcon = QIcon("testlogo.png");
     setWindowIcon(Core.mDefaultIcon);
-   
-    
+  
     #ifndef QT_DEBUG
-    loadXMLFile("demo.xml");
-    loadBinFile("demo.bin", eBufferSystem_Single);
+    QString vAutoLoadXMLFile = Core.mConfig.property("autoLoadXMLFile").toString();
+    QString vAutoLoadBINFile = Core.mConfig.property("autoLoadBINFile").toString();
+    loadXMLFile(vAutoLoadXMLFile);
+    loadBinFile(vAutoLoadBINFile, eBufferSystem_Single);
     #else
     dev_init_();
     #endif
@@ -560,7 +633,7 @@ void MainWindow::loadBinFile(QString aFName, int aMode) {
         vFI.setFile(aFName);
         quint64 vFileSize = vFI.size();
         if (vFileSize > 300000000) {
-            int vResult = QMessageBox::question(this, Core.mProgramTitle, \
+            int vResult = QMessageBox::question(this, Core.mConfig.property("programTitle").toString(), \
             "The file is larger than 300MB. Do you wish to open it in Write Buffer mode?\n(Loading might fail otherwise)", 
             QMessageBox::Yes|QMessageBox::No, QMessageBox::No);
             if (vResult == QMessageBox::Yes) {
@@ -733,7 +806,7 @@ void MainWindow::loadXML_L3() {
     if (vHasError == true) {
         if (Core.mXMLSourceHasEditBackup == true) {
             vErrMsg += ".\nDo you want to undo the latest edit?";
-            int vResult = QMessageBox::question(this, Core.mProgramTitle, \
+            int vResult = QMessageBox::question(this, Core.mConfig.property("programTitle").toString(), \
                 vErrMsg, QMessageBox::Yes|QMessageBox::No, QMessageBox::Yes);
             if (vResult == QMessageBox::Yes) {
                 Core.mXMLSource = Core.mXMLSourceRevertBackup;
@@ -763,23 +836,7 @@ void MainWindow::loadXML_L4() {
     //Reset to standard icon
     setWindowIcon(Core.mDefaultIcon);
     //Reset to standard NES palette
-    load_NES_Palette(Core.mDefaultNESPALFile);
-    
-    
-    int vStyleIx = Core.mCustomizeId.indexOf("window.stylesheet");
-    if (vStyleIx >= 0) {
-       ui->centralWidget->setStyleSheet(Core.mCustomizeString[vStyleIx]);
-    } else {
-       ui->centralWidget->setStyleSheet("");
-    }
-    vStyleIx = Core.mCustomizeId.indexOf("edit.stylesheet");
-    if (vStyleIx >= 0) {
-       ui->wTree->setStyleSheet(Core.mCustomizeString[vStyleIx]);
-       ui->wXMLEdit->setStyleSheet(Core.mCustomizeString[vStyleIx]);
-    } else {
-       ui->wTree->setStyleSheet("");
-       ui->wXMLEdit->setStyleSheet("");
-    }
+    load_NES_Palette(Core.mConfig.property("NESPaletteFile").toString());
     
     XMLReadStatus vStatus;
     vStatus.mItemCount = 0;
@@ -1074,6 +1131,62 @@ void MainWindow::loadXMLRecursive_findReaderToken(int aToken, XMLReadStatus *aSt
                 break;
             }
         }
+    }
+}
+
+void MainWindow::themeChange() {
+    Core.mCustomizeId.clear();
+    Core.mCustomizeString.clear();
+    
+    if (Core.mConfig.property("theme").toString().compare("icedragon", Qt::CaseInsensitive) == 0) {
+        Core.mCustomizeId.append("window.stylesheet"); Core.mCustomizeString.append("color: #D0FFFF; background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(40, 140, 170, 255), stop:1 rgba(130, 170, 200, 255))");
+        Core.mCustomizeId.append("grid.color"); Core.mCustomizeString.append("205060");    
+        Core.mCustomizeId.append("grid.selcolor"); Core.mCustomizeString.append("70F0FF");
+        Core.mCustomizeId.append("color1"); Core.mCustomizeString.append("40DFFF");
+        Core.mCustomizeId.append("color2"); Core.mCustomizeString.append("FFFF40");
+        Core.mCustomizeId.append("bgcolor"); Core.mCustomizeString.append("003040");
+        Core.mCustomizeId.append("edit.stylesheet"); Core.mCustomizeString.append("color: #F0F050; background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0, 80, 90, 255), stop:1 rgba(0, 150, 160, 255))");
+        ui->actionThemeNormal->setChecked(false);
+        ui->actionThemeIceDragon->setChecked(true);
+    } else {
+        ui->actionThemeNormal->setChecked(true);
+        ui->actionThemeIceDragon->setChecked(false);
+    }
+
+    //Theme: Albino WIP
+ /*   Core.mCustomizeId.append("window.stylesheet"); Core.mCustomizeString.append("color: #E05050; background: qlineargradient(spread:reflect, x1:0, x2:1, x3:0, y1:0, y2:1, stop:0 rgba(250, 250, 250, 255), stop:1 rgba(230, 230, 230, 255))");
+    Core.mCustomizeId.append("grid.color"); Core.mCustomizeString.append("205060");    
+    Core.mCustomizeId.append("grid.selcolor"); Core.mCustomizeString.append("70F0FF");
+    Core.mCustomizeId.append("color1"); Core.mCustomizeString.append("40DFFF");
+    Core.mCustomizeId.append("color2"); Core.mCustomizeString.append("FFFF40");
+    Core.mCustomizeId.append("bgcolor"); Core.mCustomizeString.append("003040");
+    Core.mCustomizeId.append("edit.stylesheet"); Core.mCustomizeString.append("font: bold; color: #701000; background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(250, 200, 200, 255), stop:1 rgba(220, 120, 120, 255))");*/
+
+
+    //Theme: Gothic WIP
+/*    Core.mCustomizeId.append("window.stylesheet"); Core.mCustomizeString.append("color: #F8F8F8; background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(120, 10, 10, 255), stop:1 rgba(220, 40, 40, 255))");
+    Core.mCustomizeId.append("grid.color"); Core.mCustomizeString.append("200000");    
+    Core.mCustomizeId.append("grid.selcolor"); Core.mCustomizeString.append("FF6060");
+    Core.mCustomizeId.append("color1"); Core.mCustomizeString.append("40DFFF");
+    Core.mCustomizeId.append("color2"); Core.mCustomizeString.append("FFFF40");
+    Core.mCustomizeId.append("bgcolor"); Core.mCustomizeString.append("003040");
+    Core.mCustomizeId.append("edit.stylesheet"); Core.mCustomizeString.append("font: \"Cambria\"; color: #E83030; background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0, 0, 0, 255), stop:1 rgba(60, 30, 30, 255))");
+*/
+
+
+    int vStyleIx = Core.mCustomizeId.indexOf("window.stylesheet");
+    if (vStyleIx >= 0) {
+       ui->centralWidget->setStyleSheet(Core.mCustomizeString[vStyleIx]);
+    } else {
+       ui->centralWidget->setStyleSheet("");
+    }
+    vStyleIx = Core.mCustomizeId.indexOf("edit.stylesheet");
+    if (vStyleIx >= 0) {
+       ui->wTree->setStyleSheet(Core.mCustomizeString[vStyleIx]);
+       ui->wXMLEdit->setStyleSheet(Core.mCustomizeString[vStyleIx]);
+    } else {
+       ui->wTree->setStyleSheet("");
+       ui->wXMLEdit->setStyleSheet("");
     }
 }
 
@@ -1491,7 +1604,7 @@ void MainWindow::on_actionDeleteItem_triggered()
 void MainWindow::on_actionClearXML_triggered()
 {
 
-    int vResult = QMessageBox::warning(this, Core.mProgramTitle, \
+    int vResult = QMessageBox::warning(this, Core.mConfig.property("programTitle").toString(), \
         "This will remove ALL elements in the XML and leave only a base Element. \n\
 Do you wish to continue?", QMessageBox::Yes|QMessageBox::No, QMessageBox::No);
 
@@ -1504,11 +1617,10 @@ Do you wish to continue?", QMessageBox::Yes|QMessageBox::No, QMessageBox::No);
 
 void MainWindow::on_actionThemeNormal_triggered()
 {
-    ui->actionThemeNormal->setChecked(true);
-    ui->actionThemeIceDragon->setChecked(false);
-    Core.mCustomizeId.clear();
-    Core.mCustomizeString.clear();  
-    Core.themeChange();
+    
+    Core.mConfig.setProperty("theme", "normal");
+
+    themeChange();
     unloadXML();
     loadXML_L3();
 }
@@ -1518,28 +1630,10 @@ void MainWindow::on_actionThemeIceDragon_triggered()
 {
     ui->actionThemeNormal->setChecked(false);
     ui->actionThemeIceDragon->setChecked(true);
-    Core.mCustomizeId.clear();
-    Core.mCustomizeString.clear();
-    Core.mCustomizeId.append("window.stylesheet"); Core.mCustomizeString.append("color: #D0FFFF; background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(40, 140, 170, 255), stop:1 rgba(130, 170, 200, 255))");
-    Core.mCustomizeId.append("grid.color"); Core.mCustomizeString.append("205060");    
-    Core.mCustomizeId.append("grid.selcolor"); Core.mCustomizeString.append("70F0FF");
-    Core.mCustomizeId.append("color1"); Core.mCustomizeString.append("40DFFF");
-    Core.mCustomizeId.append("color2"); Core.mCustomizeString.append("FFFF40");
-    Core.mCustomizeId.append("bgcolor"); Core.mCustomizeString.append("003040");
-    Core.mCustomizeId.append("edit.stylesheet"); Core.mCustomizeString.append("color: #F0F050; background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0, 80, 90, 255), stop:1 rgba(0, 150, 160, 255))");
 
+    Core.mConfig.setProperty("theme", "icedragon");
 
-    //Theme: Gothic WIP
-/*    Core.mCustomizeId.append("window.stylesheet"); Core.mCustomizeString.append("color: #F8F8F8; background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(120, 10, 10, 255), stop:1 rgba(220, 40, 40, 255))");
-    Core.mCustomizeId.append("grid.color"); Core.mCustomizeString.append("200000");    
-    Core.mCustomizeId.append("grid.selcolor"); Core.mCustomizeString.append("FF6060");
-    Core.mCustomizeId.append("color1"); Core.mCustomizeString.append("40DFFF");
-    Core.mCustomizeId.append("color2"); Core.mCustomizeString.append("FFFF40");
-    Core.mCustomizeId.append("bgcolor"); Core.mCustomizeString.append("003040");
-    Core.mCustomizeId.append("edit.stylesheet"); Core.mCustomizeString.append("font: \"Cambria\"; color: #E83030; background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0, 0, 0, 255), stop:1 rgba(60, 30, 30, 255))");
-*/
-
-    Core.themeChange();
+    themeChange();
     unloadXML();
     loadXML_L3();
 }

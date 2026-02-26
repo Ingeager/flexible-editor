@@ -53,6 +53,13 @@ struct tIconTableItem {
     QIcon mIcon;
 };
 
+class tConfig : public QObject {
+    Q_OBJECT
+
+public:
+    tConfig() : QObject(0) {}
+};
+
 class tCore {
 public:
     tCore();
@@ -79,22 +86,24 @@ public:
     
     QList<tIconTableItem> mIconTable;
     
-    //Binary Buffering ->
+    //Binary Buffering -->
     int mBufferSystem;
     QByteArray mEditFileFullBuffer; //Contains the whole file for eBufferSystem_Single, otherwise empty.
     quint32 mBufferBlockSize;
     QList<quint32> mBufferBlockLocations;
     QList<QByteArray> mBufferBlockData;
     QFile mLockedBinQFile;
-    //<-
+    //<--
     
-    QString mDefaultNESPALFile;
+    tConfig mConfig;
+    
+    //QString mDefaultNESPALFile;
     QByteArray mNESPal;
   
     tEventForScript *mEventForScript;
     
-    QString mProgramTitle;
-    QString mTypeScriptPath;
+    //QString mProgramTitle;
+    //QString mTypeScriptPath;
     
     int mDRD_intSize;
     int mVersionDate;
@@ -111,7 +120,6 @@ public:
     #endif
 
     void error(QString aMessage, int aLevel);
-    void themeChange();
     void scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElmRefIndex);
     void initTypeScript(int aElementRef, QScriptEngine *aEngine);
     void scriptLoad(QString aFileName, QScriptEngine *aEngine);
@@ -132,8 +140,8 @@ public:
     bool loadDocument(QString aFileName, QString *aDocument);
     bool loadFileCommon(QString aFName, QByteArray *aByteArray);
     bool findIncludeFile(QString *aFName);
-   
- 
+    void loadConfig();
+    void saveConfig();
 };
 
 extern tCore Core;
@@ -192,6 +200,7 @@ public:
     void disableDirectEdit();
     void closeEvent(QCloseEvent *aCEvent);
     int calculateTabOrder(int aStart);
+    void themeChange();
     
 private:
     Ui::MainWindow *ui;
