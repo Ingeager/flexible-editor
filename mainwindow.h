@@ -24,6 +24,7 @@ enum { eBufferSystem_Single = 0, eBufferSystem_WriteBuffer} ;
 
 
 struct XMLReadStatus {
+    int mPass; //1 = Icons, 2 = Everything else.
     int mItemCount;
     QTreeWidgetItem *mParentTWIRef;
     int mTreeLevel;
@@ -74,9 +75,6 @@ public:
     
     int mXMLEditIndex;
 
-    bool mBinFileOpened;
-    QString mBinFileName;
-    
     QDomDocument mMainXML;
    
     QList<tItemElmType> mItemElmTable;
@@ -85,6 +83,11 @@ public:
     QList<int> mListElmIndexTable;
     
     QList<tIconTableItem> mIconTable;
+    
+    bool mBinFileOpened;
+    QString mBinFileName;
+    
+    quint64 mBaseOffset;
     
     //Binary Buffering -->
     int mBufferSystem;
@@ -142,6 +145,7 @@ public:
     bool findIncludeFile(QString *aFName);
     void loadConfig();
     void saveConfig();
+    QString getConfigStr(QByteArray aProperty);
 };
 
 extern tCore Core;

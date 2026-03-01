@@ -35,6 +35,8 @@ tCore::tCore() {
     
     mLowLevelErrorFlag = false;
     
+    mBaseOffset = 0;
+    
 
 }
 
@@ -51,7 +53,7 @@ void tCore::error(QString aMessage, int aLevel) {
     }
     
     QMessageBox vErrorBox;
-    vErrorBox.setWindowTitle(Core.mConfig.property("programTitle").toString());
+    vErrorBox.setWindowTitle(Core.getConfigStr("programTitle"));
     vErrorBox.setWindowIcon(Core.mDefaultIcon);
     vErrorBox.setText(aMessage);
     vErrorBox.setIcon(aLevel < 3 ? QMessageBox::Warning : QMessageBox::Critical);
@@ -79,6 +81,10 @@ QDomElement tCore::getEngineElmRef(QScriptEngine *aEngine) {
 
 quint32 tCore::getFileByte(qint64 aPtr) {
     if (Core.mBinFileOpened == false) {return 0;}
+    if (aPtr < 0) {
+        Core.error("Read pointer negative: -0x" + QString::number(qAbs(aPtr), 16), 1);
+        return 0;
+    }
     if (Core.mBufferSystem == eBufferSystem_Single) {
         quint32 vPtr = aPtr;
         if (vPtr < mEditFileFullBuffer.size()) {
@@ -116,6 +122,10 @@ quint32 tCore::getFileByte(qint64 aPtr) {
 
 void tCore::setFileByte(qint64 aPtr, quint32 aValue) {
     if (Core.mBinFileOpened == false) {return;}
+    if (aPtr < 0) {
+        Core.error("Write pointer negative: -0x" + QString::number(qAbs(aPtr), 16), 1);
+        return;
+    }
     if (Core.mBufferSystem == eBufferSystem_Single) {
         quint32 vPtr = aPtr;
         if (vPtr < mEditFileFullBuffer.size()) {
@@ -201,7 +211,7 @@ void tCore::initTypeScript(int aElementRef, QScriptEngine *aEngine) {
     }
     
     QString vTypeFile = vType + ".js";
-    QString vTypeFileFull = Core.mConfig.property("typeScriptPath").toString() + vTypeFile;
+    QString vTypeFileFull = Core.getConfigStr("typeScriptPath") + vTypeFile;
     
     QFileInfo vFI;
     vFI.setFile(vTypeFileFull);
@@ -210,7 +220,7 @@ void tCore::initTypeScript(int aElementRef, QScriptEngine *aEngine) {
         QString vError = "Couldn't find script file for data type: " + vTypeFile;
         vErrorBox.setText(vError);
         vErrorBox.exec();
-        vTypeFileFull = Core.mConfig.property("typeScriptPath").toString() + "blank.js";
+        vTypeFileFull = Core.getConfigStr("typeScriptPath") + "blank.js";
     }
 
 
@@ -232,7 +242,7 @@ void tCore::scriptLoad(QString aFileName, QScriptEngine *aEngine) {
         int vCPA = vContents.indexOf('"', vIncludeTag) + 1;
         int vCPB = vContents.indexOf('"', vCPA);
         QString vFile = vContents.mid(vCPA, vCPB - vCPA);
-        vFile.prepend(Core.mConfig.property("typeScriptPath").toString());
+        vFile.prepend(Core.getConfigStr("typeScriptPath"));
         Core.scriptLoad(vFile, aEngine);
         vIncludeTag = vContents.indexOf(vIncludeTagStr, vCPB);
     }
@@ -365,6 +375,8 @@ qint64 tCore::calcItemPtr(qint32 aPtr, QDomElement aElmRef, int aElmIndex, bool 
     }
     //Work in 64-bit mode from here.
     qint64 vWorkPtr = aPtr;
+    //Add relative base offset.
+    vWorkPtr += mBaseOffset;
     
     // "ptr" is absolute. No deeper search is needed.
     if (itemHasAttr("ptr", aElmRef)) {
@@ -407,7 +419,7 @@ bool tCore::findIncludeFile(QString *aFName) {
         *aFName = vRelativeFile;
         return true;
     }
-    QString vScriptRelativeFile = Core.mConfig.property("typeScriptPath").toString() + *aFName;
+    QString vScriptRelativeFile = Core.getConfigStr("typeScriptPath") + *aFName;
     vFI.setFile(vScriptRelativeFile);
     if (vFI.exists()) {
         //Relative to Script path
@@ -422,6 +434,7 @@ bool tCore::findIncludeFile(QString *aFName) {
 
     return false;
 }
+
 
 void tCore::loadConfig() {
 
@@ -493,6 +506,10 @@ void tCore::saveConfig() {
     
 }
 
+QString tCore::getConfigStr(QByteArray aProperty) {
+    return mConfig.property(aProperty).toString();
+}
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -515,7 +532,7 @@ void MainWindow::disableDirectEdit() {
 }
 
 void MainWindow::updateWindowTitle() {
-    QString vTitle = Core.mConfig.property("programTitle").toString() + " (build " + QString::number(Core.mVersionDate) + ")";
+    QString vTitle = Core.getConfigStr("programTitle") + " (build " + QString::number(Core.mVersionDate) + ")";
     if (Core.mBinFileOpened == true) {
         vTitle += " - " + Core.mBinFileName; 
     }
@@ -547,25 +564,19 @@ void MainWindow::init() {
     
     themeChange();
     
-    load_NES_Palette(Core.mConfig.property("NESPaletteFile").toString());
+    load_NES_Palette(Core.getConfigStr("NESPaletteFile"));
     
     Core.mDefaultIcon = QIcon("testlogo.png");
     setWindowIcon(Core.mDefaultIcon);
   
     #ifndef QT_DEBUG
-    QString vAutoLoadXMLFile = Core.mConfig.property("autoLoadXMLFile").toString();
-    QString vAutoLoadBINFile = Core.mConfig.property("autoLoadBINFile").toString();
+    QString vAutoLoadXMLFile = Core.getConfigStr("autoLoadXMLFile");
+    QString vAutoLoadBINFile = Core.getConfigStr("autoLoadBINFile");
     loadXMLFile(vAutoLoadXMLFile);
     loadBinFile(vAutoLoadBINFile, eBufferSystem_Single);
     #else
     dev_init_();
     #endif
-    
-    /*#ifndef QT_DEBUG
-        ui->wXMLEdit->hide();
-        ui->wUpdate->hide();
-        ui->verticalSpacer_2->setGeometry(QRect(0, 0, 0, 0));
-    #endif*/
     
     ui->centralWidget->setLayout( ui->horizontalLayout );
     ui->mainToolBar->hide();
@@ -633,7 +644,7 @@ void MainWindow::loadBinFile(QString aFName, int aMode) {
         vFI.setFile(aFName);
         quint64 vFileSize = vFI.size();
         if (vFileSize > 300000000) {
-            int vResult = QMessageBox::question(this, Core.mConfig.property("programTitle").toString(), \
+            int vResult = QMessageBox::question(this, Core.getConfigStr("programTitle"), \
             "The file is larger than 300MB. Do you wish to open it in Write Buffer mode?\n(Loading might fail otherwise)", 
             QMessageBox::Yes|QMessageBox::No, QMessageBox::No);
             if (vResult == QMessageBox::Yes) {
@@ -806,7 +817,7 @@ void MainWindow::loadXML_L3() {
     if (vHasError == true) {
         if (Core.mXMLSourceHasEditBackup == true) {
             vErrMsg += ".\nDo you want to undo the latest edit?";
-            int vResult = QMessageBox::question(this, Core.mConfig.property("programTitle").toString(), \
+            int vResult = QMessageBox::question(this, Core.getConfigStr("programTitle"), \
                 vErrMsg, QMessageBox::Yes|QMessageBox::No, QMessageBox::Yes);
             if (vResult == QMessageBox::Yes) {
                 Core.mXMLSource = Core.mXMLSourceRevertBackup;
@@ -836,58 +847,42 @@ void MainWindow::loadXML_L4() {
     //Reset to standard icon
     setWindowIcon(Core.mDefaultIcon);
     //Reset to standard NES palette
-    load_NES_Palette(Core.mConfig.property("NESPaletteFile").toString());
+    load_NES_Palette(Core.getConfigStr("NESPaletteFile"));
     
-    XMLReadStatus vStatus;
-    vStatus.mItemCount = 0;
-    vStatus.mTreeLevel = 0;
-    vStatus.mParentTWIRef = 0;
-    vStatus.mParentIndex = -1;
-    vStatus.mListFloorCounter = 0;
-    vStatus.mCurrentSrcLine = 1;
-    vStatus.mCharPos = 0;
-    vStatus.mValidCharPos = true;
     
     if (Core.mMainXML.hasChildNodes() == false) {return;}
 
-    //Find and load any icons before crawling the XML tree.
-    //Todo: Change how we do this so Tag can be Case-insentivite.
-    QDomNodeList vIconsLC = Core.mMainXML.elementsByTagName("icon");
-    QDomNodeList vIconsUC = Core.mMainXML.elementsByTagName("ICON");
-    QDomNodeList *vDMLptr;
-    for (int vList = 0; vList < 2; vList++) {
-        vDMLptr = (vList == 0) ? &vIconsLC : &vIconsUC;
-        if (vDMLptr->length() > 0) {
-            for (int vIx = 0; vIx < vDMLptr->length(); vIx++) {
-                QDomElement vElement = vDMLptr->at(vIx).toElement();
-                QString vKeyName = "";
-                QString vFileName = "";
-                Core.qElementGetHasAttribute(vElement, "key", &vKeyName);
-                Core.qElementGetHasAttribute(vElement, "filename", &vFileName);
-                if (vFileName.size() > 0) {
-                    if (Core.findIncludeFile(&vFileName)) {
-                        QIcon vQIcon(vFileName);
-                        tIconTableItem vNewIcon;
-                        vNewIcon.mIcon = vQIcon;
-                        vNewIcon.mKey = vKeyName;
-                        Core.mIconTable.append(vNewIcon);
-                    }
-                }
-            }
-        }
+    //Read in two passes:
+    //1: Icons
+    //2: Everything else, populate tree view
+    
+    int vPass = 1;
+    while (vPass <= 2) {
+        //Using a QXmlStreamReader in tandem with QDomDocument+related when parsing.
+        //This is in order to get the Start and End character positions of XML Elements.
+        QXmlStreamReader vReader;
+        vReader.addData(Core.mXMLSource);
+        /*if (vReader.hasError() == true) {
+        qDebug("Reader reported an error");
+        }*/
+
+        XMLReadStatus vStatus;
+        vStatus.mPass = vPass;
+        vStatus.mItemCount = 0;
+        vStatus.mTreeLevel = 0;
+        vStatus.mParentTWIRef = 0;
+        vStatus.mParentIndex = -1;
+        vStatus.mListFloorCounter = 0;
+        vStatus.mCurrentSrcLine = 1;
+        vStatus.mCharPos = 0;
+        vStatus.mValidCharPos = true;
+        
+        loadXMLRecursive(Core.mMainXML.documentElement(), &vStatus, &vReader);
+        
+        vPass++;
     }
     
-    //Using a QXmlStreamReader in tandem with QDomDocument+related when parsing.
-    //This is in order to get the Start and End character positions of XML Elements.
-    QXmlStreamReader vReader;
-    vReader.addData(Core.mXMLSource);
-
-    /*if (vReader.hasError() == true) {
-        qDebug("Reader reported an error");
-    }*/
-    loadXMLRecursive(Core.mMainXML.documentElement(), &vStatus, &vReader);
-    
-    ui->wTree->expandAll();
+    //ui->wTree->expandAll();
    
 }
 
@@ -895,14 +890,39 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus, 
 
     QTreeWidgetItem *vTreeItem = 0;
 
-    if (aStatus->mListFloorCounter) {
-        aStatus->mListFloorCounter++;
-    }
-
     bool wAddToTables = false;
     
-    QString vTagText;
-    vTagText = aElement.nodeName();
+    if (aStatus->mPass == 2) {
+        if (aStatus->mListFloorCounter > 0) {
+            aStatus->mListFloorCounter++;
+        }
+   
+        if (aStatus->mTreeLevel >= 1) {
+            wAddToTables = true;
+        }
+    }
+    
+    QString vTagText = aElement.nodeName();
+
+    if (aStatus->mPass == 1) {
+    if (vTagText.compare("icon", Qt::CaseInsensitive) == 0) {
+        QString vKeyName = "";
+        QString vFileName = "";
+        Core.qElementGetHasAttribute(aElement, "key", &vKeyName);
+        Core.qElementGetHasAttribute(aElement, "filename", &vFileName);
+        if (vFileName.size() > 0) {
+            if (Core.findIncludeFile(&vFileName)) {
+                QIcon vQIcon(vFileName);
+                tIconTableItem vNewIcon;
+                vNewIcon.mIcon = vQIcon;
+                vNewIcon.mKey = vKeyName;
+                Core.mIconTable.append(vNewIcon);
+            }
+        }
+    }
+    }
+
+    if (aStatus->mPass == 2) {
     if ((vTagText.compare("item", Qt::CaseInsensitive) == 0) || 
      (vTagText.compare("bra", Qt::CaseInsensitive) == 0)) {
     
@@ -977,9 +997,8 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus, 
                 }
             }
         }
-    } else if (vTagText.compare("palette", Qt::CaseInsensitive) == 0) {
-        wAddToTables = true;
     }
+    } //aStatus->mPass == 2
 
     loadXMLRecursive_findReaderToken(QXmlStreamReader::StartElement, aStatus, aReader);
     
@@ -1098,9 +1117,11 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus, 
             Core.mItemElmTable[vTableIndex].mHasCharPos = false;
         }
     }
-
-    if (aStatus->mListFloorCounter) {
-        aStatus->mListFloorCounter--;
+    
+    if (aStatus->mPass == 2) {
+        if (aStatus->mListFloorCounter > 0) {
+            aStatus->mListFloorCounter--;
+        }
     }
 }
 
@@ -1138,7 +1159,7 @@ void MainWindow::themeChange() {
     Core.mCustomizeId.clear();
     Core.mCustomizeString.clear();
     
-    if (Core.mConfig.property("theme").toString().compare("icedragon", Qt::CaseInsensitive) == 0) {
+    if (Core.getConfigStr("theme").compare("icedragon", Qt::CaseInsensitive) == 0) {
         Core.mCustomizeId.append("window.stylesheet"); Core.mCustomizeString.append("color: #D0FFFF; background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(40, 140, 170, 255), stop:1 rgba(130, 170, 200, 255))");
         Core.mCustomizeId.append("grid.color"); Core.mCustomizeString.append("205060");    
         Core.mCustomizeId.append("grid.selcolor"); Core.mCustomizeString.append("70F0FF");
@@ -1604,7 +1625,7 @@ void MainWindow::on_actionDeleteItem_triggered()
 void MainWindow::on_actionClearXML_triggered()
 {
 
-    int vResult = QMessageBox::warning(this, Core.mConfig.property("programTitle").toString(), \
+    int vResult = QMessageBox::warning(this, Core.getConfigStr("programTitle"), \
         "This will remove ALL elements in the XML and leave only a base Element. \n\
 Do you wish to continue?", QMessageBox::Yes|QMessageBox::No, QMessageBox::No);
 
