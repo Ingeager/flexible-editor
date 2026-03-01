@@ -24,7 +24,8 @@ enum { eBufferSystem_Single = 0, eBufferSystem_WriteBuffer} ;
 
 
 struct XMLReadStatus {
-    int mPass; //1 = Icons, 2 = Everything else.
+    int mPass;          //1 = Icons, 2 = Everything else.
+    int mElementCount;
     int mItemCount;
     QTreeWidgetItem *mParentTWIRef;
     int mTreeLevel;
@@ -132,6 +133,7 @@ public:
     qint64 calcItemPtr(qint32 aPtr, QDomElement aElmRef, int aElmIndex = -1, bool aCheckBigEndian = true);
     bool itemHasAttr(QString aName, QDomElement aElmRef, bool aCheckCommon = true, bool aCheckRegular = true);
     QString getItemAttr(QString aName, QDomElement aElmRef);
+    bool qElementGetFlag(QString aFlagName, QDomElement aElmRef);
     bool getItemFlag(QString aFlagName, QDomElement aElmRef);
     quint32 getFileByte(qint64 aPtr);
     void setFileByte(qint64 aPtr, quint32 aValue);
@@ -146,6 +148,7 @@ public:
     void loadConfig();
     void saveConfig();
     QString getConfigStr(QByteArray aProperty);
+
 };
 
 extern tCore Core;

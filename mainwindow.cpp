@@ -60,11 +60,6 @@ void tCore::error(QString aMessage, int aLevel) {
     vErrorBox.exec();
 }
 
-bool tCore::qElementGetHasAttribute(QDomElement aElement, QString aName, QString *aReturnStr) {
-    if (aElement.hasAttribute(aName.toLower())) {*aReturnStr = aElement.attribute(aName.toLower()); return true;}
-    if (aElement.hasAttribute(aName.toUpper())) {*aReturnStr = aElement.attribute(aName.toUpper()); return true;}
-    return false;
-}
 
 int tCore::getEngineElmIndex(QScriptEngine *aEngine) {
     QScriptValue vGlob = aEngine->globalObject();
@@ -292,6 +287,12 @@ int tCore::getCommonElementIndex(QDomElement aElmRef) {
     return -1;
 }
 
+bool tCore::qElementGetHasAttribute(QDomElement aElement, QString aName, QString *aReturnStr) {
+    if (aElement.hasAttribute(aName.toLower())) {*aReturnStr = aElement.attribute(aName.toLower()); return true;}
+    if (aElement.hasAttribute(aName.toUpper())) {*aReturnStr = aElement.attribute(aName.toUpper()); return true;}
+    return false;
+}
+
 bool tCore::itemHasAttr(QString aName, QDomElement aElmRef, bool aCheckCommon, bool aCheckRegular) {
     QDomNamedNodeMap vAttr = aElmRef.attributes();
     if (aCheckRegular == true) {
@@ -342,6 +343,23 @@ QString tCore::getItemAttr(QString aName, QDomElement aElmRef) {
     if (!vAttrValLC.isNull()) {vValue = vAttrValLC.nodeValue();}
     if (!vAttrValUC.isNull()) {vValue = vAttrValUC.nodeValue();}
     return (vValue);
+}
+
+// Same as getItemFlag except this doesn't check Common elements.
+bool tCore::qElementGetFlag(QString aFlagName, QDomElement aElmRef) {
+    QString vFlagAttr;
+    Core.qElementGetHasAttribute(aElmRef, "flag", &vFlagAttr);
+    if (vFlagAttr.size() > 0) {
+        QStringList vFlags = vFlagAttr.split(".", QString::SkipEmptyParts);
+        int vIndex = 0;
+        while (vIndex < vFlags.size()) {
+            if (vFlags[vIndex].compare(aFlagName, Qt::CaseInsensitive) == 0) {
+                return true;
+            }
+            vIndex++;
+        }
+    }
+    return false;
 }
 
 bool tCore::getItemFlag(QString aFlagName, QDomElement aElmRef) {
@@ -853,9 +871,9 @@ void MainWindow::loadXML_L4() {
     if (Core.mMainXML.hasChildNodes() == false) {return;}
 
     //Read in two passes:
-    //1: Icons
-    //2: Everything else, populate tree view
-    
+    //1: Add Elements to the registry
+    //2: Populate tree view, handle INFO Element
+
     int vPass = 1;
     while (vPass <= 2) {
         //Using a QXmlStreamReader in tandem with QDomDocument+related when parsing.
@@ -868,7 +886,8 @@ void MainWindow::loadXML_L4() {
 
         XMLReadStatus vStatus;
         vStatus.mPass = vPass;
-        vStatus.mItemCount = 0;
+        vStatus.mElementCount = 0;
+        vStatus.mItemCount = 1;
         vStatus.mTreeLevel = 0;
         vStatus.mParentTWIRef = 0;
         vStatus.mParentIndex = -1;
@@ -891,122 +910,139 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus, 
     QTreeWidgetItem *vTreeItem = 0;
 
     bool wAddToTables = false;
+    bool wCountElement = false;
     
-    if (aStatus->mPass == 2) {
-        if (aStatus->mListFloorCounter > 0) {
-            aStatus->mListFloorCounter++;
-        }
-   
-        if (aStatus->mTreeLevel >= 1) {
+    if (aStatus->mListFloorCounter > 0) {
+        aStatus->mListFloorCounter++;
+    }
+
+    //If wAddToTables is true, wCountElement also will be (and needs to be).
+    //wAddToTables is only true in Pass 1.
+     
+    if (aStatus->mTreeLevel >= 1) {
+        wCountElement = true;
+        if (aStatus->mPass == 1) {
             wAddToTables = true;
         }
     }
     
     QString vTagText = aElement.nodeName();
 
-    if (aStatus->mPass == 1) {
-    if (vTagText.compare("icon", Qt::CaseInsensitive) == 0) {
-        QString vKeyName = "";
-        QString vFileName = "";
-        Core.qElementGetHasAttribute(aElement, "key", &vKeyName);
-        Core.qElementGetHasAttribute(aElement, "filename", &vFileName);
-        if (vFileName.size() > 0) {
-            if (Core.findIncludeFile(&vFileName)) {
-                QIcon vQIcon(vFileName);
-                tIconTableItem vNewIcon;
-                vNewIcon.mIcon = vQIcon;
-                vNewIcon.mKey = vKeyName;
-                Core.mIconTable.append(vNewIcon);
-            }
-        }
-    }
-    }
-
-    if (aStatus->mPass == 2) {
     if ((vTagText.compare("item", Qt::CaseInsensitive) == 0) || 
      (vTagText.compare("bra", Qt::CaseInsensitive) == 0)) {
     
-        if (aStatus->mListFloorCounter == 0) {
-            wAddToTables = true;
+        if (aStatus->mPass == 1) {
             
-            QString vItemName = "Data Item " + QString::number(aStatus->mItemCount+1);
-            QString vIconName = "";
-            bool vUsingIcon = false;
-            
-            if (aElement.hasAttributes() == true) {
-                Core.qElementGetHasAttribute(aElement, "name", &vItemName);
-                vUsingIcon = Core.qElementGetHasAttribute(aElement, "icon", &vIconName);
+            if (aStatus->mListFloorCounter > 0) {
+                Core.mListElmIndexTable.append(Core.mItemElmTable.count());
             }
-            
-            //Use a table to connect Tree widget items to the DRD Item Element/QDomElement.
-            int RefIndex = Core.mItemElmTable.count();
+        }
 
-            if (aStatus->mParentTWIRef == 0) {
-                //Add to the root of the tree
-                vTreeItem = new QTreeWidgetItem(ui->wTree);
-            } else {
-                if (aStatus->mParentTWIRef) {
-                    //Add to current parent
-                    vTreeItem = new QTreeWidgetItem(aStatus->mParentTWIRef);
+        if (aStatus->mPass == 2) {
+        
+            if (aStatus->mListFloorCounter == 0) {
+    
+                QString vItemName = "Data Item " + QString::number(aStatus->mItemCount);
+                QString vIconName = "";
+                bool vUsingIcon = false;
+                
+                if (aElement.hasAttributes() == true) {
+                    Core.qElementGetHasAttribute(aElement, "name", &vItemName);
+                    vUsingIcon = Core.qElementGetHasAttribute(aElement, "icon", &vIconName);
                 }
-            }
-            if (vTreeItem) {
-                vTreeItem->setText(0, vItemName);
-                vTreeItem->setData(0, eElmRefRole, RefIndex);
-                vTreeItem->setData(0, eWindowRole, 0);
-                if (vUsingIcon == true) {
-                    for (int vIx = 0; vIx < Core.mIconTable.size(); vIx++) {
-                        if (vIconName.compare(Core.mIconTable[vIx].mKey, Qt::CaseInsensitive) == 0) {
-                            QIcon vIconRef = Core.mIconTable[vIx].mIcon;
-                            vTreeItem->setIcon(0, vIconRef);
+                
+                //Connect Tree widget item to the XML Item Element/QDomElement.
+                int vRefIndex = aStatus->mElementCount;
+    
+                if (aStatus->mParentTWIRef == 0) {
+                    //Add to the root of the tree
+                    vTreeItem = new QTreeWidgetItem(ui->wTree);
+                } else {
+                    if (aStatus->mParentTWIRef) {
+                        //Add to current parent
+                        vTreeItem = new QTreeWidgetItem(aStatus->mParentTWIRef);
+                    }
+                }
+                if (vTreeItem) {
+                    vTreeItem->setText(0, vItemName);
+                    vTreeItem->setData(0, eElmRefRole, vRefIndex);
+                    vTreeItem->setData(0, eWindowRole, 0);
+                    bool vExpand = !Core.getItemFlag("COLLAPSE", aElement);
+                    vTreeItem->setExpanded(vExpand);
+                    if (vUsingIcon == true) {
+                        for (int vIx = 0; vIx < Core.mIconTable.size(); vIx++) {
+                            if (vIconName.compare(Core.mIconTable[vIx].mKey, Qt::CaseInsensitive) == 0) {
+                                QIcon vIconRef = Core.mIconTable[vIx].mIcon;
+                                vTreeItem->setIcon(0, vIconRef);
+                            }
                         }
                     }
                 }
+                
+                aStatus->mItemCount++;
             }
-            
-        } else {
-            wAddToTables = true;
-            Core.mListElmIndexTable.append(Core.mItemElmTable.count());
         }
         
-        aStatus->mItemCount++;
     } else if (vTagText.compare("list", Qt::CaseInsensitive) == 0) {
         //Set list mode and keep track of floor levels.
         aStatus->mListFloorCounter = 1;
-    } else if (vTagText.compare("common", Qt::CaseInsensitive) == 0) {
-        wAddToTables = true;
-        Core.mCommonElmIndexTable.append(Core.mItemElmTable.count());
-    } else if (vTagText.compare("nespal", Qt::CaseInsensitive) == 0) {
-        QString vNESPalFile;
-        if (Core.qElementGetHasAttribute(aElement, "filename", &vNESPalFile)) {
-            if (Core.findIncludeFile(&vNESPalFile)) {
-                load_NES_Palette(vNESPalFile);
+    }
+    
+    if (aStatus->mPass == 1) {
+        if (vTagText.compare("common", Qt::CaseInsensitive) == 0) {
+            Core.mCommonElmIndexTable.append(Core.mItemElmTable.count());
+        } else if (vTagText.compare("icon", Qt::CaseInsensitive) == 0) {
+            QString vKeyName = "";
+            QString vFileName = "";
+            Core.qElementGetHasAttribute(aElement, "key", &vKeyName);
+            Core.qElementGetHasAttribute(aElement, "filename", &vFileName);
+            if (vFileName.size() > 0) {
+                if (Core.findIncludeFile(&vFileName)) {
+                    QIcon vQIcon(vFileName);
+                    tIconTableItem vNewIcon;
+                    vNewIcon.mIcon = vQIcon;
+                    vNewIcon.mKey = vKeyName;
+                    Core.mIconTable.append(vNewIcon);
+                }
             }
-        }
-    } else if (vTagText.compare("info", Qt::CaseInsensitive) == 0) {
-        QString vIntSizeAttr;
-        if (Core.qElementGetHasAttribute(aElement, "intsize", &vIntSizeAttr)) {
-            Core.mDRD_intSize = vIntSizeAttr.toInt();
-        }
-        QString vIconKey;
-        if (Core.qElementGetHasAttribute(aElement, "headicon", &vIconKey)) {
-            for (int vIx = 0; vIx < Core.mIconTable.size(); vIx++) {
-                if (vIconKey.compare(Core.mIconTable[vIx].mKey, Qt::CaseInsensitive) == 0) {
-                    QIcon vIconRef = Core.mIconTable[vIx].mIcon;
-                    setWindowIcon(vIconRef);
+        } else if (vTagText.compare("nespal", Qt::CaseInsensitive) == 0) {
+            QString vNESPalFile;
+            if (Core.qElementGetHasAttribute(aElement, "filename", &vNESPalFile)) {
+                if (Core.findIncludeFile(&vNESPalFile)) {
+                    load_NES_Palette(vNESPalFile);
+                }
+            }
+        } 
+    }  //aStatus->mPass == 1
+
+    if (aStatus->mPass == 2) {
+        if (vTagText.compare("info", Qt::CaseInsensitive) == 0) {
+            QString vIntSizeAttr;
+            if (Core.qElementGetHasAttribute(aElement, "intsize", &vIntSizeAttr)) {
+                Core.mDRD_intSize = vIntSizeAttr.toInt();
+            }
+            QString vIconKey;
+            if (Core.qElementGetHasAttribute(aElement, "headicon", &vIconKey)) {
+                for (int vIx = 0; vIx < Core.mIconTable.size(); vIx++) {
+                    if (vIconKey.compare(Core.mIconTable[vIx].mKey, Qt::CaseInsensitive) == 0) {
+                        QIcon vIconRef = Core.mIconTable[vIx].mIcon;
+                        setWindowIcon(vIconRef);
+                    }
                 }
             }
         }
-    }
-    } //aStatus->mPass == 2
+    }  //aStatus->mPass == 2
+
 
     loadXMLRecursive_findReaderToken(QXmlStreamReader::StartElement, aStatus, aReader);
     
     int vTableIndex = -1;
     if (wAddToTables == true) {
+        vTableIndex = Core.mItemElmTable.size();
+        
         tItemElmType vNewItemElm;
         vNewItemElm.mElmRef = aElement;
-        vNewItemElm.mItemViewRef = 0;
+        vNewItemElm.mItemViewRef = 0;   //Pointer to Item View window, if open.
         vNewItemElm.mArrayIndex = 0;
         vNewItemElm.mArrayByteSz = 1;
         vNewItemElm.mBigEndianByteSz = 0;
@@ -1067,11 +1103,14 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus, 
             aStatus->mValidCharPos = false;
         }
 
-        vTableIndex = Core.mItemElmTable.size();
         Core.mItemElmTable.append(vNewItemElm);
         if (aStatus->mParentIndex >= 0) {
             Core.mItemElmTable[aStatus->mParentIndex].mChildIndexes.append(vTableIndex);
         }
+    }
+    
+    if (wCountElement == true) {
+        aStatus->mElementCount++;
     }
     
     if (aStatus->mValidCharPos == true) {
@@ -1118,10 +1157,8 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus, 
         }
     }
     
-    if (aStatus->mPass == 2) {
-        if (aStatus->mListFloorCounter > 0) {
-            aStatus->mListFloorCounter--;
-        }
+    if (aStatus->mListFloorCounter > 0) {
+        aStatus->mListFloorCounter--;
     }
 }
 
