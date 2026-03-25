@@ -48,18 +48,18 @@ function GridHandler(argcellw, argcellh, argw, argh, arg_entries, a_accessname) 
 		a_accessname = "grid";
 	}
 
-   this.bmvObject = 0;
-   this.drawCmd = [];
+	this.bmvObject = 0;
+	this.drawCmd = [];
 	this.bgcolor = 0;
 	this.currentcolor = Number("0x" + Core.customize(a_accessname+".selcolor", "CFCFCF", "grid.selcolor"));
-   this.rangecolor = 0x8F8F8F;
+	this.rangecolor = 0x8F8F8F;
 	this.gridcolor = Number("0x" + Core.customize(a_accessname+".color", "2F2F2F", "grid.color"));
 	this.selectable = true;
 	this.multiPage = false;
-   this.multiSelect = false;
-   this.rangeActive = false;
-   this.rangeStart = 0;
-   this.rangeEnd = 0;
+	this.multiSelect = false;
+	this.rangeActive = false;
+	this.rangeStart = 0;
+	this.rangeEnd = 0;
 	this.current_y = 0;
 	this.current_x = 0;
 	this.current_page = 0;
@@ -108,7 +108,6 @@ function GridHandler(argcellw, argcellh, argw, argh, arg_entries, a_accessname) 
 	} else {
 		this.animate = false;
 	}
-
 }
 
 GridHandler.prototype.timerFunc = function() {
@@ -430,7 +429,7 @@ GridHandler.prototype.redrawGrid = function() {
          }
      }
 
-     if (typev > 0) {
+     if ((typev > 0)  && (this.gridline_w > 0)) {
 		x = this.cell_start_x[cellx];
 		colorv = colortable[typev];
 		if (singleGridLineW == true) {
@@ -439,7 +438,7 @@ GridHandler.prototype.redrawGrid = function() {
 			this.drawBox(this.cell_start_y[celly]+vert_y1, this.cell_start_y[celly+1]-1, x, x+this.gridline_w-1, colorv);
 		}
       }
-      if (typeh > 0) {
+      if ((typeh > 0) && (this.gridline_h > 0)) {
 		y = this.cell_start_y[celly];
 		colorh = colortable[typeh];
 		if (singleGridLineH == true) {

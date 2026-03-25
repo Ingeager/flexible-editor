@@ -3,12 +3,17 @@ Update Notes
 ============
 
 GitHub updates:
- - Added CHR_GB
+ - Added CHR_GB data type
+ - Added MAP data type
  - CHR types: Unlimited LEN (page selector if more than 256).
  - CHR types: Added support for selection between multiple sub-palettes.
  - Data Type for PALETTE Element can now also be: PAL_6, PAL_15A, PAL_24
  - HEX data type now has a page selector if data length is more than 256 bytes
    (No LEN restriction)
+ - Bugfix: linewidth and lineheight in GRID customization class can now be "0". (would cause crash)
+ - Added fetch functionality to BYTE data type.
+To be supported in next binary:
+ - Added COLLAPSE flag for all Items.
 
 Release 2026-02-05:
  - Added CHR_NES and CHR_SNES data types.
@@ -110,7 +115,7 @@ Supported attributes for ITEM:
 		2. Size of array for fixed-length data that supports arrays. (Integers)
 		3. Size of array for a parent Item without Type.
 		(For 2 and 3, see "Arrays" section for more details.)
-	FLAG	Define flags relevant to the data type. All flags you want to
+	FLAG	Define flags for the Item or flags relevant to the data type. All flags you want to
 		set is placed in this attribute, separated using a dot (.)
 		Example: .. flag="DECIMAL.SIGNED" ..
 	COMMON	Use a COMMON element as a template. (See "Common Element" section)
@@ -119,6 +124,10 @@ Supported attributes for ITEM:
 		(See "ICON Element" section)
 	LAB	Display a comment. If present, it will be displayed in an edit control at the
 		top of the editing window.
+
+Supported flags for all Items:
+	COLLAPSE	If set, the Item will not be expanded in the Tree View when the XML loads,
+			meaning any Child Items will be hidden until the user expands it.
 
 An Item for editing data will use either PTR or RELPTR.
 (They can both be used, but there's not much point)
@@ -367,8 +376,8 @@ pal_32argb	32 bit palette (ARGB8888), with channels in order Alpha, Red, Green, 
 pal_32bgra	32 bit palette (BGRA8888), with channels in order Blue, Green, Red, Alpha.
 
 Supported attributes for all Palette Types:
-	LEN	Number of palette entries in hexadecimal.
-		If it's higher than 0x100 (256), a page selector is added.
+	LEN		Number of palette entries in hexadecimal.
+			If it's higher than 0x100 (256), a page selector is added.
 
 Supported Flags for all Palette Types:
 	BGR	Swaps the position of Blue and Red channels.
@@ -381,6 +390,21 @@ Supported objects for customization attributes, all CHR types (See "GUI Cusomiza
 	GRID		indexedgrid	Grid displaying indexed palette, such as for PAL_NES.
 
 	(Example: entrygrid.selcolor="70C070" grid.color="007000")
+
+Fetch support: Supported for pal_nes and pal_15. Returns all colors as an array of RGB24.
+
+TO BE IMPLEMENTED:
+
+Render support: N/A
+
+Supported Render child elements:
+	IMAGE		Shows graphics based on a data type below the standard controls.
+			Draws using the palette, if supported by the data type.
+			The graphics is refreshed when the user changes the current color or palette data.
+
+			Parameters passed to Render script: palette, paletteentries, paletteindex
+
+			Init behaviour: Data type must always initialize the BitmapView object with desired Width/Height.
 
 
 Types: Graphics - CHR (Tiles)
@@ -429,6 +453,18 @@ Supported objects for customization attributes, all CHR types (See "GUI Cusomiza
 
 	(Example: tilegrid.selcolor="70C070" grid.color="007000")
 
+Fetch support: N/A
+
+TO BE IMPLEMENTED:
+
+Render type support: chr_nes and chr_snes can be used as render type within other data types. CHR will be drawn into destination,
+		the number of tiles specified by LEN. SCALE and ROWLENGTH can be specified just as when it's a regular type.
+		Supports palette parameters as input. If the "index" parameter is set, it modifies the relative tile index.
+
+		Input parameter support: x, y, index, palette, paletteentries, paletteindex
+
+Supported Render child elements: N/A
+
 Types: Graphics - Other
 -----------------------
 
@@ -457,6 +493,22 @@ Supported attributes for COORDINATE:
 	GRIDY	Decimal value. If set, horizontal lines will be shown for every GRIDY pixel.
 	GRIDX	Decimal value. If set, vertical lines will be shown for every GRIDX pixel.
 
+
+Types: Map
+----------
+
+map	General map grid editor. Data must be formatted as a byte value for each unit or tile.
+	Currently shows byte datas as hexadecimal values.
+	In the future, it will be able to draw graphics described by child elements
+	so that it can be used as a tilemap editor and more.
+
+Supported attributes for MAP:
+	LEN		Hex value. Total number of units/number of bytes.
+	WIDTH		Decimal value. Number of units on each row.
+	PIXELW		Pixel width of each unit.
+	PIXELH		Pixel height of each unit.
+
+	(More to be added)
 
 Deprecated but Supported Data Types 
 -----------------------------------
