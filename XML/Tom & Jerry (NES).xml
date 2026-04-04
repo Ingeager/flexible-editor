@@ -1,0 +1,42 @@
+<drd>
+	<item name="Level 1-1">
+		<item name="Level 1-1 Map" ptr="84B7" height="16" width="16" pixelw="16" pixelh="16" totalwidth="160" totalheight="47" type="map">
+		<parameter map.index_src="index" map.dest="paletteindex" map.val_mul="4" ptr="B67D" type="byte" len="A0"/>
+		<subitem ptr="B3FD" type="map" pixelw="8" pixelh="8" height="2" width="2" index_mul="160">
+			<subitem ptr="2F010" type="chr_nes" len="1" width="1" scale="1" grid.linewidth="0" grid.lineheight="0">
+				<palette ptr="80FA" type="pal_nes" len="10"/>
+			</subitem>
+		</subitem>
+		</item>
+		<item name="Level 1-1 Palette" ptr="80FA" len="10" type="pal_nes">
+		<image ptr="84B7" height="16" width="16" pixelw="16" pixelh="16" totalheight="47" totalwidth="160" type="map">
+			<parameter map.index_src="index" map.dest="paletteindex" map.val_mul="4" ptr="B67D" type="byte" len="A0"/>
+			<subitem ptr="B3FD" type="map" pixelw="8" pixelh="8" len="4" width="2" index_mul="160">
+				<subitem ptr="2F010" type="chr_nes" len="1" bufferlen="100" width="1" scale="1" grid.linewidth="0" grid.lineheight="0">
+				</subitem>
+			</subitem>
+		</image>
+		</item>
+	</item>
+	<item name="Level 1-2">
+		<item name="Level 1-2 Map" ptr="A244" height="16" width="16" pixelw="16" pixelh="16" totalwidth="48" totalheight="84" type="map">
+		<parameter map.index_src="index" map.dest="paletteindex" map.val_mul="4" ptr="B9DD" type="byte" len="A0"/>
+		<subitem ptr="B8BD" type="map" pixelw="8" pixelh="8" len="4" width="2" index_mul="72">
+			<subitem ptr="30010" type="chr_nes" len="1" width="1" scale="1" grid.linewidth="0" grid.lineheight="0">
+				<palette ptr="A217" type="pal_nes" len="10"/>
+			</subitem>
+		</subitem>
+		</item>
+	</item>
+	<item name="Level 1-2 Bonus">
+		<item name="Level 1-2 Bonus Map" ptr="BAD3" height="13" width="16" pixelw="16" pixelh="16" totalwidth="60" type="map">
+		<parameter map.index_src="index" map.dest="paletteindex" map.val_mul="4" ptr="B67D" type="byte" len="A0"/>
+		<subitem ptr="B3FD" type="map" pixelw="8" pixelh="8" height="2" width="2" index_mul="160">
+			<subitem ptr="2F010" type="chr_nes" len="1" width="1" scale="1" grid.linewidth="0" grid.lineheight="0">
+				<palette ptr="80FA" type="pal_nes" len="10"/>
+			</subitem>
+		</subitem>
+		</item>
+	</item>
+
+</drd>
