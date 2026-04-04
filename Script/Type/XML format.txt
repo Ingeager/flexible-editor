@@ -493,22 +493,42 @@ Supported attributes for COORDINATE:
 	GRIDY	Decimal value. If set, horizontal lines will be shown for every GRIDY pixel.
 	GRIDX	Decimal value. If set, vertical lines will be shown for every GRIDX pixel.
 
-
 Types: Map
 ----------
 
-map	General map grid editor. Data must be formatted as a byte value for each unit or tile.
+map	General map editor with evenly sized units. Data must be a byte value for each unit or tile.
 	Currently shows byte datas as hexadecimal values.
 	In the future, it will be able to draw graphics described by child elements
 	so that it can be used as a tilemap editor and more.
 
 Supported attributes for MAP:
-	LEN		Hex value. Total number of units/number of bytes.
-	WIDTH		Decimal value. Number of units on each row.
+	WIDTH		Decimal value. Number of units on each row. Optional if LEN is set.
+	HEIGHT		Decimal value. Number of units on each collumn. Optional if LEN and WIDTH is set.
+	LEN		Hex value. Total number of units/number of bytes. Optional if both WIDTH and HEIGHT is set.
 	PIXELW		Pixel width of each unit.
 	PIXELH		Pixel height of each unit.
+	TOTALWIDTH	Total width of map in units. If this is present, a horizontal slider/
+			scroll bar appears.
+	TOTALHEIGHT	Total height of map in units. If this is present, a vertical slider/
+			scroll bar appears.
 
-	(More to be added)
+	INDEX_MUL	Decimal value. Sets byte spacing for each index if present.
+			In other words, values will be read from (index * INDEX_MUL).
+
+-- TO BE IMPLEMENTED --:
+
+Supported Render child elements:
+	SUBITEM		Draws a data type into each cell of the grid, or for each unit to be drawn.
+			The value associated to each unit is passed as INDEX to the data type script.
+			Use for example a CHR data type in this element for a simple tile map,
+			or MAP type to describe the next sub level in a meta tile system.
+
+	Output parameters: x, y, index
+
+Supported as Render type: Yes. Interprets "index" parameter, which is added to the data offset.
+
+	Input parameter support: x, y, index
+
 
 Deprecated but Supported Data Types 
 -----------------------------------

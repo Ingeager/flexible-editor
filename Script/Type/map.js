@@ -1,218 +1,343 @@
 //FLEX_INCLUDE "common_default.js"
 //FLEX_INCLUDE "common_grid.js"
 
-TileMap = {}
+Map = {}
 
-TileMap.renderArr = [];
-TileMap.renderHndArr = [];
-TileMap.mapBMview = 0;
-TileMap.mapGrid = 0;
-TileMap.selBMview = 0;
-TileMap.selGrid = 0;
-TileMap.pixelw = 8;
-TileMap.pixelh = 8;
-TileMap.width = 16;
-TileMap.height = 16;
-TileMap.entries = 256;
-TileMap.parentParam = {};
-TileMap.paramSetup = [];
-TileMap.multiParam = true;
-TileMap.paramDispatchList = [];
-TileMap.simpleMode = false;
+Map.renderArr = [];
+Map.renderHndArr = [];
+Map.mapBMview = 0;
+Map.mapGrid = 0;
+Map.selBMview = 0;
+Map.selGrid = 0;
+Map.pixelw = 8;
+Map.pixelh = 8;
+Map.width = 16;
+Map.height = 16;
+Map.entries = 256;
+Map.current_x = 0;
+Map.current_y = 0;
+Map.parentParam = {};
+Map.paramSetup = [];
+Map.multiParam = true;
+Map.paramDispatchList = [];
+Map.simpleMode = false;
 
-TileMap.width_spacing = {};
-TileMap.width_spacing.v = 16;
-TileMap.width_spacing.has = false;
-TileMap.parentindex_mul = 1;
-TileMap.index_bitsize = 8;
-TileMap.index_mul = 1;
-TileMap.index_ror = {};
-TileMap.index_ror.has = false;
-TileMap.index_ror.v = 0;
+Map.totalwidth = {};
+Map.totalwidth.v = 16;
+Map.totalwidth.has = false;
+Map.totalheight = {};
+Map.totalheight.v = 16;
+Map.totalheight.has = false;
+Map.parentindex_mul = 1;
+Map.index_bitsize = 8;
+Map.index_mul = 1;
+Map.index_ror = {};
+Map.index_ror.has = false;
+Map.index_ror.v = 0;
+Map.versionDate = 0;
 
-TileMap.dataCacheEnable = false;
-TileMap.dataCache = [];
+Map.dataCacheEnable = true;
+Map.dataCache = [];
+Map.dataCacheSz = 0;
+Map.cacheExpandSize = 256;
 
-TileMap.font = [];
+// Enums
+Map.modeNormal = 1;
+Map.modeRender = 2;
+
+Map.font = [];
 
 function init() {
 	DefaultControls.init();
-	initCommon(1, 0);
-	// TileMap.refresh();
+	initCommon(Map.modeNormal, 0);
 }
 
 function initRender(a_bmv, a_data) {
-	initCommon(2, a_bmv);
+	initCommon(Map.modeRender, a_bmv);
 }
 
 function initCommon(a_mode, a_bmv) {
 
-	var numOf = Core.getHexValueAttr("len");
-	var numOfPages = 1;
-	var gw = 16;
-	var gh = 20;
+	Map.versionDate = Core.versionDate;
+
+  Map.pixelw = (Core.hasAttr("pixelw") == true) ? Number(Core.getAttr("pixelw")) : 8;
+  Map.pixelh = (Core.hasAttr("pixelh") == true) ? Number(Core.getAttr("pixelh")) : 8;
+
+	var gw = Math.ceil(256/Map.pixelw);
+	var gh = Math.ceil(256/Map.pixelh);
+   var numOf = gw*gh;
+   var haslen = false;
+   var haswidth = false;
+   var hasheight = false;
+
+   // Calculate grid setup
 	if (Core.hasAttr("width") == true) {
 		gw = Number(Core.getAttr("width"));
+      haswidth = true;
 	}
-	if (numOf > this.pageSize) {
-		gh = Math.ceil(this.pageSize/gw);
-		numOfPages = Math.ceil(numOf / this.pageSize);
-	} else {
-		gh = Math.ceil(numOf/gw);
-		if (gh == 1) {
-			gw = numOf;
-		}
+  if (Core.hasAttr("height") == true) {
+		gh = Number(Core.getAttr("height"));
+      hasheight = true;
 	}
+   if (Core.hasAttr("len") == true) {
+      numOf = Core.getHexValueAttr("len");
+      haslen = true;
+   }
 	
-	TileMap.height = gh;
-	TileMap.width = gw;
-	TileMap.entries = numOf;
+   if ((haswidth == true) && (hasheight == true) && (haslen == false)) {
+       // H and W set, but not LEN
+       numOf = gh * gw;
+   }
+   if ((haswidth == true) && (hasheight == false) && (haslen == true)) {
+      // LEN and W set, but not H.
+      gh = Math.ceil(numOf / gw);
+  }
+   if ((haslen == true) && (hasheight == false) && (haswidth == false)) {
+      // Only LEN set.
+       if (numOf < gw) {
+          gh = 1;
+          gw = numOf;
+       } else {
+          gh = Math.ceil(numOf / gw);
+       }
+   }
+	
+	Map.height = gh;
+	Map.width = gw;
+	Map.entries = numOf;
 	
 	// Store various settings
-	if (Core.hasAttr("width_spacing") == true) {
-		TileMap.width_spacing.has = true;
-		TileMap.width_spacing.v = Number(Core.getAttr("width_spacing"));
+	if (Core.hasAttr("totalwidth") == true) {
+		Map.totalwidth.has = true;
+		Map.totalwidth.v = Number(Core.getAttr("totalwidth"));
 	} else {
-		TileMap.width_spacing.has = false;
+		Map.totalwidth.has = false;
+	}
+if (Core.hasAttr("totalheight") == true) {
+		Map.totalheight.has = true;
+		Map.totalheight.v = Number(Core.getAttr("totalheight"));
+	} else {
+		Map.totalheight.has = false;
 	}
 
+
 	if (Core.hasAttr("parentindex_mul")) {
-	TileMap.parentindex_mul = Number(Core.getAttr("parentindex_mul"));
-	}
-	if (Core.hasAttr("index_bitsize")) {
-	TileMap.index_bitsize = Number(Core.getAttr("index_bitsize"));
+	Map.parentindex_mul = Number(Core.getAttr("parentindex_mul"));
 	}
 	if (Core.hasAttr("index_mul")) {
-	TileMap.index_mul = Number(Core.getAttr("index_mul"));
+	Map.index_mul = Number(Core.getAttr("index_mul"));
+	}
+   if (Core.hasAttr("index_bitsize")) {
+	Map.index_bitsize = Number(Core.getAttr("index_bitsize"));
 	}
 	if (Core.hasAttr("index_ror") == true) {
-	TileMap.index_ror.has = true;
-	TileMap.index_ror.v = Number(Core.getAttr("index_ror"));
+	Map.index_ror.has = true;
+	Map.index_ror.v = Number(Core.getAttr("index_ror"));
 	} else  {
-	TileMap.index_ror.has = false;
+	Map.index_ror.has = false;
 	}
 	
 
     // Set up BitmapView for map
    var initbmv = false;
 
-    if (a_mode == 1) {
+    if (a_mode == Map.modeNormal) {
         var ctrl = new BitmapView(Core.window);
-        TileMap.mapBMview = ctrl;
-        TileMap.mapBMview.move(Core.base_x, Core.base_y);
+        Map.mapBMview = ctrl;
+        Map.mapBMview.move(Core.base_x, Core.base_y);
         initbmv = true;
     }
-    if (a_mode == 2) {
+    if (a_mode == Map.modeRender) {
         initbmv = !a_bmv.initialized;
-        TileMap.mapBMview = a_bmv;
+        Map.mapBMview = a_bmv;
     }
-    var grid = a_mode == 1 ? true : false;
-    TileMap.pixelw = (Core.hasAttr("pixelw") == true) ? Number(Core.getAttr("pixelw")) : 8;
-    TileMap.pixelh = (Core.hasAttr("pixelh") == true) ? Number(Core.getAttr("pixelh")) : 8;
+    var grid = a_mode == Map.modeNormal ? true : false;
 
-    TileMap.mapGrid = new GridHandler(TileMap.pixelw, TileMap.pixelh, TileMap.width, TileMap.height, TileMap.numOf, "mapgrid");
+    Map.mapGrid = new GridHandler(Map.pixelw, Map.pixelh, Map.width, Map.height, Map.numOf, "mapgrid");
     if (grid == false) {
-        TileMap.mapGrid.gridline_w = 0;
-	TileMap.mapGrid.gridline_h = 0;
-	TileMap.mapGrid.calculate();
+        Map.mapGrid.gridline_w = 0;
+	Map.mapGrid.gridline_h = 0;
+	Map.mapGrid.calculate();
     }
-    //TileMap.mapGrid.parent = TileMap;
-    TileMap.mapGrid.setBitmapView(TileMap.mapBMview, false);
+    //Map.mapGrid.parent = TileMap;
+    Map.mapGrid.setBitmapView(Map.mapBMview, false);
 
+   var wpixels = 1;
+   var hpixels = 1;
     if (initbmv == true) {
-	var wpixels = TileMap.mapGrid.getTotalWidth();
-	var hpixels = TileMap.mapGrid.getTotalHeight();
+	wpixels = Map.mapGrid.getTotalWidth();
+	hpixels = Map.mapGrid.getTotalHeight();
 	//wpixels = 600;
 	//hpixels = 600;
 
-	TileMap.mapBMview.init(wpixels,hpixels);
+	Map.mapBMview.init(wpixels,hpixels);
     }
 
-	TileMap.mapGrid.drawItemFunc = TileMap.mapGridDrawFunc;
+	Map.mapGrid.drawItemFunc = Map.mapGridDrawFunc;
     
+   var base_relative_x = 0;
 
-    if (a_mode == 1) {
-	Core.base_x += TileMap.mapBMview.width + 10;
+    if (a_mode == Map.modeNormal) {
+
+        if (Map.totalwidth.has) {
+        var maxwidth = Map.totalwidth.v-Map.width;
+         if (Map.versionDate >= 270123) {
+	      Map.xslider = new QScrollBar(Core.window);
+         } else {
+		Map.xslider = new QSlider(Core.window);
+         }
+			Map.xslider.move(Core.base_x, (Core.base_y + hpixels));
+			Map.xslider.setOrientation(1);
+			Map.xslider.resize(wpixels, 20);
+			
+			Map.xslider.setRange(0, maxwidth);
+			Map.xslider.setSingleStep(1);
+			Map.xslider.setPageStep(16);
+			
+			Map.xslider.valueChanged.connect(Map.xsliderFunc);
+			Map.xslider.show();
+    
+        }
+
+        if (Map.totalheight.has) {
+        var maxheight = Map.totalheight.v-Map.height;
+         if (Map.versionDate >= 270123) {
+	      Map.yslider = new QScrollBar(parentWnd);
+         } else {
+         Map.yslider = new QSlider(Core.window);
+         }
+			Map.yslider.move((Core.base_x + wpixels), Core.base_y);
+			Map.yslider.setOrientation(0);
+			Map.yslider.resize(20, hpixels);
+			
+			Map.yslider.setRange(0, maxheight);
+			Map.yslider.setSingleStep(1);
+			Map.yslider.setPageStep(1);
+			Map.yslider.setValue(maxheight); //Needs to be reverse
+			
+			Map.yslider.valueChanged.connect(Map.ysliderFunc);
+			Map.yslider.show();
+        base_relative_x = Map.yslider.width;
+        }
+
+  base_relative_x += (10 + wpixels);
     
 	//Initialize grid for value selection
 	var ctrl = new BitmapView(Core.window);
-	TileMap.selBMview = ctrl;
-	TileMap.selBMview.move(Core.base_x, Core.base_y);
+	Map.selBMview = ctrl;
+	Map.selBMview.move(Core.base_x+base_relative_x, Core.base_y);
 
-	TileMap.selGrid = new GridHandler(TileMap.pixelw, TileMap.pixelh, 16, 16, 256, "selgrid");
-	//TileMap.selGrid.parent = TileMap;
-	TileMap.selGrid.setBitmapView(TileMap.selBMview, false);
-	var wpixels = TileMap.selGrid.getTotalWidth();
-	var hpixels = TileMap.selGrid.getTotalHeight();
-	TileMap.selBMview.init(wpixels, hpixels);
+	Map.selGrid = new GridHandler(Map.pixelw, Map.pixelh, 16, 16, 256, "selgrid");
+	//Map.selGrid.parent = TileMap;
+	Map.selGrid.setBitmapView(Map.selBMview, false);
+	var selwpixels = Map.selGrid.getTotalWidth();
+	var selhpixels = Map.selGrid.getTotalHeight();
+	Map.selBMview.init(selwpixels, selhpixels);
 
-	TileMap.selGrid.drawItemFunc = TileMap.selGridDrawFunc;
+	Map.selGrid.drawItemFunc = Map.selGridDrawFunc;
 
     }
 
-    if (Core.versionDate < 280301) {
-        TileMap.simpleMode = true;
+	if (Map.versionDate < 260206) {
+		Map.dataCacheEnable = false;
+	}
+
+   if (Map.dataCacheEnable == true) {
+   var cachesz = 16;
+
+       // Attempt to calculate the range of bytes read
+	if (Map.totalwidth.has == false) {
+		cachesz = Map.entries;
+	} else {
+	     if (Map.totalheight.has == false) {
+			cachesz = (Map.height*Map.totalwidth.v);
+	      } else {
+		   cachesz = (Map.totalheight.v*Map.totalwidth.v);
+	      }
+	}
+
+       var a = Map.index_mul * Map.entries;
+       if (cachesz < a) {cachesz = a;}
+       var b = Map.parentindex_mul * 256;
+       if (cachesz < b) {cachesz = b;}
+
+
+	  Map.dataCacheSz = cachesz;
+	  Map.dataCache = Core.getByteArray(0, Map.dataCacheSz);
+  }
+
+    if (Map.versionDate < 260301) {
+        Map.simpleMode = true;
     } else {
 
     // Initialize subitem child elements
 //    var list = Core.childElementIndexList("subitem");
-
 	var list = Core.childElementIndex("subitem");
 	if (list >= 0) {
-		TileMap.paramDispatchList[TileMap.renderArr.length] = [];
-		TileMap.renderArr.push(list);
+		Map.paramDispatchList[Map.renderArr.length] = [];
+		Map.renderArr.push(list);
 	}
 	
 
    // Initialize child elements for rendering graphics
-	if (TileMap.renderArr.length > 0) {
-		for (var ix = 0; ix < TileMap.renderArr.length; ix++) {
-			var elmIndex = TileMap.renderArr[ix];
+	if (Map.renderArr.length > 0) {
+		for (var ix = 0; ix < Map.renderArr.length; ix++) {
+			var elmIndex = Map.renderArr[ix];
 			var param = {};
-			var hnd = Core.initRender(elmIndex, TileMap.mapBMview, param);
-			TileMap.renderHndArr[ix] = hnd;
+			var hnd = Core.initRender(elmIndex, Map.mapBMview, param);
+			Map.renderHndArr[ix] = hnd;
 		}
 	} else {
       // If none are found, set to simple mode
-      TileMap.simpleMode = true;
+      Map.simpleMode = true;
    }
 
-	// Register param child element/data and keep in cache
+	// Register PARAM child element/data and keep in memory
+  // (Call "fetch" function of its data type.)
+  
 	var param_ei = Core.childElementIndex("parameter");
 	if (param_ei >= 0) {
 		var data = Core.fetchElementData(param_ei);
 		var dest_param = "index";
 		var index_src = "index";
+     var has_index_src = false;
 		var val_mul = 1;
 
+      // Read attributes specifically related to parameters.
+      // map.dest: Name of parameter to set.
+      // If not provided it will override "index".
 		if (Core.hasAttr("map.dest", param_ei)) {
 		dest_param = Core.getAttr("map.dest", param_ei);
 		}
 		if (Core.hasAttr("map.index_src", param_ei)) {
+      // Input parameter to use as Array index
 		index_src = Core.getAttr("map.index_src", param_ei);
+     has_index_src = true;
 		}
 		if (Core.hasAttr("map.val_mul", param_ei)) {
+      // map.val_mul: Multiply source value
 		val_mul = Number(Core.getAttr("map.val_mul", param_ei));
 		}
 
 		var paramset = {};
 		paramset.dest_param = dest_param;
 		paramset.data = data;
+		paramset.has_index_src = has_index_src;
 		paramset.index_src = index_src;
 		paramset.val_mul = val_mul;
-		TileMap.paramSetup.push(paramset);
+		Map.paramSetup.push(paramset);
 
 	}
    } // versionDate check
 
-    if (TileMap.simpleMode == true) {
-       TileMap.font[0] = [
+    if (Map.simpleMode == true) {
+       Map.font[0] = [
 "OOO", "__O", "OOO", "OOO", "O_O", "OOO", "_OO", "OOO",
 "O_O",  "__O", "__O",  "__O",  "O_O", "O__",  "O__",  "__O", 
 "O_O", "__O",  "OOO", "OOO", "OOO","OOO","OOO","__O",
 "O_O", "__O", "O__",  "__O",   "__O",  "__O", "O_O", "_O_",
 "OOO","__O", "OOO", "OOO", "__O",  "OOO","OOO", "_O_"];
-        TileMap.font[1] = [
+        Map.font[1] = [
 "OOO","OOO","_O_",  "OO_","_OO","OO_","OOO","OOO",
 "O_O", "O_O",  "O_O",  "O_O","O__", "O_O","O__", "O__",
 "OOO","OOO","OOO", "OO_", "O__","O_O","OOO","OOO",
@@ -221,158 +346,204 @@ function initCommon(a_mode, a_bmv) {
 
     }
   
-    if (a_mode == 1) {
-	var index = TileMap.getValue();
-	TileMap.selGrid.setIndex(index);
-	TileMap.mapBMview.mousePress.connect(TileMap.mapClickFunc);
-	TileMap.selBMview.mousePress.connect(TileMap.selClickFunc);
+    if (a_mode == Map.modeNormal) {
+	var index = Map.getValue(0);
+	Map.selGrid.setIndex(index);
+	Map.mapBMview.mousePress.connect(Map.mapClickFunc);
+	Map.selBMview.mousePress.connect(Map.selClickFunc);
 
 	// Refresh everything if we're in normal data type mode.
 	// If map.js is loaded in Render mode, map will be redrawn in updateRender.
-	TileMap.redrawMapGrid();
+	Map.redrawMapGrid(true, true);
 
-	TileMap.mapBMview.refresh();
-	TileMap.mapBMview.show();
+	Map.mapBMview.refresh();
+	Map.mapBMview.show();
 
-	TileMap.selGrid.redraw();
-   if (TileMap.simpleMode == false) {
-	if (TileMap.multiParam == true) {
-		for (var r_index = 0; r_index < TileMap.renderArr.length; r_index++) {
-			Core.updateRender(TileMap.renderHndArr[r_index], TileMap.selBMview, TileMap.paramDispatchList[r_index]);
-			TileMap.paramDispatchList[r_index].length = 0;
+	Map.selGrid.redraw();
+   if (Map.simpleMode == false) {
+	if (Map.multiParam == true) {
+		for (var r_index = 0; r_index < Map.renderArr.length; r_index++) {
+			Core.updateRender(Map.renderHndArr[r_index], Map.selBMview, Map.paramDispatchList[r_index]);
+			Map.paramDispatchList[r_index].length = 0;
 		}
 	}
    }
-	TileMap.selBMview.refresh();
-	TileMap.selBMview.show();
+	Map.selBMview.refresh();
+	Map.selBMview.show();
     }
 
 }
 
 function updateRender(a_bmv, a_param) {
 
-	TileMap.mapBMview = a_bmv;
+	Map.mapBMview = a_bmv;
 	if (Array.isArray(a_param) == false) {
-		TileMap.parentParam = a_param;
-		TileMap.redrawMapGrid();
+		Map.parentParam = a_param;
+		Map.redrawMapGrid(true, false);
 	} else {
 		for (var ix = 0; ix < a_param.length; ix++) {
-			TileMap.parentParam = a_param[ix];
-			TileMap.redrawMapGrid();
+			Map.parentParam = a_param[ix];
+			Map.redrawMapGrid(true, false);
 		}
 	}
+
+   // Dispatch all parameters to child elements at once
+   // in one API call instead of multiple API calls.
+   // This way its much faster.
+   if ((Map.simpleMode == false) && (Map.multiParam == true)) {
+		for (var r_index = 0; r_index < Map.renderArr.length; r_index++) {
+			Core.updateRender(Map.renderHndArr[r_index], Map.mapBMview, Map.paramDispatchList[r_index]);
+			Map.paramDispatchList[r_index].length = 0;
+		}
+   }
 }
 
-TileMap.redrawMapGrid = function() {
-//    TileMap.dataCache = Core.getByteArray(0, TileMap.entries);
-//    TileMap.dataCacheEnable = true;
-    TileMap.mapGrid.redraw();
-//    TileMap.dataCacheEnable = false;
-   if (TileMap.simpleMode == false) {
-	if (TileMap.multiParam == true) {
-		for (var r_index = 0; r_index < TileMap.renderArr.length; r_index++) {
-			/*for (var ix = 0; ix < TileMap.paramDispatchList[r_index].length; ix++) {
-				Core.updateRender(TileMap.renderHndArr[r_index], TileMap.mapBMview, TileMap.paramDispatchList[r_index][ix]);
+Map.xsliderFunc = function(a_value) {
+     Map.current_x = a_value;
+     Map.redrawMapGrid(false, true);
+     Map.mapBMview.refresh();
+}
+
+Map.ysliderFunc = function(a_value) {
+     Map.current_y = (Map.yslider.maximum - a_value);
+     Map.redrawMapGrid(false, true);
+     Map.mapBMview.refresh();
+}
+
+
+Map.redrawMapGrid = function(a_drawGrid, a_dispatch) {
+  
+    if (a_drawGrid == true) {
+	Map.mapGrid.redraw();
+    } else {
+	for (var celly = 0; celly < Map.mapGrid.height; celly++) {
+	for (var cellx = 0; cellx < Map.mapGrid.width; cellx++) {
+		Map.mapGrid.redrawCell(celly, cellx);
+	}
+	}
+    }
+
+   if ((a_dispatch == true) && (Map.simpleMode == false) && (Map.multiParam == true)) {
+		for (var r_index = 0; r_index < Map.renderArr.length; r_index++) {
+			/*for (var ix = 0; ix < Map.paramDispatchList[r_index].length; ix++) {
+				Core.updateRender(Map.renderHndArr[r_index], Map.mapBMview, Map.paramDispatchList[r_index][ix]);
 			}*/
-			Core.updateRender(TileMap.renderHndArr[r_index], TileMap.mapBMview, TileMap.paramDispatchList[r_index]);
-			TileMap.paramDispatchList[r_index].length = 0;
+			Core.updateRender(Map.renderHndArr[r_index], Map.mapBMview, Map.paramDispatchList[r_index]);
+			Map.paramDispatchList[r_index].length = 0;
 		}
-		
-	}
    }
 }
 
-TileMap.mapClickFunc = function(a_buttons, a_y, a_x) {
-	TileMap.mapGrid.eventMousePress(a_buttons, a_y, a_x);
-	var index;
+Map.mapClickFunc = function(a_buttons, a_y, a_x) {
+	Map.mapGrid.eventMousePress(a_buttons, a_y, a_x);
+	var index = Map.getIndex();
 	
-	if (TileMap.width_spacing.has == false) {
-		index = TileMap.mapGrid.getIndex();
-	} else {
-		index = (TileMap.mapGrid.current_y * TileMap.width_spacing.v) + TileMap.mapGrid.current_x;
-	}
-	
-	var value = TileMap.getValue(index);
-	TileMap.selGrid.setIndex(value);
-	TileMap.selGrid.redrawGrid();
-	TileMap.selBMview.refresh();
+	var value = Map.getValue(index);
+	Map.selGrid.setIndex(value);
+	Map.selGrid.redrawGrid();
+	Map.selBMview.refresh();
 }
 
-TileMap.selClickFunc = function(a_buttons, a_y, a_x) {
-	TileMap.selGrid.eventMousePress(a_buttons, a_y, a_x);
-	var value = TileMap.selGrid.getIndex();
-	var index;
+Map.selClickFunc = function(a_buttons, a_y, a_x) {
+	Map.selGrid.eventMousePress(a_buttons, a_y, a_x);
+	var value = Map.selGrid.getIndex();
+	var index = Map.getIndex();
 
-	if (TileMap.width_spacing.has == false) {
-		index = TileMap.mapGrid.getIndex();
-	} else {
-		index = (TileMap.mapGrid.current_y * TileMap.width_spacing.v) + TileMap.mapGrid.current_x;
-	}
-
-	TileMap.setValue(index, value);
-	TileMap.mapGrid.redrawCurrentCell();
-	if ((TileMap.simpleMode == false) &&  (TileMap.multiParam == true)) {
-		for (var r_index = 0; r_index < TileMap.renderArr.length; r_index++) {
-			Core.updateRender(TileMap.renderHndArr[r_index], TileMap.mapBMview, TileMap.paramDispatchList[r_index]);
-			TileMap.paramDispatchList[r_index].length = 0;
+	Map.setValue(index, value);
+	Map.mapGrid.redrawCurrentCell();
+	if ((Map.simpleMode == false) &&  (Map.multiParam == true)) {
+		for (var r_index = 0; r_index < Map.renderArr.length; r_index++) {
+			Core.updateRender(Map.renderHndArr[r_index], Map.mapBMview, Map.paramDispatchList[r_index]);
+			Map.paramDispatchList[r_index].length = 0;
 		}
 	}
-	TileMap.mapBMview.refresh();
+	Map.mapBMview.refresh();
 }
 
-TileMap.getValue = function(a_index) {
-   if (TileMap.dataCacheEnable == false) {
-       return( Core.getByte(a_index) );
+Map.getIndex = function() {
+  var rowsize;
+  if (Map.totalwidth.has == false) {
+		rowsize = Map.width;
+	} else {
+		rowsize = Map.totalwidth.v;
+	}
+   return(((Map.mapGrid.current_y+Map.current_y) * rowsize) + Map.mapGrid.current_x+Map.current_x);
+}
+
+Map.getValue = function(a_index) {
+  if (Map.dataCacheEnable == true) {
+       Map.checkCacheOk(a_index);
+       return( Map.dataCache[a_index] );
    } else {
-       return( TileMap.dataCache[a_index] );
+       return( Core.getByte(a_index) );
    }
 }
 
-TileMap.setValue = function(a_index, a_val) {
-    Core.setByte(a_index, a_val);
+Map.setValue = function(a_index, a_val) {
+  if (Map.dataCacheEnable == true) {
+    Map.checkCacheOk(a_index);
+    Map.dataCache[a_index] = a_val;
+  }
+  Core.setByte(a_index, a_val);
 }
 
-TileMap.mapGridDrawFunc = function(a_index, a_page, a_cell_y, a_cell_x, a_y1, a_x1, a_y2, a_x2) {
+Map.checkCacheOk = function(a_index) {
 
-	if (TileMap.width_spacing.has == true) {
-		a_index = (a_cell_y * TileMap.width_spacing.v) + a_cell_x;
+    if (a_index < Map.dataCacheSz) {return true;}
+ //  print("over: " + a_index + " : " + Map.dataCacheSz);
+    // Expand the cache
+    var cachesz = Math.ceil(a_index/Map.cacheExpandSize)*Map.cacheExpandSize;
+    Map.dataCacheSz = cachesz;
+    // Re-read entire buffer
+    Map.dataCache = Core.getByteArray(0, Map.dataCacheSz);
+    return false;
+}
+
+Map.mapGridDrawFunc = function(a_index, a_page, a_cell_y, a_cell_x, a_y1, a_x1, a_y2, a_x2) {
+
+   a_cell_x += Map.current_x;
+   a_cell_y += Map.current_y;
+
+	if (Map.totalwidth.has == true) {
+		a_index = (a_cell_y * Map.totalwidth.v) + a_cell_x;
 	}
 
-   // if "index" is set, use as a relative pointer that can be modified through
+   // if "index" param is set from parent, use as a relative pointer that can be modified through
    // various attributes.
    // "index" is usually a value read from the file in the parent element.
 	var byteindex = 0;
-	if (TileMap.parentParam.hasOwnProperty("index")) {
-		byteindex = TileMap.parentParam.index;
+	if (Map.parentParam.hasOwnProperty("index")) {
+		byteindex = Map.parentParam.index;
 	}
 	
-	//Simple operation: Multiply index passed from parent element.
-	byteindex = byteindex*TileMap.parentindex_mul;
+	//Simple operation: Multiply the index passed from parent element.
+	byteindex = byteindex*Map.parentindex_mul;
 
 	//Operations done on a_index:
-	var bitsize = TileMap.index_bitsize;
-	if (TileMap.index_ror.has == true) {
+	var bitsize = Map.index_bitsize;
+	if (Map.index_ror.has == true) {
 		//Simple operation: Rotate right
-		var ror = TileMap.index_ror.v;
+		var ror = Map.index_ror.v;
 		var back = a_index & ((1<<ror)-1);
 		a_index = (a_index >> ror) | (back<<(bitsize-ror));
 	}
 
 	//Simple operation: Mul
-	a_index = a_index*TileMap.index_mul;
+	a_index = a_index*Map.index_mul;
 
-	var cell_value = TileMap.getValue(a_index+byteindex);
+	var cell_value = Map.getValue(a_index+byteindex);
 	
-	TileMap.renderCellCommon(TileMap.mapBMview, cell_value, a_index+byteindex, a_page, a_cell_y, a_cell_x, a_y1, a_x1, a_y2, a_x2);
+	Map.renderCellCommon(Map.mapBMview, cell_value, a_index+byteindex, a_page, a_cell_y, a_cell_x, a_y1, a_x1, a_y2, a_x2);
 }
 
-TileMap.selGridDrawFunc = function(a_index, a_page, a_cell_y, a_cell_x, a_y1, a_x1, a_y2, a_x2) {
-	TileMap.renderCellCommon(TileMap.selBMview, a_index, a_index, a_page, a_cell_y, a_cell_x, a_y1, a_x1, a_y2, a_x2);
+Map.selGridDrawFunc = function(a_index, a_page, a_cell_y, a_cell_x, a_y1, a_x1, a_y2, a_x2) {
+	Map.renderCellCommon(Map.selBMview, a_index, a_index, a_page, a_cell_y, a_cell_x, a_y1, a_x1, a_y2, a_x2);
 }
 
-TileMap.renderCellCommon = function(a_bmv, a_index, a_parentindex, a_page, a_cell_y, a_cell_x, a_y1, a_x1, a_y2, a_x2) {
+Map.renderCellCommon = function(a_bmv, a_index, a_parentindex, a_page, a_cell_y, a_cell_x, a_y1, a_x1, a_y2, a_x2) {
   
-	var obj = TileMap.parentParam;
+   // clone the param object
+	var obj = Map.parentParam;
 	var param = {};
 	if ((obj != null) && (typeof obj == "object")) {
 		param = obj.constructor();
@@ -385,12 +556,14 @@ TileMap.renderCellCommon = function(a_bmv, a_index, a_parentindex, a_page, a_cel
         param.index = a_index;
         param.indexpage = a_page;
 
+   // if there's already an x property, add.
 	if (param.hasOwnProperty("x")) {
 		param.x = Number(param.x) + a_x1;
 	} else {
 		param.x = a_x1;
 	}
 
+   // if there's already an y property, add.
 	if (param.hasOwnProperty("y")) {
 		param.y += a_y1;
 	} else {
@@ -401,32 +574,42 @@ TileMap.renderCellCommon = function(a_bmv, a_index, a_parentindex, a_page, a_cel
         param.cellx = a_cell_x;
         param.celly = a_cell_y;
 
+  if (param.x >= a_bmv.width) {return;}
+  if (param.y >= a_bmv.height) {return;}
 
-	if (TileMap.paramSetup.length > 0) {
-		for (var count = 0; count < TileMap.paramSetup.length; count++) {
 
-			var setup = TileMap.paramSetup[count];
-			var dest_param  = setup.dest_param;
-			var index_src =  setup.index_src;
+	if (Map.paramSetup.length > 0) {
+		for (var count = 0; count < Map.paramSetup.length; count++) {
 
-			if (param.hasOwnProperty(index_src)) {
-				var index = param[index_src];
-				var value =  setup.data[index];
+		var setup = Map.paramSetup[count];
+		var dest_param  = setup.dest_param;
+		var value = 0;
+		
+		if (setup.hasOwnProperty("has_index_src")) {
+		if (setup.has_index_src == true) {
+		if (setup.hasOwnProperty("index_src")) {
+			var paramname = setup.index_src;
+			var index = param[paramname];
+			value = setup.data[index];
+			value = value * setup.val_mul;
+		}
+		}
+		}
 
-				param[dest_param] = value * setup.val_mul;
-			}
+		param[dest_param] = value;
+
 		}
 	}
 	
-	if (TileMap.simpleMode == false) {
-	if (TileMap.renderArr.length > 0) {
+	if (Map.simpleMode == false) {
+	if (Map.renderArr.length > 0) {
 
-		for (var r_index = 0; r_index < TileMap.renderArr.length; r_index++) {
+		for (var r_index = 0; r_index < Map.renderArr.length; r_index++) {
 
-			if (TileMap.multiParam == false) {
-				Core.updateRender(TileMap.renderHndArr[r_index], a_bmv, param);
+			if (Map.multiParam == false) {
+				Core.updateRender(Map.renderHndArr[r_index], a_bmv, param);
 			} else {
-				TileMap.paramDispatchList[r_index].push(param);
+				Map.paramDispatchList[r_index].push(param);
 			}
 
 		}
@@ -439,41 +622,50 @@ TileMap.renderCellCommon = function(a_bmv, a_index, a_parentindex, a_page, a_cel
         var color = ((v&1) << 23) | ((v&2)<<14) | ((v&4)<<5) |
                          ((v&8) << 19) | ((v&16)<<10) | ((v&32)<<1) |
                          ((v&64) << 15) | ((v&128) << 6);
-        var ypixels = TileMap.pixelh;
-        var xpixels = TileMap.pixelw;
-        var buffer = new Array(ypixels*xpixels);
-        for (var filli = 0; filli < (ypixels*xpixels); filli++) {
+        var ypixels = Map.pixelh;
+        var xpixels = Map.pixelw;
+        var totalpixels = ypixels*xpixels;
+        var buffer = new Array(totalpixels);
+        for (var filli = 0; filli < totalpixels; filli++) {
             buffer[filli] = color;
         }
         var digit = [];
         digit[0] = param.index >> 4;
         digit[1] = param.index & 0xF;
+	var propx = xpixels/8;
+	var digitxpixels = Math.floor(propx*3);
         for (var d = 0; d < 2; d++) {
            var fblock = digit[d] >> 3;
            var f_offset = (digit[d] & 7);
 	
-	var propx = xpixels/8;
-	var digitxpixels = Math.floor(propx*3);
            for (var y = 0; y < ypixels; y++) {
                var fonty = Math.floor((y / ypixels) * 6);
                if (fonty < 5) {
                    var f_entry = f_offset+(fonty*8);
-                   var fdata = TileMap.font[fblock][f_entry];
+                   var fdata = Map.font[fblock][f_entry];
 
                    var basex = Math.floor(propx+(Math.floor(propx*4)*d));
                    for (var x = 0; x < digitxpixels; x++) {
                        var fontx = Math.floor((x / digitxpixels)*3);
                         if (fontx < 3) {
-                           var px = fdata.charAt(fontx);
-                           if (px == 'O') {
-                              buffer[(y*xpixels)+x+basex] = (buffer[(y*xpixels)+x+basex] ^ 0xFFFFFF);
+                           if (fdata.charAt(fontx) == 'O') {
+                              buffer[(y*xpixels)+x+basex] ^= 0xFFFFFF;
                            }
                         }
                    }
                }
            }
         }
-        a_bmv.drawBuffer(a_y1, a_y2, a_x1, a_x2, buffer);
+	if (Map.versionDate >= 260131) {
+		a_bmv.drawBuffer(a_y1, a_y2, a_x1, a_x2, buffer);
+	} else {
+		var bufp = 0;
+		for (var y = a_y1; y <= a_y2; y++) {
+		for (var x = a_x1; x <= a_x2; x++) {
+			a_bmv.setPixel(y, x, buffer[bufp++]);
+		}
+		}
+	}
     }
 
 }
