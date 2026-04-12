@@ -16,6 +16,8 @@ Map.height = 16;
 Map.entries = 256;
 Map.current_x = 0;
 Map.current_y = 0;
+Map.currentscreen_x = 0;
+Map.currentscreen_y = 0;
 Map.parentParam = {};
 Map.paramSetup = [];
 Map.multiParam = true;
@@ -28,6 +30,13 @@ Map.totalwidth.has = false;
 Map.totalheight = {};
 Map.totalheight.v = 16;
 Map.totalheight.has = false;
+Map.screenwidth = {};
+Map.screenwidth.v = 1;
+Map.screenwidth.has = false;
+Map.screenheight = {};
+Map.screenheight.v = 1;
+Map.screenheight.has = false;
+
 Map.parentindex_mul = 1;
 Map.index_bitsize = 8;
 Map.index_mul = 1;
@@ -41,11 +50,12 @@ Map.dataCache = [];
 Map.dataCacheSz = 0;
 Map.cacheExpandSize = 256;
 
+Map.font = [];
+
 // Enums
 Map.modeNormal = 1;
 Map.modeRender = 2;
-
-Map.font = [];
+Map.modeFetch = 3;
 
 function init() {
 	DefaultControls.init();
@@ -54,6 +64,36 @@ function init() {
 
 function initRender(a_bmv, a_data) {
 	initCommon(Map.modeRender, a_bmv);
+}
+
+function initFetch() {
+	initCommon(Map.modeFetch, 0);
+
+   var size = 0;
+   if (Map.totalwidth.has || Map.totalheight.has) {
+       if (Map.totalwidth.has == true) {
+           size = Map.totalwidth.v;
+       } else {
+           size = Map.width;
+       }
+       if (Map.totalheight.has == true) {
+           size *= Map.totalheight.v;
+       } else {
+           size *= Map.height;
+       }
+   } else if (Map.screenwidth.has || Map.screenheight.has) {
+       size = Map.width*Map.height;
+       if (Map.screenwidth.has) {size *= Map.screenwidth.v};
+       if (Map.screenheight.has) {size *= Map.screenheight.v};
+   } else {
+       size = Map.entries;
+   }
+
+   var returnData = new Array(size);
+   for (var index = 0; index < size; index++) {
+       returnData[index] = Map.getValue(index);
+   }
+   return returnData;
 }
 
 function initCommon(a_mode, a_bmv) {
@@ -107,18 +147,12 @@ function initCommon(a_mode, a_bmv) {
 	Map.entries = numOf;
 	
 	// Store various settings
-	if (Core.hasAttr("totalwidth") == true) {
-		Map.totalwidth.has = true;
-		Map.totalwidth.v = Number(Core.getAttr("totalwidth"));
-	} else {
-		Map.totalwidth.has = false;
-	}
-if (Core.hasAttr("totalheight") == true) {
-		Map.totalheight.has = true;
-		Map.totalheight.v = Number(Core.getAttr("totalheight"));
-	} else {
-		Map.totalheight.has = false;
-	}
+
+	Map.setAttrStat("totalheight", Map.totalheight);
+	Map.setAttrStat("totalwidth", Map.totalwidth);
+
+	Map.setAttrStat("screenwidth", Map.screenwidth);
+	Map.setAttrStat("screenheight", Map.screenheight);
 
 
 	if (Core.hasAttr("parentindex_mul")) {
@@ -127,123 +161,17 @@ if (Core.hasAttr("totalheight") == true) {
 	if (Core.hasAttr("index_mul")) {
 	Map.index_mul = Number(Core.getAttr("index_mul"));
 	}
-   if (Core.hasAttr("index_bitsize")) {
+	if (Core.hasAttr("index_bitsize")) {
 	Map.index_bitsize = Number(Core.getAttr("index_bitsize"));
 	}
-	if (Core.hasAttr("index_ror") == true) {
-	Map.index_ror.has = true;
-	Map.index_ror.v = Number(Core.getAttr("index_ror"));
-	} else  {
-	Map.index_ror.has = false;
-	}
-	
-
-    // Set up BitmapView for map
-   var initbmv = false;
-
-    if (a_mode == Map.modeNormal) {
-        var ctrl = new BitmapView(Core.window);
-        Map.mapBMview = ctrl;
-        Map.mapBMview.move(Core.base_x, Core.base_y);
-        initbmv = true;
-    }
-    if (a_mode == Map.modeRender) {
-        initbmv = !a_bmv.initialized;
-        Map.mapBMview = a_bmv;
-    }
-    var grid = a_mode == Map.modeNormal ? true : false;
-
-    Map.mapGrid = new GridHandler(Map.pixelw, Map.pixelh, Map.width, Map.height, Map.numOf, "mapgrid");
-    if (grid == false) {
-        Map.mapGrid.gridline_w = 0;
-	Map.mapGrid.gridline_h = 0;
-	Map.mapGrid.calculate();
-    }
-    //Map.mapGrid.parent = TileMap;
-    Map.mapGrid.setBitmapView(Map.mapBMview, false);
-
-   var wpixels = 1;
-   var hpixels = 1;
-    if (initbmv == true) {
-	wpixels = Map.mapGrid.getTotalWidth();
-	hpixels = Map.mapGrid.getTotalHeight();
-	//wpixels = 600;
-	//hpixels = 600;
-
-	Map.mapBMview.init(wpixels,hpixels);
-    }
-
-	Map.mapGrid.drawItemFunc = Map.mapGridDrawFunc;
-    
-   var base_relative_x = 0;
-
-    if (a_mode == Map.modeNormal) {
-
-        if (Map.totalwidth.has) {
-        var maxwidth = Map.totalwidth.v-Map.width;
-         if (Map.versionDate >= 270123) {
-	      Map.xslider = new QScrollBar(Core.window);
-         } else {
-		Map.xslider = new QSlider(Core.window);
-         }
-			Map.xslider.move(Core.base_x, (Core.base_y + hpixels));
-			Map.xslider.setOrientation(1);
-			Map.xslider.resize(wpixels, 20);
-			
-			Map.xslider.setRange(0, maxwidth);
-			Map.xslider.setSingleStep(1);
-			Map.xslider.setPageStep(16);
-			
-			Map.xslider.valueChanged.connect(Map.xsliderFunc);
-			Map.xslider.show();
-    
-        }
-
-        if (Map.totalheight.has) {
-        var maxheight = Map.totalheight.v-Map.height;
-         if (Map.versionDate >= 270123) {
-	      Map.yslider = new QScrollBar(parentWnd);
-         } else {
-         Map.yslider = new QSlider(Core.window);
-         }
-			Map.yslider.move((Core.base_x + wpixels), Core.base_y);
-			Map.yslider.setOrientation(0);
-			Map.yslider.resize(20, hpixels);
-			
-			Map.yslider.setRange(0, maxheight);
-			Map.yslider.setSingleStep(1);
-			Map.yslider.setPageStep(1);
-			Map.yslider.setValue(maxheight); //Needs to be reverse
-			
-			Map.yslider.valueChanged.connect(Map.ysliderFunc);
-			Map.yslider.show();
-        base_relative_x = Map.yslider.width;
-        }
-
-  base_relative_x += (10 + wpixels);
-    
-	//Initialize grid for value selection
-	var ctrl = new BitmapView(Core.window);
-	Map.selBMview = ctrl;
-	Map.selBMview.move(Core.base_x+base_relative_x, Core.base_y);
-
-	Map.selGrid = new GridHandler(Map.pixelw, Map.pixelh, 16, 16, 256, "selgrid");
-	//Map.selGrid.parent = TileMap;
-	Map.selGrid.setBitmapView(Map.selBMview, false);
-	var selwpixels = Map.selGrid.getTotalWidth();
-	var selhpixels = Map.selGrid.getTotalHeight();
-	Map.selBMview.init(selwpixels, selhpixels);
-
-	Map.selGrid.drawItemFunc = Map.selGridDrawFunc;
-
-    }
+	Map.setAttrStat("index_ror", Map.index_ror);
 
 	if (Map.versionDate < 260206) {
 		Map.dataCacheEnable = false;
 	}
 
    if (Map.dataCacheEnable == true) {
-   var cachesz = 16;
+	var cachesz = 16;
 
        // Attempt to calculate the range of bytes read
 	if (Map.totalwidth.has == false) {
@@ -265,6 +193,131 @@ if (Core.hasAttr("totalheight") == true) {
 	  Map.dataCacheSz = cachesz;
 	  Map.dataCache = Core.getByteArray(0, Map.dataCacheSz);
   }
+
+   // Exit here if "fetch" mode
+   if (a_mode == Map.modeFetch) {
+      return;
+   }
+
+    // Set up BitmapView for map
+   var initbmv = false;
+   var grid = true;
+    if (a_mode == Map.modeNormal) {
+        Map.mapBMview = new BitmapView(Core.window);
+        Map.mapBMview.move(Core.base_x, Core.base_y);
+        initbmv = true;
+        grid = true;
+    }
+    if (a_mode == Map.modeRender) {
+        initbmv = !a_bmv.initialized;
+        Map.mapBMview = a_bmv;
+        grid = false;
+    }
+
+    Map.mapGrid = new GridHandler(Map.pixelw, Map.pixelh, Map.width, Map.height, Map.numOf, "mapgrid");
+    if (grid == false) {
+        Map.mapGrid.gridline_w = 0;
+	Map.mapGrid.gridline_h = 0;
+	Map.mapGrid.calculate(); // Recalculate
+    }
+    //Map.mapGrid.parent = TileMap;
+    Map.mapGrid.setBitmapView(Map.mapBMview, false);
+
+   var wpixels = 1;
+   var hpixels = 1;
+    if (initbmv == true) {
+	wpixels = Map.mapGrid.getTotalWidth();
+	hpixels = Map.mapGrid.getTotalHeight();
+
+	Map.mapBMview.init(wpixels,hpixels);
+    }
+
+	Map.mapGrid.drawItemFunc = Map.mapGridDrawFunc;
+    
+   var base_relative_x = 0;
+
+    if (a_mode == Map.modeNormal) {
+
+        if (Map.totalwidth.has || Map.screenwidth.has) {
+        var maxwidth = 0;
+	var pagestep = 1;
+        
+        if (Map.totalwidth.has) {
+            maxwidth = Map.totalwidth.v-Map.width;
+	    pagestep = Map.width;
+        }
+        if (Map.screenwidth.has) {
+            maxwidth = Map.screenwidth.v-1;
+	    pagestep = 1;
+        }
+
+         if (Map.versionDate >= 270123) {
+	      Map.xslider = new QScrollBar(Core.window);
+         } else {
+		Map.xslider = new QSlider(Core.window);
+         }
+			Map.xslider.move(Core.base_x, (Core.base_y + hpixels));
+			Map.xslider.setOrientation(1);  // Horizontal
+			Map.xslider.resize(wpixels, 20);
+			
+			Map.xslider.setRange(0, maxwidth);
+			Map.xslider.setSingleStep(1);
+			Map.xslider.setPageStep(pagestep);
+			
+			Map.xslider.valueChanged.connect(Map.xsliderFunc);
+			Map.xslider.show();
+    
+        }
+
+     if (Map.totalheight.has || Map.screenheight.has) {
+        var maxheight = 0;
+	var pagestep = 1;
+        
+        if (Map.totalheight.has) {
+            maxheight = Map.totalheight.v-Map.height;
+	    pagestep = Map.height;
+        }
+        if (Map.screenheight.has) {
+            maxheight = Map.screenheight.v-1;
+	    pagestep = 1;
+        }
+
+	if (Map.versionDate >= 270123) {
+	      Map.yslider = new QScrollBar(parentWnd);
+         } else {
+         Map.yslider = new QSlider(Core.window);
+         }
+			Map.yslider.move((Core.base_x + wpixels), Core.base_y);
+			Map.yslider.setOrientation(0);  // Vertical
+			Map.yslider.resize(20, hpixels);
+			
+			Map.yslider.setRange(0, maxheight);
+			Map.yslider.setSingleStep(1);
+			Map.yslider.setPageStep(pagestep);
+			Map.yslider.setValue(maxheight); //Needs to be reverse
+			
+			Map.yslider.valueChanged.connect(Map.ysliderFunc);
+			Map.yslider.show();
+        base_relative_x = Map.yslider.width;
+        }
+
+  base_relative_x += (10 + wpixels);
+    
+	//Initialize the right-side area / value selection
+	Map.selBMview = new BitmapView(Core.window);
+	Map.selBMview.move(Core.base_x+base_relative_x, Core.base_y);
+
+	Map.selGrid = new GridHandler(Map.pixelw, Map.pixelh, 16, 16, 256, "selgrid");
+	//Map.selGrid.parent = TileMap;
+	Map.selGrid.setBitmapView(Map.selBMview, false);
+	var selwpixels = Map.selGrid.getTotalWidth();
+	var selhpixels = Map.selGrid.getTotalHeight();
+	Map.selBMview.init(selwpixels, selhpixels);
+
+	Map.selGrid.drawItemFunc = Map.selGridDrawFunc;
+
+    }
+
 
     if (Map.versionDate < 260301) {
         Map.simpleMode = true;
@@ -390,24 +443,38 @@ function updateRender(a_bmv, a_param) {
    // Dispatch all parameters to child elements at once
    // in one API call instead of multiple API calls.
    // This way its much faster.
-   if ((Map.simpleMode == false) && (Map.multiParam == true)) {
-		for (var r_index = 0; r_index < Map.renderArr.length; r_index++) {
-			Core.updateRender(Map.renderHndArr[r_index], Map.mapBMview, Map.paramDispatchList[r_index]);
-			Map.paramDispatchList[r_index].length = 0;
-		}
-   }
+    Map.dispatchUpdateRender();
+}
+
+Map.setAttrStat = function(a_attrstr, a_obj) {
+	if (Core.hasAttr(a_attrstr) == true) {
+		a_obj.has = true;
+		a_obj.v = Number(Core.getAttr(a_attrstr));
+	} else {
+		a_obj.has = false;
+	}
 }
 
 Map.xsliderFunc = function(a_value) {
-     Map.current_x = a_value;
+     if (Map.screenwidth.has) {
+         Map.currentscreen_x = a_value;
+     } else {
+         Map.current_x = a_value;
+     }
      Map.redrawMapGrid(false, true);
      Map.mapBMview.refresh();
+     Map.refreshSelGrid();
 }
 
 Map.ysliderFunc = function(a_value) {
-     Map.current_y = (Map.yslider.maximum - a_value);
+     if (Map.screenheight.has) {
+         Map.currentscreen_y = (Map.yslider.maximum - a_value);
+     } else {
+         Map.current_y = (Map.yslider.maximum - a_value);
+     }
      Map.redrawMapGrid(false, true);
      Map.mapBMview.refresh();
+     Map.refreshSelGrid();
 }
 
 
@@ -423,21 +490,18 @@ Map.redrawMapGrid = function(a_drawGrid, a_dispatch) {
 	}
     }
 
-   if ((a_dispatch == true) && (Map.simpleMode == false) && (Map.multiParam == true)) {
-		for (var r_index = 0; r_index < Map.renderArr.length; r_index++) {
-			/*for (var ix = 0; ix < Map.paramDispatchList[r_index].length; ix++) {
-				Core.updateRender(Map.renderHndArr[r_index], Map.mapBMview, Map.paramDispatchList[r_index][ix]);
-			}*/
-			Core.updateRender(Map.renderHndArr[r_index], Map.mapBMview, Map.paramDispatchList[r_index]);
-			Map.paramDispatchList[r_index].length = 0;
-		}
+   if (a_dispatch == true) {
+       Map.dispatchUpdateRender();
    }
 }
 
 Map.mapClickFunc = function(a_buttons, a_y, a_x) {
 	Map.mapGrid.eventMousePress(a_buttons, a_y, a_x);
+	Map.refreshSelGrid();
+}
+
+Map.refreshSelGrid = function() {
 	var index = Map.getIndex();
-	
 	var value = Map.getValue(index);
 	Map.selGrid.setIndex(value);
 	Map.selGrid.redrawGrid();
@@ -451,23 +515,43 @@ Map.selClickFunc = function(a_buttons, a_y, a_x) {
 
 	Map.setValue(index, value);
 	Map.mapGrid.redrawCurrentCell();
-	if ((Map.simpleMode == false) &&  (Map.multiParam == true)) {
+	Map.dispatchUpdateRender();
+	Map.mapBMview.refresh();
+}
+
+Map.dispatchUpdateRender = function() {
+	if ((Map.simpleMode == false) && (Map.multiParam == true)) {
 		for (var r_index = 0; r_index < Map.renderArr.length; r_index++) {
 			Core.updateRender(Map.renderHndArr[r_index], Map.mapBMview, Map.paramDispatchList[r_index]);
 			Map.paramDispatchList[r_index].length = 0;
 		}
 	}
-	Map.mapBMview.refresh();
+}
+
+Map.getScreenBase = function() {
+  var base = 0;
+  var screensize = (Map.width*Map.height);
+  var screens_x_size = screensize;
+  if (Map.screenwidth.has) {
+      base += (screensize*Map.currentscreen_x);
+      screens_x_size = Map.screenwidth.v*screensize;
+  }
+  if (Map.screenheight.has) {
+      base += (Map.currentscreen_y * screens_x_size);
+  }
+	return base;
 }
 
 Map.getIndex = function() {
+  var sbase = Map.getScreenBase();
+  
   var rowsize;
   if (Map.totalwidth.has == false) {
 		rowsize = Map.width;
 	} else {
 		rowsize = Map.totalwidth.v;
 	}
-   return(((Map.mapGrid.current_y+Map.current_y) * rowsize) + Map.mapGrid.current_x+Map.current_x);
+   return(sbase+((Map.mapGrid.current_y+Map.current_y) * rowsize) + Map.mapGrid.current_x+Map.current_x);
 }
 
 Map.getValue = function(a_index) {
@@ -504,36 +588,39 @@ Map.mapGridDrawFunc = function(a_index, a_page, a_cell_y, a_cell_x, a_y1, a_x1, 
    a_cell_x += Map.current_x;
    a_cell_y += Map.current_y;
 
+   var index = a_index;
 	if (Map.totalwidth.has == true) {
-		a_index = (a_cell_y * Map.totalwidth.v) + a_cell_x;
+		index = (a_cell_y * Map.totalwidth.v) + a_cell_x;
 	}
+
+	index += Map.getScreenBase();
 
    // if "index" param is set from parent, use as a relative pointer that can be modified through
    // various attributes.
    // "index" is usually a value read from the file in the parent element.
-	var byteindex = 0;
+	var parentindex = 0;
 	if (Map.parentParam.hasOwnProperty("index")) {
-		byteindex = Map.parentParam.index;
+		parentindex = Map.parentParam.index;
 	}
 	
 	//Simple operation: Multiply the index passed from parent element.
-	byteindex = byteindex*Map.parentindex_mul;
+	parentindex *= Map.parentindex_mul;
 
-	//Operations done on a_index:
+	//Operations done on index:
 	var bitsize = Map.index_bitsize;
 	if (Map.index_ror.has == true) {
 		//Simple operation: Rotate right
 		var ror = Map.index_ror.v;
-		var back = a_index & ((1<<ror)-1);
-		a_index = (a_index >> ror) | (back<<(bitsize-ror));
+		var back = index & ((1<<ror)-1);
+		index = (index >> ror) | (back<<(bitsize-ror));
 	}
 
-	//Simple operation: Mul
-	a_index = a_index*Map.index_mul;
+	//Simple operation: Multiply the index
+	index *= Map.index_mul;
 
-	var cell_value = Map.getValue(a_index+byteindex);
+	var cell_value = Map.getValue(parentindex + index);
 	
-	Map.renderCellCommon(Map.mapBMview, cell_value, a_index+byteindex, a_page, a_cell_y, a_cell_x, a_y1, a_x1, a_y2, a_x2);
+	Map.renderCellCommon(Map.mapBMview, cell_value, a_index+parentindex, a_page, a_cell_y, a_cell_x, a_y1, a_x1, a_y2, a_x2);
 }
 
 Map.selGridDrawFunc = function(a_index, a_page, a_cell_y, a_cell_x, a_y1, a_x1, a_y2, a_x2) {
@@ -569,6 +656,7 @@ Map.renderCellCommon = function(a_bmv, a_index, a_parentindex, a_page, a_cell_y,
 	} else {
 		param.y = a_y1;
 	}
+
         param.x2 = param.x + a_x2;
         param.y2 = param.y + a_y2;
         param.cellx = a_cell_x;
@@ -591,7 +679,7 @@ Map.renderCellCommon = function(a_bmv, a_index, a_parentindex, a_page, a_cell_y,
 			var paramname = setup.index_src;
 			var index = param[paramname];
 			value = setup.data[index];
-			value = value * setup.val_mul;
+			value *= setup.val_mul;
 		}
 		}
 		}
@@ -622,6 +710,22 @@ Map.renderCellCommon = function(a_bmv, a_index, a_parentindex, a_page, a_cell_y,
         var color = ((v&1) << 23) | ((v&2)<<14) | ((v&4)<<5) |
                          ((v&8) << 19) | ((v&16)<<10) | ((v&32)<<1) |
                          ((v&64) << 15) | ((v&128) << 6);
+        var fontcolor;
+        var cr = (color&0xFF);
+        var cg = ((color>>8)&0xFF);
+        var cb = ((color>>16)&0xFF);
+        var diff = Math.abs(0x80-cr)+
+                Math.abs(0x80-cg)+
+              Math.abs(0x80-cb);
+        if (diff < 128) {
+            if ((((cr>=0x80)?1:-1)+((cg>=0x80)?1:-1)+((cb>=0x80)?1:-1))>=1) {
+                fontcolor = 0;
+            } else {
+                fontcolor = 0xFFFFFF;
+            }
+        } else {
+            fontcolor = color ^ 0xFFFFFF;
+        }
         var ypixels = Map.pixelh;
         var xpixels = Map.pixelw;
         var totalpixels = ypixels*xpixels;
@@ -637,19 +741,18 @@ Map.renderCellCommon = function(a_bmv, a_index, a_parentindex, a_page, a_cell_y,
         for (var d = 0; d < 2; d++) {
            var fblock = digit[d] >> 3;
            var f_offset = (digit[d] & 7);
+           var basex = Math.floor(propx+(Math.floor(propx*4)*d));
 	
            for (var y = 0; y < ypixels; y++) {
                var fonty = Math.floor((y / ypixels) * 6);
                if (fonty < 5) {
                    var f_entry = f_offset+(fonty*8);
                    var fdata = Map.font[fblock][f_entry];
-
-                   var basex = Math.floor(propx+(Math.floor(propx*4)*d));
                    for (var x = 0; x < digitxpixels; x++) {
                        var fontx = Math.floor((x / digitxpixels)*3);
                         if (fontx < 3) {
                            if (fdata.charAt(fontx) == 'O') {
-                              buffer[(y*xpixels)+x+basex] ^= 0xFFFFFF;
+                              buffer[(y*xpixels)+x+basex] = fontcolor;
                            }
                         }
                    }
