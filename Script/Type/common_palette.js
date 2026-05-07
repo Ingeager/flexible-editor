@@ -33,6 +33,8 @@ CommonPalette = function() {
 		this.valueEditRef[x].thisRef = this;
 		this.valueEditRef[x].index = x;
 	}
+	
+	this.renderHandle = -1;
 }
 
 //Fetch palette data, each array index is 24-bit RGB value of a color.
@@ -229,6 +231,7 @@ CommonPalette.prototype.init = function () {
 			}
 		}
 
+    Core.base_y += (this.channels * 25) + 5;
 
 		this.updateCurrentIndex();
 	} else {
@@ -259,12 +262,39 @@ CommonPalette.prototype.init = function () {
 
 			this.updateCurrentIndex();
 			this.palTable_BMView.show();
+
+			Core.base_y += (hpixels + 10);
 		}
 	
+	}
+	
+	if (Core.versionDate >= 260304) {
+		var elmIndex = Core.childElementIndex("image");
+		if (elmIndex >= 0) {
+			this.imageBMview = new BitmapView(parentWnd);
+			this.imageBMview.move(Core.base_x, Core.base_y);
+			var param = {};
+			this.renderHandle = Core.initRender(elmIndex, this.imageBMview, param);
+			this.updateImage();
+		}
 	}
 
 }
 
+CommonPalette.prototype.updateImage = function() {
+	var entries = Core.getHexValueAttr("len");
+
+	var param = {};
+	param.palette = [];
+
+	for (var index = 0; index < entries; index++) {
+		param.palette.push(this.getRGB(index));
+	}
+	param.paletteentries = entries;
+	param.paletteindex = this.palGrid.getIndex();
+	Core.updateRender(this.renderHandle, this.imageBMview, param);
+	this.imageBMview.refresh();
+}
 
 CommonPalette.prototype.updateCurrentIndex = function() {
 	if (this.indexed == false) {
@@ -474,6 +504,9 @@ CommonPalette.prototype.drawPalTableFunc = function(a_index, a_page, cell_y, cel
 CommonPalette.prototype.entryGridMousePressFunc = function(a_buttons, a_y, a_x) {
 	this.palGrid.eventMousePress(a_buttons, a_y, a_x);
 	this.updateCurrentIndex();
+	if (this.renderHandle >= 0) {
+		this.updateImage();
+	}
 }
 
 CommonPalette.prototype.palTableGridMousePressFunc = function(a_buttons, a_y, a_x) {
@@ -490,6 +523,9 @@ CommonPalette.prototype.palTableGridMousePressFunc = function(a_buttons, a_y, a_
 
 	this.palGrid.redraw();
 	this.BMView.refresh();
+	if (this.renderHandle >= 0) {
+		this.updateImage();
+	}
 }
 
 CommonPalette.prototype.pageSpinEditFunc = function(a_value) {

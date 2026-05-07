@@ -5,6 +5,25 @@
 
 function init() {
 	DefaultControls.init();
+	initCommon();
+	tileHandler.init();
+}
+
+function initFetch() {
+	//Todo: Send back tile bitmap data
+}
+
+function initRender(a_bitmapView, a_param) {
+	initCommon();
+	
+	tileHandler.initRender(a_bitmapView, a_param);
+}
+
+function updateRender(a_bitmapView, a_param) {
+	tileHandler.updateRender(a_bitmapView, a_param);
+}
+
+function initCommon() {
 	tileHandler = new CommonTile();
 	//tileHandler.bufferBig = Core.getByteArray(0, 32*256);
 	tileHandler.buffer = new Array(32);
@@ -56,7 +75,5 @@ function init() {
 	
 	tileHandler.palette = [0x1F170F, 0x3F2F1F, 0x5F472F, 0x7F5F3F, 0x9F774F, 0xBF8F5F, 0xDFA76F, 0xFFBF7F,
 					0x0F171F, 0x1F2F3F, 0x2F475F, 0x3F5F7F, 0x4F779F, 0x5F8FBF, 0x6FA7DF, 0x7FBFFF];
-	
-	tileHandler.init();
 
 }

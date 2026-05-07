@@ -7,6 +7,24 @@
 
 function init() {
 	DefaultControls.init();
+	initCommon(false);
+	tileHandler.init();
+}
+
+function initRender(a_bitmapView, a_param) {
+	initCommon(true);
+	tileHandler.initRender(a_bitmapView, a_param);
+}
+
+function updateRender(a_bitmapView, a_param) {
+	tileHandler.updateRender(a_bitmapView, a_param);
+}
+
+function initFetch() {
+	//Todo: Send back tile bitmap data
+}
+
+function initCommon(a_useBufferBig) {
 	tileHandler = new CommonTile();
 	tileHandler.buffer = new Array(16);
 	tileHandler.tilePixelWidth = 8;
@@ -44,13 +62,4 @@ function init() {
 	}
 	tileHandler.palette = [0, 0xFFFFFF, 0xBBBBBB, 0x777777];
 	
-    tileHandler.init();
-}
-
-function initFetch() {
-	//Todo: Send back tile bitmap data
-}
-
-function initRender(a_bitmapView, a_y1, a_x1, a_y2, a_x2) {
-	//Todo: Probably draw a single tile..?
 }

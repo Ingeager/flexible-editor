@@ -1,13 +1,4 @@
-//FLEX_INCLUDE "common_default.js"
-//FLEX_INCLUDE "common_int.js"
 
-function init() {
+INTEGER_BIT_SIZE = 16;
 
-	DefaultControls.init();
-	
-	intObj = new CommonInt();
-	intObj.bitSize = 16;
-	
-	intObj.init();
-
-}
+//FLEX_INCLUDE "common_int_base.js"

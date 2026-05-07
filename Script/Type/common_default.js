@@ -2,7 +2,11 @@
 
 DefaultControls = {}
 
-DefaultControls.typeEdit = 0;
+//Settings
+DefaultControls.textSpacingHeight = 24;
+DefaultControls.width = 800;
+
+DefaultControls.ctrlTypeEdit = 0;
 DefaultControls.ctrlTypeLabel = 0;
 DefaultControls.ctrlAPtrLabel = 0;
 DefaultControls.ctrlAPtrEdit = 0;
@@ -16,8 +20,6 @@ DefaultControls.ctrlArraySpinBox = 0;
 DefaultControls.ctrlText = 0;
 DefaultControls.ctrlText2 = 0;
 DefaultControls.majorChangeFunc = 0;
-DefaultControls.textSpacingHeight = 24;
-DefaultControls.width = 600;
 
 DefaultControls.init = function() {
 	DefaultControls.addDefault();
@@ -63,18 +65,20 @@ DefaultControls.addType = function() {
 	 	vTypeString = Core.getAttr("type");
 	}
 
-	DefaultControls.ctrlTypeLabel = new QLabel(parentWnd);
-	DefaultControls.ctrlTypeLabel.text = "Data Type:";
-	DefaultControls.ctrlTypeLabel.move(x, y+2);
-	DefaultControls.ctrlTypeLabel.show();
+	var ctrl = new QLabel(parentWnd);
+	DefaultControls.ctrlTypeLabel = ctrl;
+	ctrl.text = "Data Type:";
+	ctrl.move(x, y+2);
+	ctrl.show();
 
-	DefaultControls.typeEdit = new QLineEdit(parentWnd);
-	DefaultControls.typeEdit.setText(vTypeString);
-	DefaultControls.typeEdit.readOnly = true;
-	DefaultControls.typeEdit.move(x+55, y);
-	DefaultControls.typeEdit.resize(100, 20);
-	DefaultControls.typeEdit.styleSheet = Core.customize("edit.stylesheet", "");
-	DefaultControls.typeEdit.show();
+	ctrl = new QLineEdit(parentWnd);
+	DefaultControls.ctrlTypeEdit = ctrl;
+	ctrl.setText(vTypeString);
+	ctrl.readOnly = true;
+	ctrl.move(x+55, y);
+	ctrl.resize(100, 20);
+	ctrl.styleSheet = Core.customize("edit.stylesheet", "");
+	ctrl.show();
 	
 	Core.base_y = y + DefaultControls.textSpacingHeight;
 }
@@ -159,22 +163,22 @@ DefaultControls.addElementDefaults = function() {
 
 DefaultControls.addFlags = function() {
 
-  if (Core.hasAttr("flag") == false) {
-    return;
-  }
-  var ctrl;
-  var showStr;
-  var flagStr;
-  var parentWnd = Core.window;
+	if (Core.hasAttr("flag") == false) {
+		return;
+	}
+	var ctrl;
+	var showStr;
+	var flagStr;
+	var parentWnd = Core.window;
 
-  ctrl = new QLabel(parentWnd);
-  ctrl.text = "Flags:";
-  ctrl.move(Core.base_x, Core.base_y);
-  ctrl.resize(80, 20);
-  
-  ctrl.show();
+	ctrl = new QLabel(parentWnd);
+	ctrl.text = "Flags:";
+	ctrl.move(Core.base_x, Core.base_y);
+	ctrl.resize(80, 20);
 
-  flagStr = Core.getAttr("flag");
+	ctrl.show();
+
+	flagStr = Core.getAttr("flag");
 
  // if (Core.versionDate >= 250907) {
  

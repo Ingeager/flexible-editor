@@ -100,47 +100,47 @@ function initCommon(a_mode, a_bmv) {
 
 	Map.versionDate = Core.versionDate;
 
-  Map.pixelw = (Core.hasAttr("pixelw") == true) ? Number(Core.getAttr("pixelw")) : 8;
-  Map.pixelh = (Core.hasAttr("pixelh") == true) ? Number(Core.getAttr("pixelh")) : 8;
+	Map.pixelw = (Core.hasAttr("pixelw") == true) ? Number(Core.getAttr("pixelw")) : 8;
+	Map.pixelh = (Core.hasAttr("pixelh") == true) ? Number(Core.getAttr("pixelh")) : 8;
 
-	var gw = Math.ceil(256/Map.pixelw);
-	var gh = Math.ceil(256/Map.pixelh);
-   var numOf = gw*gh;
-   var haslen = false;
-   var haswidth = false;
-   var hasheight = false;
+	var gw = Math.ceil(320/Map.pixelw);
+	var gh = Math.ceil(320/Map.pixelh);
+	var numOf = gw*gh;
+	var haslen = false;
+	var haswidth = false;
+	var hasheight = false;
 
-   // Calculate grid setup
+	// Calculate grid setup
 	if (Core.hasAttr("width") == true) {
 		gw = Number(Core.getAttr("width"));
-      haswidth = true;
+		haswidth = true;
 	}
-  if (Core.hasAttr("height") == true) {
+	if (Core.hasAttr("height") == true) {
 		gh = Number(Core.getAttr("height"));
-      hasheight = true;
+		hasheight = true;
 	}
-   if (Core.hasAttr("len") == true) {
-      numOf = Core.getHexValueAttr("len");
-      haslen = true;
-   }
+	if (Core.hasAttr("len") == true) {
+		numOf = Core.getHexValueAttr("len");
+		haslen = true;
+	}
 	
-   if ((haswidth == true) && (hasheight == true) && (haslen == false)) {
-       // H and W set, but not LEN
-       numOf = gh * gw;
-   }
-   if ((haswidth == true) && (hasheight == false) && (haslen == true)) {
-      // LEN and W set, but not H.
-      gh = Math.ceil(numOf / gw);
-  }
-   if ((haslen == true) && (hasheight == false) && (haswidth == false)) {
-      // Only LEN set.
-       if (numOf < gw) {
-          gh = 1;
-          gw = numOf;
-       } else {
-          gh = Math.ceil(numOf / gw);
-       }
-   }
+	if ((haswidth == true) && (hasheight == true) && (haslen == false)) {
+		// H and W set, but not LEN
+		numOf = gh * gw;
+	}
+	if ((haswidth == true) && (hasheight == false) && (haslen == true)) {
+		// LEN and W set, but not H.
+		gh = Math.ceil(numOf / gw);
+	}
+	if ((haslen == true) && (hasheight == false) && (haswidth == false)) {
+		// Only LEN set.
+		if (numOf < gw) {
+			gh = 1;
+			gw = numOf;
+		} else {
+			gh = Math.ceil(numOf / gw);
+		}
+	}
 	
 	Map.height = gh;
 	Map.width = gw;
@@ -214,7 +214,7 @@ function initCommon(a_mode, a_bmv) {
         grid = false;
     }
 
-    Map.mapGrid = new GridHandler(Map.pixelw, Map.pixelh, Map.width, Map.height, Map.numOf, "mapgrid");
+    Map.mapGrid = new GridHandler(Map.pixelw, Map.pixelh, Map.width, Map.height, Map.entries, "mapgrid");
     if (grid == false) {
         Map.mapGrid.gridline_w = 0;
 	Map.mapGrid.gridline_h = 0;
@@ -239,69 +239,71 @@ function initCommon(a_mode, a_bmv) {
     if (a_mode == Map.modeNormal) {
 
         if (Map.totalwidth.has || Map.screenwidth.has) {
-        var maxwidth = 0;
-	var pagestep = 1;
-        
-        if (Map.totalwidth.has) {
-            maxwidth = Map.totalwidth.v-Map.width;
-	    pagestep = Map.width;
-        }
-        if (Map.screenwidth.has) {
-            maxwidth = Map.screenwidth.v-1;
-	    pagestep = 1;
+		var maxwidth = 0;
+		var pagestep = 1;
+		
+		if (Map.totalwidth.has) {
+		    maxwidth = Map.totalwidth.v-Map.width;
+		    pagestep = Map.width;
+		}
+		if (Map.screenwidth.has) {
+		    maxwidth = Map.screenwidth.v-1;
+		    pagestep = 1;
+		}
+
+		 if (Map.versionDate >= 260412) {
+		      Map.xslider = new QScrollBar(Core.window);
+		 } else {
+			Map.xslider = new QSlider(Core.window);
+		 }
+		Map.xslider.move(Core.base_x, (Core.base_y + hpixels));
+		Map.xslider.setOrientation(1);  // Horizontal
+		Map.xslider.resize(wpixels, 20);
+
+		Map.xslider.setRange(0, maxwidth);
+		Map.xslider.setSingleStep(1);
+		Map.xslider.setPageStep(pagestep);
+
+		Map.xslider.valueChanged.connect(Map.xsliderFunc);
+		Map.xslider.show();
+	    
         }
 
-         if (Map.versionDate >= 270123) {
-	      Map.xslider = new QScrollBar(Core.window);
-         } else {
-		Map.xslider = new QSlider(Core.window);
-         }
-			Map.xslider.move(Core.base_x, (Core.base_y + hpixels));
-			Map.xslider.setOrientation(1);  // Horizontal
-			Map.xslider.resize(wpixels, 20);
-			
-			Map.xslider.setRange(0, maxwidth);
-			Map.xslider.setSingleStep(1);
-			Map.xslider.setPageStep(pagestep);
-			
-			Map.xslider.valueChanged.connect(Map.xsliderFunc);
-			Map.xslider.show();
-    
-        }
+	if (Map.totalheight.has || Map.screenheight.has) {
+		var maxheight = 0;
+		var pagestep = 1;
+		
+		if (Map.totalheight.has) {
+		    maxheight = Map.totalheight.v-Map.height;
+		    pagestep = Map.height;
+		}
+		if (Map.screenheight.has) {
+		    maxheight = Map.screenheight.v-1;
+		    pagestep = 1;
+		}
 
-     if (Map.totalheight.has || Map.screenheight.has) {
-        var maxheight = 0;
-	var pagestep = 1;
-        
-        if (Map.totalheight.has) {
-            maxheight = Map.totalheight.v-Map.height;
-	    pagestep = Map.height;
-        }
-        if (Map.screenheight.has) {
-            maxheight = Map.screenheight.v-1;
-	    pagestep = 1;
-        }
-
-	if (Map.versionDate >= 270123) {
-	      Map.yslider = new QScrollBar(parentWnd);
-         } else {
-         Map.yslider = new QSlider(Core.window);
-         }
-			Map.yslider.move((Core.base_x + wpixels), Core.base_y);
-			Map.yslider.setOrientation(0);  // Vertical
-			Map.yslider.resize(20, hpixels);
-			
-			Map.yslider.setRange(0, maxheight);
-			Map.yslider.setSingleStep(1);
-			Map.yslider.setPageStep(pagestep);
+		if (Map.versionDate >= 260412) {
+		      Map.yslider = new QScrollBar(Core.window);
+			Map.yslider.setValue(0);
+		 } else {
+			Map.yslider = new QSlider(Core.window);
 			Map.yslider.setValue(maxheight); //Needs to be reverse
-			
-			Map.yslider.valueChanged.connect(Map.ysliderFunc);
-			Map.yslider.show();
-        base_relative_x = Map.yslider.width;
-        }
+		 }
+		Map.yslider.move((Core.base_x + wpixels), Core.base_y);
+		Map.yslider.setOrientation(0);  // Vertical
+		Map.yslider.resize(20, hpixels);
 
-  base_relative_x += (10 + wpixels);
+		Map.yslider.setRange(0, maxheight);
+		Map.yslider.setSingleStep(1);
+		Map.yslider.setPageStep(pagestep);
+
+
+		Map.yslider.valueChanged.connect(Map.ysliderFunc);
+		Map.yslider.show();
+		base_relative_x = Map.yslider.width;
+	}
+
+	base_relative_x += (10 + wpixels);
     
 	//Initialize the right-side area / value selection
 	Map.selBMview = new BitmapView(Core.window);
@@ -365,7 +367,7 @@ function initCommon(a_mode, a_bmv) {
 		if (Core.hasAttr("map.index_src", param_ei)) {
       // Input parameter to use as Array index
 		index_src = Core.getAttr("map.index_src", param_ei);
-     has_index_src = true;
+		has_index_src = true;
 		}
 		if (Core.hasAttr("map.val_mul", param_ei)) {
       // map.val_mul: Multiply source value
@@ -467,10 +469,11 @@ Map.xsliderFunc = function(a_value) {
 }
 
 Map.ysliderFunc = function(a_value) {
+	var new_value = (Map.versionDate >= 260412) ? a_value : (Map.yslider.maximum - a_value);
      if (Map.screenheight.has) {
-         Map.currentscreen_y = (Map.yslider.maximum - a_value);
+         Map.currentscreen_y = new_value;
      } else {
-         Map.current_y = (Map.yslider.maximum - a_value);
+         Map.current_y = new_value;
      }
      Map.redrawMapGrid(false, true);
      Map.mapBMview.refresh();

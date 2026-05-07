@@ -2,10 +2,13 @@
 //FLEX_INCLUDE "common_int.js"
 
 function init() {
-
 	DefaultControls.init();
-	
 	intObj = new CommonInt();
 	intObj.init();
+}
 
+function initFetch() {
+	intObj = new CommonInt();
+	var data = intObj.fetch();
+	return data;
 }

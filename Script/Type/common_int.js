@@ -1,4 +1,5 @@
 //FLEX_INCLUDE "common_bit.js"
+//FLEX_INCLUDE "common_stringrender.js"
 
 //Information for UI:
 //FLEX_FLAG "SIGNED" "Signed Integer"
@@ -44,6 +45,12 @@ CommonInt = function(a_intSize) {
 	this.statusCtrl = 0;
 	this.hasBitControls = false;
 	this.bitClass = {};
+
+	this.renderScaling = 2;
+
+	this.e_NormalMode = 1;
+	this.e_FetchMode = 2;
+	this.e_RenderMode = 3;
 	
 	//Array support hack for b250813
 	if (Core.versionDate < 250823) {
@@ -56,90 +63,11 @@ CommonInt = function(a_intSize) {
 		Core.setByteWr = function(a_addr, a_val) {Core.setByte(a_addr, a_val);}
 	}
 
-	
 }
 
 CommonInt.prototype.init = function() {
+	this.initCommon(this.e_NormalMode);
 
-
-	if (Core.hasAttr("intsize") == true) {
-		this.bitSize = Number(Core.getAttr("intsize"));
-	}
-	this.bitSize &= 0xFFF8;
-
-	this.byteSize = (this.bitSize >> 3);
-	
-	if (Core.getFlag("BIGENDIAN") == true) {
-		if (Core.versionDate >= 251117) {
-			//Use functionality in Flexible Editor
-			Core.setBigEndianByteSize(this.byteSize);
-		} else {
-			//Use internal functionality
-			this.bigEndian = true;
-		}
-	}
-
-	//Arrays 
-	if (Core.hasAttr("len") == true) {
-		if (this.arrayEnable == true) {
-			DefaultControls.addArrayTuner();
-			if (Core.versionDate >= 250823) {
-				Core.setArrayByteSize(this.byteSize);
-			} else {
-				Core.arrayByteSize = this.byteSize;
-			}
-		}
-	}
-
-	if (Core.getFlag("DECIMAL") == true) {
-		this.base = 10;
-	}
-
-	if (Core.hasAttr("base")) {
-		this.base = Number(Core.getAttr("base"));
-		if (this.base < 2) {
-			this.base = 16;
-		}
-	}
-
-	if (Core.getFlag("SIGNED") == true) {
-		this.signed = true;
-	}
-
-	var a = 256;
-	var b = 0;
-	do {
-		a /= this.base;
-		b++;
-	} while (a >= this.base);
-	if (a > 0) {b++;}
-	this.maxCharSize = b*this.byteSize;
-
-	
-	if (this.base == 16) {
-		this.symmetricBase = true;
-		this.maxCharSize = (this.byteSize*2);
-	} else if (this.base == 4) {
-		this.symmetricBase = true;
-		this.maxCharSize = (this.byteSize*4);
-	} else if (this.base == 2) {
-		this.symmetricBase = true;
-		this.maxCharSize = (this.byteSize*8);	
-	} else {
-		this.symmetricBase = false;
-	}
-
-	this.arr_size = this.maxCharSize + 4;
-	this.mul_table = new Array(this.arr_size);
-	this.val_table = new Array(this.arr_size);
-	this.mul_table_size = 0;
-	this.val_table_size = 0;
-	
-	this.val_table2 = new Array(this.byteSize);
-	this.mul_table2 = new Array(this.byteSize);
-	this.mul_table2_size = 0;
-	this.val_table2_size = 0;
-	
 	var parentWnd = Core.window;
 
 	if (Core.hasAttr("list") == true) {
@@ -243,6 +171,187 @@ CommonInt.prototype.init = function() {
 		Event.signal.connect(this, this.eventFunc);
 	}
 }
+
+CommonInt.prototype.initRender = function(a_bitmapView, a_param) {
+	this.initCommon(this.e_RenderMode);
+
+	//if (Core.hasAttr("list") == true) {
+	//	this.usingList = true;
+	//}
+	
+	if (a_bitmapView.initialized == false) {
+		var datastring = this.getArrayString(0);
+		var chars = datastring.length;
+		this.renderScaling = 5;
+		var height = 6*this.renderScaling;
+		var width;
+		if (chars < (512/(this.renderScaling*4))) {
+			width = chars*(this.renderScaling*4);
+		} else {
+			width = 512;
+		}
+		a_bitmapView.init(width, height);
+		a_bitmapView.refresh();
+		a_bitmapView.show();
+	}
+	
+}
+
+CommonInt.prototype.updateRender = function(a_bitmapView, a_param) {
+  
+    var index_base = 0;
+
+   if (a_param.hasOwnProperty("index")) {
+        index_base = Number(a_param.index);
+    }
+
+    var datastring = this.getArrayString(index_base);
+
+    var fgcolor = Number("0x" + Core.customize("color1", "FFFFFF"));
+    
+    if (a_param.hasOwnProperty("palette")) {
+        var index = 0;
+        if (a_param.hasOwnProperty("paletteindex")) {
+            index = a_param.paletteindex;
+        }
+        fgcolor = a_param.palette[0];
+    }
+
+    var base_x = 0;
+    var base_y = 0;
+    
+    CommonStringRender.drawString(datastring, a_bitmapView, base_x, base_y, 4*this.renderScaling, 6*this.renderScaling, fgcolor, 0);
+   
+   
+}
+
+CommonInt.prototype.getArrayString = function(a_index_base) {
+   var str = "";
+	var array_size = 1;
+	if (Core.hasAttr("len") == true) {
+		array_size = Core.getHexValueAttr("len");
+	}
+	
+	for (var index = 0; index < array_size; index++) {
+		Core.setArrayIndex(index+a_index_base);
+		str += this.getString();
+      if ((index+1) != array_size) {
+              str += ",";
+      }
+	}
+   return str;
+
+}
+
+CommonInt.prototype.fetch = function() {
+	this.initCommon(this.e_FetchMode);
+	
+	var values = [];
+	var array_size = 1;
+	if (Core.hasAttr("len") == true) {
+		array_size = Core.getHexValueAttr("len");
+	}
+	
+	for (var index = 0; index < array_size; index++) {
+		Core.setArrayIndex(index);
+		var str = this.getString();
+		//if (str.length >= 1) {
+			values.push(Number(str));
+		//}
+	}
+	
+	return values;
+}
+
+CommonInt.prototype.initCommon = function(a_mode) {
+	if (Core.hasAttr("intsize") == true) {
+		this.bitSize = Number(Core.getAttr("intsize"));
+	}
+	this.bitSize &= 0xFFF8;
+
+	this.byteSize = (this.bitSize >> 3);
+	
+	if (Core.getFlag("BIGENDIAN") == true) {
+		if (Core.versionDate >= 251117) {
+			//Use functionality in Flexible Editor
+			Core.setBigEndianByteSize(this.byteSize);
+		} else {
+			//Use internal functionality
+			this.bigEndian = true;
+		}
+	}
+
+	//Arrays 
+	if (Core.hasAttr("len") == true) {
+		if (this.arrayEnable == true) {
+			if (a_mode == this.e_NormalMode) {
+				DefaultControls.addArrayTuner();
+			}
+			if (Core.versionDate >= 250823) {
+				Core.setArrayByteSize(this.byteSize);
+			} else {
+				Core.arrayByteSize = this.byteSize;
+			}
+		}
+	}
+
+	if (a_mode != this.e_FetchMode) {
+		if (Core.getFlag("DECIMAL") == true) {
+			this.base = 10;
+		}
+
+		if (Core.hasAttr("base")) {
+			this.base = Number(Core.getAttr("base"));
+			if (this.base < 2) {
+				this.base = 16;
+			}
+		}
+	} else {
+	
+		this.base = 10;
+	}
+
+	if (Core.getFlag("SIGNED") == true) {
+		this.signed = true;
+	}
+
+	var a = 256;
+	var b = 0;
+	do {
+		a /= this.base;
+		b++;
+	} while (a >= this.base);
+	if (a > 0) {b++;}
+	this.maxCharSize = b*this.byteSize;
+
+	
+	if (this.base == 16) {
+		this.symmetricBase = true;
+		this.maxCharSize = (this.byteSize*2);
+	} else if (this.base == 4) {
+		this.symmetricBase = true;
+		this.maxCharSize = (this.byteSize*4);
+	} else if (this.base == 2) {
+		this.symmetricBase = true;
+		this.maxCharSize = (this.byteSize*8);	
+	} else {
+		this.symmetricBase = false;
+	}
+
+	this.arr_size = this.maxCharSize + 4;
+	this.mul_table = new Array(this.arr_size);
+	this.val_table = new Array(this.arr_size);
+	this.mul_table_size = 0;
+	this.val_table_size = 0;
+	
+	this.val_table2 = new Array(this.byteSize);
+	this.mul_table2 = new Array(this.byteSize);
+	this.mul_table2_size = 0;
+	this.val_table2_size = 0;
+
+
+}
+
 
 //Update everything
 CommonInt.prototype.eventFunc = function(a_event_bits) {

@@ -2,6 +2,8 @@
 
 CommonTile = function() {
 	this.palette = [0, 0xFFFFFF, 0xBBBBBB, 0x777777];
+	this.mode = 0;
+	this.renderModeSubPalBase = 0;
 	this.numOfColors = 4;
 	this.setTileFunc = function(a_index) {}
 	this.getPixFunc = function(y, x) {return 0;}
@@ -19,10 +21,25 @@ CommonTile = function() {
 	this.pageSize = 256;
 	this.previousEditPixelX = -1;
 	this.previousEditPixelY = -1;
+	this.base_pix_x = 0;
+	this.base_pix_y = 0;
+	this.base_index = 0;
+	this.versionDate = 0;
 }
 
-CommonTile.prototype.init = function() {
+CommonTile.prototype.init= function() {
+	this.initCommon(0, 0, 0);
+}
 
+CommonTile.prototype.initRender = function(a_bmv, a_data) {
+	this.initCommon(1, a_bmv, a_data);
+}
+
+CommonTile.prototype.initCommon = function(a_mode, a_bmv, a_data) {
+
+   this.mode = a_mode;
+
+	this.versionDate = Core.versionDate;
 	if (Core.hasAttr("scale") == true) {
 		this.proportion = Number(Core.getAttr("scale"));
 	}
@@ -39,20 +56,39 @@ CommonTile.prototype.init = function() {
 		numOfPages = Math.ceil(numOf / this.pageSize);
 	} else {
 		gh = Math.ceil(numOf/gw);
+		if (gh == 1) {
+			gw = numOf;
+		}
 	}
     	
 	var cellw = this.tilePixelWidth*this.proportion;
 	var cellh = this.tilePixelHeight*this.proportion;
-	this.tileBMview = new BitmapView(Core.window);
-	this.tileBMview.move(Core.base_x, Core.base_y);
+	if (a_mode == 0) {
+		this.tileBMview = new BitmapView(Core.window);
+		this.tileBMview.move(Core.base_x, Core.base_y);
+	} else {
+		this.tileBMview = a_bmv;
+	}
 	this.tileGrid = new GridHandler(cellw, cellh, gw, gh, numOf, "tilegrid");
 	this.tileGrid.redrawCellOnSelect = 0;
 	this.tileGrid.parent = this;
 	this.tileGrid.setBitmapView(this.tileBMview, false);
-	this.tileBMview.mousePress.connect(this, this.tileBMviewClickFunc);
+	var init = true;
+	if (a_mode == 0) {
+		this.tileBMview.mousePress.connect(this, this.tileBMviewClickFunc);
+	} else {
+		this.tileGrid.selectable = false;
+		init = !(this.tileBMview.initialized);
+		this.tileGrid.gridline_w = 0;
+		this.tileGrid.gridline_h = 0;
+		this.tileGrid.calculate(); // Recalculate
+		//print(this.tileBMview.initialized);
+	}
 	var wpixels = this.tileGrid.getTotalWidth();
 	var hpixels = this.tileGrid.getTotalHeight();
-	this.tileBMview.init(wpixels, hpixels);
+	if (init == true) {
+		this.tileBMview.init(wpixels, hpixels);
+	}
 	this.tileGrid.drawItemFunc = this.drawSelectorFunc;
 
 	if (Core.hasAttr("palette") == true) {
@@ -63,12 +99,12 @@ CommonTile.prototype.init = function() {
 		}
 	}
 	
-	if (Core.versionDate >= 999999) {
+	if (this.versionDate >= 999999) {
 		var ix_array = Core.childElementIndexes("palette");
 		if (ix_array.length > 0) {
 
 		}
-	} else if (Core.versionDate >= 260129) {
+	} else if (this.versionDate >= 260129) {
 		var ix = Core.childElementIndex("palette");
 		if (ix >= 0) {
 			var fetchdata = Core.fetchElementData(ix);
@@ -80,7 +116,8 @@ CommonTile.prototype.init = function() {
 	
 	
 	this.tileGrid.setIndex(0);
-	  
+	
+   if (a_mode == 0) {
 	var local_base_y = Core.base_y;
 	cellw = 18;
 	cellh = 18;
@@ -93,7 +130,7 @@ CommonTile.prototype.init = function() {
 	this.editGrid.parent = this;
 	this.editGrid.setBitmapView(this.editBMview, false);	//Todo: Set to false?
    	this.editBMview.mousePress.connect(this, this.editBMviewClickFunc);
-	if (Core.versionDate >= 260109) {
+	if (this.versionDate >= 260109) {
 		this.editBMview.mouseMove.connect(this, this.editBMviewMoveFunc);
 	}
 	wpixels = this.editGrid.getTotalWidth();
@@ -159,6 +196,12 @@ CommonTile.prototype.init = function() {
 	this.colorBMview.refresh();
 	this.colorBMview.show();
 
+	this.setTileFunc(0);
+	this.editGrid.redraw();
+	this.editBMview.refresh();
+	this.editBMview.show();
+   
+
 	var benchMark = false;
 	if (benchMark == false) {
 		this.tileGrid.redraw();
@@ -176,13 +219,44 @@ CommonTile.prototype.init = function() {
 	}
 	
 	this.tileBMview.refresh();
+   }
+
 	this.tileBMview.show();
 
-	this.setTileFunc(0);
-	this.editGrid.redraw();
-	this.editBMview.refresh();
-	this.editBMview.show();
+}
 
+CommonTile.prototype.updateRender = function(a_bmv, a_data) {
+
+	
+	this.tileGrid.setBitmapView(a_bmv, false);
+
+	var v_data = [];
+	if (Array.isArray(a_data) == true) {
+		v_data = a_data;
+	} else {
+		v_data.push(a_data);
+	}
+
+	for (var ix = 0; ix < v_data.length; ix++) {
+		if (v_data[ix].hasOwnProperty("palette") && v_data[ix].hasOwnProperty("paletteentries")) {
+			for (var ixb = 0; ixb < v_data[ix].paletteentries; ixb++) {
+				this.palette[ixb] = v_data[ix].palette[ixb];
+			}
+		}
+		
+		if (v_data[ix].hasOwnProperty("paletteindex")) {
+			this.renderModeSubPalBase = v_data[ix].paletteindex;
+		}
+		
+		if (v_data[ix].hasOwnProperty("x")) {this.base_pix_x = Number(v_data[ix].x);}
+		if (v_data[ix].hasOwnProperty("y")) {this.base_pix_y = Number(v_data[ix].y);}
+		if (v_data[ix].hasOwnProperty("index")) {this.base_index = v_data[ix].index;}
+
+		//print(x);
+		//print(y);
+		//print(value);
+		this.tileGrid.redraw();
+	}
 }
 
 CommonTile.prototype.tileBMviewClickFunc = function(a_buttons, a_y, a_x) {
@@ -240,17 +314,27 @@ CommonTile.prototype.drawSelectorFunc = function(a_index, a_page, a_cell_y, a_ce
     var color;
     var y, x;
     var parent = this.parent;
+    	a_x += parent.base_pix_x;
+    	a_x2 += parent.base_pix_x;
+    	a_y += parent.base_pix_y;
+    	a_y2 += parent.base_pix_y;
+	a_index += parent.base_index;
     var prop = parent.proportion;
-    var subPalBase = (Math.floor(parent.colorGrid.getIndex() / parent.numOfColors) * parent.numOfColors);
+    var subPalBase = 0;
+    if (parent.mode == 0) {
+        subPalBase = (Math.floor(parent.colorGrid.getIndex() / parent.numOfColors) * parent.numOfColors);
+    } else {
+        subPalBase = (Math.floor(parent.renderModeSubPalBase / parent.numOfColors) * parent.numOfColors);
+    }
     //a_index contains the total index (page base included)
     parent.setTileFunc(a_index);
     if (prop == 1) {
-	if (Core.versionDate >= 260131) {
+	if (parent.versionDate >= 260131) {
 		var buffer = new Array(parent.tilePixelWidth*parent.tilePixelHeight);
 		var pointer = 0;
 		for (var pixY = 0; pixY < parent.tilePixelHeight; pixY++) {
 	   for (var pixX = 0; pixX < parent.tilePixelWidth; pixX++) {
-			buffer[pointer++] =  parent.palette[subPalBase + parent.getPixFunc(pixY, pixX)];
+			buffer[pointer++] = parent.palette[subPalBase + parent.getPixFunc(pixY, pixX)];
 		}
       }
 		this.drawBuffer(a_y, a_y+7, a_x, a_x+7, buffer);
@@ -264,7 +348,7 @@ CommonTile.prototype.drawSelectorFunc = function(a_index, a_page, a_cell_y, a_ce
 		}
 	}
     } else {
-	if (Core.versionDate >= 260131) {
+	if (parent.versionDate >= 260131) {
 		var buffer = new Array((parent.tilePixelHeight*prop)*(parent.tilePixelWidth*prop));
 		for (var pixY = 0; pixY < parent.tilePixelHeight; pixY++) {
 		var base2 = ((pixY*prop)*(prop*parent.tilePixelWidth));

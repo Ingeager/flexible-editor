@@ -1,4 +1,5 @@
 //FLEX_INCLUDE "common_default.js"
+
 //FLEX_ATTR "TBL", "Table File", "FILE", "*.tbl"
 
 function init() {
@@ -68,6 +69,7 @@ tblString.prototype.init = function() {
   this.logCtrl.move(Core.base_x, Core.base_y+240);
   this.logCtrl.resize(600, 300);
   this.logCtrl.styleSheet = Core.customize("edit.stylesheet", "");
+  this.logCtrl.readOnly = true;
   this.logCtrl.show();
 
   this.convertBtn = new QPushButton(Core.window);
@@ -176,9 +178,9 @@ tblString.prototype.tblDetectFunc_newTable = function(a_line, a_lineIx) {
 }
 
 tblString.prototype.tblDetectFunc_removeFirstChar = function(a_line, a_lineIx) {
-    // Chop off the first character and continue
-    // (Control code, End token, Table switch)
-    return a_line.slice(1);
+	// Chop off the first character and continue
+	// (Control code, End token, Table switch)
+	return a_line.slice(1);
 }
 
 tblString.prototype.tblParseFunc_controlCode = function(a_tableEntry, a_rightSide) {
@@ -519,14 +521,6 @@ tblString.prototype.translateIn = function() {
     
     } // byte loop
     return outputStr;
-}
-
-tblString.prototype.debugTest = function() {
-
-}
-
-tblString.prototype.setupTestTbl = function() {
- 
 }
 
 //Convert text to binary (Insertion)

@@ -1,0 +1,55 @@
+XML Format - Advanced Features
+(WORK IN PROGRESS / TO BE IMPLEMENTED / SUBJECT TO CHANGE)
+==========================================================
+
+Render Elements
+===============
+
+Introduction
+------------
+Some data types will support special child elements, "render" elements or even depend on them.
+They have different keys depending on use, for example IMAGE.
+Basically, a render element functions like a regular Item element but
+loads the script in a different mode, if supported, which is focused on drawing graphics.
+You can utilize a render element in any case that the data type supports placing them and
+the TYPE attribute of the render element refers to a data type that supports the render function.
+
+Example:
+All palette data types will support one or more IMAGE elements. The IMAGE element works like
+regular Item Element that can be various data types, except its datas will be drawn into an
+image, and can't be edited.
+The data type can for example be a CHR type:
+
+<item type="pal_nes">
+	<image type="chr_nes">
+</item>
+
+This will show an image made of the CHR tiles, using the palette, as a way of examplifying how graphics will look.
+The palette is passed to the child element script as one of many possible parameters that can be passed.
+In this case, the parent element is also able to send a parameter to the child script telling what color is
+currently selected, meaning it will redraw the tiles based on the currently selected palette.
+
+Standard parameter list
+-----------------------
+These are parameters passed from the parent Item script to the child render Item script's
+initRender and refreshRender routines. They are all optional.
+Depending on the parent Item data type and context,
+they may or may not be sent. Generally, this is done below the surface and the
+user don't need to worry about them. However it determines the system of
+what the render script will respond to.
+
+Key		Description
+
+index		If parent type renders a grid or an array, this will hold the index into it.
+value		If parent type renders a grid or an array, this will hold the value associated to that index.
+x		First X coordinate to draw inside the BitmapView.
+y		First Y coordinate to draw inside the BitmapView.
+x2		Last X coordinate to draw inside the BitmapView. (note that "x" can be present without this being.)
+y2		Last Y coordinate to draw inside the BitmapView. (note that "y" can be present without this being.)
+cellx		If parent type renders a grid, this will hold the X cell coordinate.
+celly		If parent type renders a grid, this will hold the Y cell coordinate.
+page		If parent type renders a multi-page grid, this will hold the page index.
+palette		Palette data, array of RGB24 values. The entire palette is provided.
+paletteindex	Current color index in palette data. Used to tell the render script which part of the palette to
+		draw if relevant. Note that this value is not a "sub palette index", just color index.
+		If a sub palette index is needed by the render script, it must calculate it itself.

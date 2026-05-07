@@ -2,34 +2,17 @@
 Update Notes
 ============
 
-GitHub updates:
- - Added CHR_GB data type
+Script Update Pack 2026-05-06:
+ - Added CHR_GB (GameBoy CHR) data type
  - Added MAP data type
- - CHR types: Unlimited LEN (page selector if more than 256).
+ - CHR types: Unlimited LEN (page selector if more than 256 tiles).
  - CHR types: Added support for selection between multiple sub-palettes.
- - Data Type for PALETTE Element can now also be: PAL_6, PAL_15A, PAL_24
- - HEX data type now has a page selector if data length is more than 256 bytes
-   (No LEN restriction)
- - Bugfix: linewidth and lineheight in GRID customization class can now be "0". (would cause crash)
- - Added fetch functionality to BYTE data type.
-To be supported in next binary:
- - Added COLLAPSE flag for all Items.
-
-Release 2026-02-05:
- - Added CHR_NES and CHR_SNES data types.
- - Added PALETTE Element, that can be placed as child elements of CHR data types.
- - Added STRING_UTF8 data type.
- - Added SNAPX, SNAPY, GRIDX and GRIDY attributes for COORDINATE data type.
-
-Script Update Pack 2025-12-22:
- - Added BIGENDIAN flag for Integer types.
- - Added LAB Item attribute.
- - Palette types now has a page selector and can be larger than 256 entries.
- - Added PAL_32 Type (RGBA8888), also added PAL32_ABGR, PAL32_ARGB and PAL32_BGRA.
- - Added PAL_24BGR Type (BGR888)
- - Added PAL_15A Type (RGB555 with MSB as Transparency toggle)
- - Added BGR Flag for all Palette types.
- - Bugfix: Integers: Bit editing controls and List control now reflect each other's changes.
+ - CHR types: Data Type for PALETTE Child Element can now be any palette type.
+ - HEX data type: Unlimited LEN (page selector if data length is more than 256 bytes)
+ - Bugfix: HEX data type: Fixed bug where it was possible to write past the end of data (or end of row).
+ - Bugfix: linewidth and lineheight in GRID customization class can now be "0". (would previously cause crash)
+ - Added fetch support for all Integer Data types that isn't deprecated.
+ - Added COLLAPSE flag for all Items. (To be supported in next binary)
 
 DRDXML format - Introduction
 ============================
@@ -128,6 +111,7 @@ Supported attributes for ITEM:
 Supported flags for all Items:
 	COLLAPSE	If set, the Item will not be expanded in the Tree View when the XML loads,
 			meaning any Child Items will be hidden until the user expands it.
+			(To be supported in next Binary release)
 
 An Item for editing data will use either PTR or RELPTR.
 (They can both be used, but there's not much point)
@@ -215,19 +199,20 @@ You'll have 4 values to choose between corresponding to the 4 entries in the lis
 PALETTE
 -------
 
-"PALETTE" elements can be placed as a child of ITEM elements with CHR_NES and CHR_SNES data types,
+"PALETTE" elements can be placed as a child of ITEM elements with CHR data types,
 to describe a source of Palette data to view and edit the tiles.
 These Elements works like regular ITEM elements, except that only attributes related to retrieving the
 data is relevant. (Attributes like "name" is ignored)
+You may use any palette data type (or any other data type that supports Fetch).
 
-Examples 1 - NES - This will show the tiles using the palette data at 0x550-0x553.
+Examples 1 - NES - This will display the tiles using the palette data at 0x550-0x553.
 
 	<item ptr="1800" type="chr_nes" len="100">
 		<palette ptr="550" type="pal_nes" len="4">
 	</item>
 
 
-Examples 2 - SNES - This will show the tiles using the palette data at 0x66A00-0x66A1F.
+Examples 2 - SNES - This will display the tiles using the palette data at 0x66A00-0x66A1F.
 
 	<item ptr="40200" type="chr_snes" len="100">
 		<palette ptr="66A00" type="pal_15" len="10">
@@ -327,6 +312,9 @@ Supported flags for all Integer Types:
  <item name="Potentially negative hex value" ptr="7F0" type="int24" flag="SIGNED"/>
  <item name="Potentially negative decimal value" ptr="7F3" type="int24" flag="SIGNED.DECIMAL"/>
 
+Advanced - Fetch support:
+	Yes, Fetch function is available for all types listed here.
+
 Raw data types
 --------------
 
@@ -335,6 +323,10 @@ hex	Edit bytes in hexadecimal, with 16 bytes on each row.
 Supported attributes:
 	LEN	Number of bytes in hex. No limit. If it's more than 256 (0x100),
 		the page selector will be shown.
+
+
+Advanced - Fetch support:
+	Not available yet.
 
 String Types
 ------------
@@ -391,9 +383,9 @@ Supported objects for customization attributes, all CHR types (See "GUI Cusomiza
 
 	(Example: entrygrid.selcolor="70C070" grid.color="007000")
 
-Fetch support: Supported for pal_nes and pal_15. Returns all colors as an array of RGB24.
+Advanced - Fetch support: Supported for all types. Returns all colors as an array of RGB24.
 
-TO BE IMPLEMENTED:
+- TO BE IMPLEMENTED -:
 
 Render support: N/A
 
@@ -432,9 +424,11 @@ Supported Attributes for all CHR Types:
 
 Supported Child Elements for all CHR types:
 	PALETTE		Use data from the file as a palette source.
-			Functions the same way as an Item element.
-			Palette info is described using PTR, TYPE and LEN attributes.
-			TYPE can be PAL_NES, PAL_15, PAL_6, PAL_15A, PAL_24
+			Uses Fetch function on a data type script if supported.
+			Basically, these elements work the same way as an Item element,
+			palette info is described using PTR, TYPE and LEN attributes.
+			TYPE can be PAL_NES, PAL_15, PAL_6, PAL_15A, PAL_24,
+			or any type that has Fetch support.
 
 Sub-Palette selection:
 
@@ -453,13 +447,14 @@ Supported objects for customization attributes, all CHR types (See "GUI Cusomiza
 
 	(Example: tilegrid.selcolor="70C070" grid.color="007000")
 
-Fetch support: N/A
+- TO BE IMPLEMENTED -:
 
-TO BE IMPLEMENTED:
+Advanced - Fetch support: N/A
 
-Render type support: chr_nes and chr_snes can be used as render type within other data types. CHR will be drawn into destination,
+Advanced - Supported as Render type: All types can be used as render type within other data types. CHR will be drawn into destination,
 		the number of tiles specified by LEN. SCALE and ROWLENGTH can be specified just as when it's a regular type.
-		Supports palette parameters as input. If the "index" parameter is set, it modifies the relative tile index.
+		In Render mode, grid is not drawn unless "grid.linewidth" or "grid.lineheight" attributes is set as non-zero values.
+		Supports palette parameters passed as input. If the "index" parameter is set, it's used as the relative tile index.
 
 		Input parameter support: x, y, index, palette, paletteentries, paletteindex
 
@@ -496,14 +491,14 @@ Supported attributes for COORDINATE:
 Types: Map
 ----------
 
-map	General map editor with evenly sized units. Data must be a byte value for each unit or tile.
+map	General map editor where each byte is represented as a rectangular unit.
 	Currently shows byte datas as hexadecimal values.
 	In the future, it will be able to draw graphics described by child elements
-	so that it can be used as a tilemap editor and more.
+	so that it can be used as a tilemap editor / nametable editor and more.
 
 Supported attributes for MAP:
 	WIDTH		Decimal value. Number of units on each row. Optional if LEN is set.
-	HEIGHT		Decimal value. Number of units on each collumn. Optional if LEN and WIDTH is set.
+	HEIGHT		Decimal value. Number of units on each collumn. Optional if LEN is set.
 	LEN		Hex value. Total number of units/number of bytes. Optional if both WIDTH and HEIGHT is set.
 	PIXELW		Pixel width of each unit.
 	PIXELH		Pixel height of each unit.
@@ -515,19 +510,30 @@ Supported attributes for MAP:
 	INDEX_MUL	Decimal value. Sets byte spacing for each index if present.
 			In other words, values will be read from (index * INDEX_MUL).
 
+Supported objects for customization attributes (See "GUI Cusomization"):
+	Type		Name
+
+	GRID		grid		(all grids)
+	GRID		mapgrid		Left matrix grid showing the actual datas.
+	GRID		selgrid		Right matrix grid showing what values can be selected.
+
+	(Example: mapgrid.selcolor="70C070" grid.color="007000")
+
 -- TO BE IMPLEMENTED --:
 
-Supported Render child elements:
+Advanced - Fetch Support: Yes. (Untested) Returns an array of bytes representing the entire map.
+
+Advanced - Supported Render child elements:
 	SUBITEM		Draws a data type into each cell of the grid, or for each unit to be drawn.
 			The value associated to each unit is passed as INDEX to the data type script.
-			Use for example a CHR data type in this element for a simple tile map,
-			or MAP type to describe the next sub level in a meta tile system.
+			Use for example a CHR data type like CHR_NES in this element for simple nametable data,
+			or MAP type to describe the next sub level in a meta-tile system.
 
 	Output parameters: x, y, index
 
-Supported as Render type: Yes. Interprets "index" parameter, which is added to the data offset.
+Advanced - Supported as Render type: Yes. Interprets "index" parameter, which is added to the data offset.
 
-	Input parameter support: x, y, index
+	Input parameters support: x, y, index
 
 
 Deprecated but Supported Data Types 

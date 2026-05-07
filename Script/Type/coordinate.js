@@ -21,6 +21,7 @@ Coord.lineColorH = 0x606060;
 Coord.bmView = {}
 Coord.editY = {}
 Coord.editX = {}
+Coord.renderHnd = -1;
 
 function init() {
 	DefaultControls.init();
@@ -29,22 +30,22 @@ function init() {
 	Coord.lineColorH = Number("0x" + Core.customize("color2", "606060"));
 	Coord.bgColor = Number("0x" + Core.customize("bgcolor", "0"));
 
-    var halfcolor = 0;
-    var srccolor = Coord.lineColorV;
-    halfcolor |= Math.round((srccolor & 0xFF) * 0.3);
-    halfcolor |= (Math.round((srccolor & 0xFF00) * 0.3) & 0xFF00);
-    halfcolor |= (Math.round((srccolor & 0xFF0000) * 0.3) & 0xFF0000);
+	var halfcolor = 0;
+	var srccolor = Coord.lineColorV;
+	halfcolor |= Math.round((srccolor & 0xFF) * 0.3);
+	halfcolor |= (Math.round((srccolor & 0xFF00) * 0.3) & 0xFF00);
+	halfcolor |= (Math.round((srccolor & 0xFF0000) * 0.3) & 0xFF0000);
 	 Coord.gridColor = halfcolor;
 
-    var parentWnd = Core.window;
-    Coord.bmView = new BitmapView(parentWnd);
-    Coord.bmView.move(Core.base_x, Core.base_y);
-    Coord.bmView.init(Coord.bmW, Coord.bmH);
-    Coord.bmView.mousePress.connect(Coord, Coord.mouseFunc);
-    if (Core.versionDate >= 260109) {
-	Coord.bmView.mouseMove.connect(Coord, Coord.mouseFunc);    
-    }
-    Coord.bmView.show();
+	var parentWnd = Core.window;
+	Coord.bmView = new BitmapView(parentWnd);
+	Coord.bmView.move(Core.base_x, Core.base_y);
+	Coord.bmView.init(Coord.bmW, Coord.bmH);
+	Coord.bmView.mousePress.connect(Coord, Coord.mouseFunc);
+	if (Core.versionDate >= 260109) {
+		Coord.bmView.mouseMove.connect(Coord, Coord.mouseFunc);    
+	}
+	Coord.bmView.show();
 
     if (Core.hasAttr("x")) {
         Coord.hasX = true;
@@ -114,7 +115,15 @@ function init() {
     if (Core.hasAttr("gridy") == true) {
         Coord.gridY = Number(Core.getAttr("gridy"));
     }
-    
+
+	if (Core.versionDate >= 260304) {
+		var elmIndex = Core.childElementIndex("fgimage");
+		if (elmIndex >= 0) {
+			var param = {};
+			Coord.renderHnd = Core.initRender(elmIndex, Coord.bmView, param);
+		}
+	}
+	
     Coord.redraw();
 }
 
@@ -182,11 +191,16 @@ if (Coord.gridX > 0) {
         }
     }
 
+	var drawX = 0;
+	var drawX2 = 0;
+	var drawY = 0;
+	var drawY2 = 0;
+
   if (Coord.hasX == true) {
         var stepX = Coord.bmW / Coord.fieldW;
         var dataX = Core.getByte(Coord.pointerX);
-        var drawX = Math.floor(dataX * stepX);
-        var drawX2 = Math.floor((dataX+1) * stepX)-1;
+        drawX = Math.floor(dataX * stepX);
+        drawX2 = Math.floor((dataX+1) * stepX)-1;
         Coord.bmView.drawBox(0, Coord.bmH-1, drawX, drawX2, Coord.lineColorH);
 
         Coord.editX.text = "X: " + dataX;
@@ -195,12 +209,22 @@ if (Coord.gridX > 0) {
     if (Coord.hasY == true) {
         var stepY = Coord.bmH / Coord.fieldH;
         var dataY = Core.getByte(Coord.pointerY);
-        var drawY = Math.floor(dataY * stepY);
-        var drawY2 = Math.floor((dataY+1) * stepY)-1;
+        drawY = Math.floor(dataY * stepY);
+        drawY2 = Math.floor((dataY+1) * stepY)-1;
         Coord.bmView.drawBox(drawY, drawY2, 0, Coord.bmW-1, Coord.lineColorV);
 
 	     Coord.editY.text = "Y: " + dataY;
     }
+
+	if (Core.versionDate >= 260304) {
+		var elmIndex = Core.childElementIndex("fgimage");
+		if ((elmIndex >= 0) && (Coord.renderHnd >= 0)) {
+			var param = {};
+			param.x = drawX;
+			param.y = drawY;
+			Core.updateRender(Coord.renderHnd, Coord.bmView, param);
+		}
+	}
 
     Coord.bmView.refresh();
 

@@ -3,17 +3,21 @@
 function init() {
 	DefaultControls.init();
 
-	/*for (b = 0; b < 16; b++) {
-		Core.setByteAbs(0x15b300000+b, 238);
-	}*/
-	var a = Core.loadTextFile("debug/file.txt");
-
-	lab = new QLabel(Core.window);
-	var size = Core.getActivePtr();
-	lab.text = a;
-	lab.show();
-	lab.move(Core.base_x, Core.base_y);
+	aaa = new BitmapView(Core.window);
+	aaa.move(Core.base_x, Core.base_y);
+	aaa.show();
 	
-	var dataa = Core.fetchElementData(0);
-	print(dataa[0]);
+	var data = {};
+	
+	var handle = Core.initRender(0, aaa, data);
+	
+	Core.updateRender(handle, aaa, data);
+
+/*	var length = 64;
+	var testarra = new Array(length);
+	for (var a = 0; a < length; a++) {
+		testarra[a] = a;
+	}
+	
+	Core.setByteArray(0x380, testarra, length);*/
 }

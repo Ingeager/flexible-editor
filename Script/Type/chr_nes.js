@@ -11,7 +11,6 @@ function init() {
 
 function initRender(a_bitmapView, a_param) {
 	initCommon(true);
-	
 	tileHandler.initRender(a_bitmapView, a_param);
 }
 
