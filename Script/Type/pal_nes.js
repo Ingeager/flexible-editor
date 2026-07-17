@@ -14,10 +14,13 @@ function initFetch() {
 	return(palObj.fetch());
 }
 
-//Render Init (Future Idea)
-function initRender(a_bitmapView, a_y1, a_x1, a_y2, a_x2) {
+function initRender(a_bitmapView, a_param) {
 	initCommon();
-	palObj.render(a_bitmapView, a_y1, a_x1, a_y2, a_x2);
+	palObj.initRender(a_bitmapView, a_param);
+}
+
+function updateRender(a_bitmapView, a_param) {
+	palObj.updateRender(a_bitmapView, a_param);
 }
 
 function initCommon() {

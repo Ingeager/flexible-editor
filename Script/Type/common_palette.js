@@ -1,5 +1,6 @@
 //FLEX_INCLUDE "common_grid.js"
 
+//Information for GUI
 //FLEX_ATTR "LEN" "Number of entries" "HEX" "10"
 //FLEX_FLAG "BGR" "Swap Red and Blue channels"
 
@@ -35,31 +36,58 @@ CommonPalette = function() {
 	}
 	
 	this.renderHandle = -1;
+	this.renderBaseX = 0;
+	this.renderBaseY = 0;
+
+	this.modeNormal = 1;
+	this.modeRender = 2;
+
 }
 
 //Fetch palette data, each array index is 24-bit RGB value of a color.
 
-CommonPalette.prototype.fetch = function () {
+CommonPalette.prototype.fetch = function() {
 	this.initNonGUI();
 	
 	var entries = Core.getHexValueAttr("len");
 
-	var data = [];
+	var retdata = [];
 
-	if (entries < 1) {return data;}
+	if (entries < 1) {return retdata;}
 	
 	for (var index = 0; index < entries; index++) {
-		data.push(this.getRGB(index));
+		retdata.push(this.getRGB(index));
 	}
-	return data;
+	return retdata;
 }
 
-CommonPalette.prototype.render = function(a_bitmapView, a_y1, a_x1, a_y2, a_x2) {
+CommonPalette.prototype.initRender = function(a_bmv, a_param) {
 	this.initNonGUI();
-	//....
+	this.initGUI(this.modeRender, a_bmv);
 }
 
-CommonPalette.prototype.initNonGUI = function () {
+CommonPalette.prototype.updateRender = function(a_bmv, a_param) {
+
+	if (a_param.hasOwnProperty("x")) {
+		//this.renderBaseX = Number(a_param.x);
+		this.palGrid.bm_base_x = Number(a_param.x);
+	} else {
+		//this.renderBaseX = 0;
+		this.palGrid.bm_base_x = 0;
+	}
+	if (a_param.hasOwnProperty("y")) {
+		//this.renderBaseY = Number(a_param.y);
+		this.palGrid.bm_base_y = Number(a_param.y);
+	} else {
+		//this.renderBaseY = 0;
+		this.palGrid.bm_base_y = 0;
+	}
+
+	this.BMview = a_bmv;
+	this.palGrid.redraw();
+}
+
+CommonPalette.prototype.initNonGUI = function() {
 	if (this.bigEndian == true) {
 		if (Core.versionDate >= 251117) {
 			var byteSize = this.bitSize >> 3;
@@ -75,10 +103,13 @@ CommonPalette.prototype.initNonGUI = function () {
 	}
 }
 
-CommonPalette.prototype.init = function () {
+CommonPalette.prototype.init = function() {
 
 	this.initNonGUI();
-	
+	this.initGUI(this.modeNormal);
+}
+
+CommonPalette.prototype.initGUI = function(a_mode, a_renderBMV) {
 	var entries = Core.getHexValueAttr("len");
 	var cellsx;
 	var cellsy;
@@ -104,19 +135,40 @@ CommonPalette.prototype.init = function () {
 		cellSize = 30;
 	}
 	
-	var parentWnd = Core.window;
-	this.BMView = new BitmapView(parentWnd);
-	this.BMView.move(Core.base_x, Core.base_y);
+  var parentWnd = Core.window;
+   var initBMV = true;
+   if (a_mode == this.modeNormal) {
+     	this.BMView = new BitmapView(parentWnd);
+	    this.BMView.move(Core.base_x, Core.base_y);
+   } else {
+       this.BMView = a_renderBMV;
+       if (this.BMView.initialized == true) {
+           initBMV = false;
+       }
+   }
 
 	this.palGrid = new GridHandler(cellSize, cellSize, cellsx, cellsy, entries, "entrygrid");
 	this.palGrid.redrawCellOnSelect = 0;
 	this.palGrid.parent = this;
 	this.palGrid.setBitmapView(this.BMView, false);
+	if (a_mode == this.modeRender) {
+		this.palGrid.selectable = false;
+	       if (this.BMView.initialized == true) {
+		//	this.palGrid.gridline_w = 0;
+		//	this.palGrid.gridline_h = 0;
+		//	this.palGrid.calculate(); // Recalculate
+	       }
+	}
 	var wpixels = this.palGrid.getTotalWidth();
 	var hpixels = this.palGrid.getTotalHeight();
-	this.BMView.init(wpixels,hpixels);
+   if (initBMV == true) {
+	    this.BMView.init(wpixels,hpixels);
+   }
+
 
 	this.palGrid.drawItemFunc = this.drawItemFunc;
+
+   if (a_mode == this.modeRender) {return;}
 	
 	this.palGrid.redraw();
 	this.BMView.refresh();
@@ -481,10 +533,17 @@ CommonPalette.prototype.sliderChangeFunc = function(a_value) {
 	var chnData = new Array(4);
 	chnData[index] = a_value;
 	cpRef.setColorBits(cpRef.palGrid.getIndex(), chnData, 1 << index);
+
 	cpRef.palGrid.redrawCurrentCell();
 	cpRef.BMView.refresh();
 	cpRef.updateCurrentIndex();
+	
+	if (cpRef.renderHandle >= 0) {
+		cpRef.updateImage();
+	}
+	
 	//cpRef.valueEdit[index].text = a_value;
+
 }
 
 
@@ -493,6 +552,10 @@ CommonPalette.prototype.sliderChangeFunc = function(a_value) {
 //Therefore, we use "parent", that we set up before, to get a reference to the CommonPalette object.)
 CommonPalette.prototype.drawItemFunc = function(a_index, a_page, cell_y, cell_x, y1, x1, y2, x2)  {
 	var rgb = this.parent.getRGB(a_index);
+	y1 += this.parent.renderBaseY;
+	y2 += this.parent.renderBaseY;
+	x1 += this.parent.renderBaseX;
+	x2 += this.parent.renderBaseX;
 	this.drawBox(y1, y2, x1, x2, rgb);
 }
 
@@ -537,6 +600,10 @@ CommonPalette.prototype.pageSpinEditFunc = function(a_value) {
 
 	this.palGrid.redraw();
 	this.BMView.refresh();
+
+	if (this.renderHandle >= 0) {
+		this.updateImage();
+	}
 }
 
 CommonPalette.prototype.eventFunc = function(flags) {

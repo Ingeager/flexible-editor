@@ -1,9 +1,11 @@
 //FLEX_INCLUDE "common_default.js"
+//FLEX_INCLUDE "common_stringrender.js"
 
 Hex = {};
 
 Hex.rows = 1;
 Hex.totalRows = 1;
+Hex.activeRows = 1;
 Hex.pages = 1;
 Hex.currentPage = 0;
 Hex.pageSize = 0x100;
@@ -12,6 +14,7 @@ Hex.rowLength = 0x10;
 Hex.pageSelectSpinCtrl = 0;
 Hex.editCtrl = [];
 Hex.addrCtrl = [];
+Hex.charCtrl = [];
 
 function init() {
     DefaultControls.init();
@@ -32,17 +35,17 @@ function init() {
     if (Core.versionDate >= 251202) {
         placeAddrLabels = true;
     }
+    var placeCharacters = true;
 
     var editWidth = 500;
+    var charEditWidth = 200;
     for (var rowCount = 0; rowCount < Hex.rows; rowCount++) {
-	//edit_control_x_base = Core.base_x;
 	var verticalSpacing = 27;
         if (placeAddrLabels == true) {
             var ctrl = new QLabel(Core.window);
             Hex.addrCtrl[rowCount] = ctrl;
 	         ctrl.styleSheet = "font: 16px";
             ctrl.hide();
-	         //edit_control_x_base += hsize;
         }
         var ctrl = new QLineEdit(Core.window);
         Hex.editCtrl[rowCount] = ctrl;
@@ -50,8 +53,18 @@ function init() {
         ctrl.ctrlIndex = rowCount;
         ctrl.textChanged.connect(Hex.editCtrl[rowCount], Hex.editFunc);
 	     ctrl.styleSheet = Core.customize("edit.stylesheet", "") + "; font: 18px  \"Terminal\" ";
-        ctrl.resize(editWidth, 28);
+        ctrl.resize(editWidth, verticalSpacing+1);
         ctrl.hide();
+        if (placeCharacters == true) {
+            var ctrl = new QLineEdit(Core.window);
+            Hex.charCtrl[rowCount] = ctrl;
+            ctrl.programChanged = false;
+            ctrl.ctrlIndex = rowCount;
+		ctrl.textChanged.connect(Hex.charCtrl[rowCount], Hex.charEditFunc);
+           ctrl.styleSheet = Core.customize("edit.stylesheet", "") + "; font: 18px  \"Terminal\" ";
+            ctrl.resize(charEditWidth, verticalSpacing+1);
+            ctrl.hide();
+        }
     }
 
     if (Hex.pages > 1) {
@@ -78,12 +91,81 @@ function init() {
     Hex.resetControls();
 }
 
+function initFetch() {
+   return(Hex.getDataArray());
+}
+
+function initRender(a_bmv, a_param) {
+	if (a_bmv.initialized == true) {return;}
+
+	var datalen = 1;
+	if (Core.hasAttr("len") == true) {
+		datalen = Core.getHexValueAttr("len");
+	}
+	CommonStringRender.initBMV(a_bmv, datalen*2,  4*5, 6*5, Hex.rowLength*2);
+}
+
+function updateRender(a_bmv, a_param) {
+	var param_arr = [];
+	if (Array.isArray(a_param) == false) {
+		param_arr.push(a_param);
+	} else {
+		param_arr = a_param;
+	}
+
+	for (var par_ix = 0; par_ix < param_arr.length; par_ix++) {
+
+		var v_param = param_arr[par_ix];
+		
+		var index_base = 0;
+		var dataArray = [];
+		if (v_param.hasOwnProperty("index")) {
+			index_base = Number(v_param.index);
+			dataArray.push(Core.getByte(index_base));
+		} else {
+			dataArray = Hex.getDataArray();
+		}
+
+		var displayString = "";
+		for (var ix = 0; ix < dataArray.length; ix++) {
+			var byteString = dataArray[ix].toString(16);
+			if (byteString.length < 2) {
+			byteString = "0" + byteString;
+			}
+			displayString += byteString;
+		}
+
+		var multi = 5;
+		CommonStringRender.drawStringParam(displayString, a_bmv, v_param, 4*multi, 6*multi, true);
+	}
+    
+}
+
+Hex.getDataArray = function() {
+   var len = Core.getHexValueAttr("len");
+    var resultArray = [];
+    if (Core.versionDate >= 270127) {
+        resultArray = Core.getByteArray(0, len);
+    } else {
+        for (var ix = 0; ix < len; ix++) {
+             resultArray.push(Core.getByte(ix));
+        }
+    }
+    return resultArray;
+}
+
 Hex.resetControls = function() {
+    if (((Hex.currentPage*Hex.rows) + Hex.rows) <= Hex.totalRows) {
+        Hex.activeRows = Hex.rows;
+    } else {
+        Hex.activeRows = Hex.totalRows-(Hex.currentPage*Hex.rows);
+   }
    var placeAddrLabels = false;
     if (Core.versionDate >= 251202) {
         placeAddrLabels = true;
     }
     var edit_control_x_base = 0;
+    var placeCharacters = true;
 
   var ptrbase = (Hex.currentPage*(Hex.rows*Hex.rowLength));
   for (var rowCount = 0; rowCount < Hex.rows; rowCount++) {
@@ -107,9 +189,18 @@ Hex.resetControls = function() {
         ctrl.move(edit_control_x_base, Core.base_y+(rowCount*verticalSpacing));
         Hex.buildString(rowCount);
         ctrl.show();
+        edit_control_x_base += ctrl.width + 20;
+        if (placeCharacters == true) {
+            var ctrl = Hex.charCtrl[rowCount];
+            ctrl.programChanged = false;
+            ctrl.move(edit_control_x_base, Core.base_y+(rowCount*verticalSpacing));
+            Hex.buildCharString(rowCount);
+            ctrl.show();
+        }
     } else {
         Hex.addrCtrl[rowCount].hide();
         Hex.editCtrl[rowCount].hide();
+        Hex.charCtrl[rowCount].hide();
     }
     }
 }
@@ -124,6 +215,7 @@ Hex.pageChangeFunc = function(a_value) {
 
     for (var row = 0; row < Hex.rows; row++) {
         Hex.buildString(row);
+        Hex.buildCharString(row);
     }
 }
 
@@ -158,6 +250,40 @@ Hex.buildString = function(a_index) {
     Hex.editCtrl[a_index].programChanged = false;
 
 }
+
+Hex.buildCharString = function(a_index) {
+    //Todo: Make routine of spaghetti code?
+    var totalRow = (Hex.currentPage*Hex.rows)+a_index;
+    if (totalRow >= Hex.totalRows) {
+        return;
+    }
+    var len = Core.getHexValueAttr("len");
+    var base = (totalRow * Hex.rowLength);
+    var sublen;
+    if ((base+Hex.rowLength) <= len) {
+        sublen = Hex.rowLength;
+    } else {
+        sublen = (len - base);
+    }
+    var outStr = "";
+    var count;
+    for (count = 0; count < sublen; count++) {
+        var bv = Core.getByte(base + count);
+        var str = String.fromCharCode(bv);
+	//var test = /\p{C}/.test(str);
+	
+        if ((str.length < 1) || (bv < 0x20) || (bv == 0xAD)) {
+            str = ".";
+        } else {
+            str = str[0];
+        }
+       outStr += str;
+    }
+    Hex.charCtrl[a_index].programChanged = true;
+    Hex.charCtrl[a_index].setText(outStr);
+    Hex.charCtrl[a_index].programChanged = false;
+}
+
 
 Hex.editFunc = function(a_newStr) {
     
@@ -223,13 +349,60 @@ Hex.editFunc = function(a_newStr) {
     }
     
     Hex.buildString(ctrlIndex);
+    Hex.buildCharString(ctrlIndex);
     
-    if ((byteIndex == (Hex.rowLength-1)) && (sub == 1) && (this.ctrlIndex < Hex.totalRows)) {
+    if ((byteIndex == (Hex.rowLength-1)) && (sub == 1) && (this.ctrlIndex <  (Hex.activeRows-1))) {
         Hex.editCtrl[this.ctrlIndex+1].setFocus();
         Hex.editCtrl[this.ctrlIndex+1].cursorPosition = 0;
     } else {
         Hex.editCtrl[this.ctrlIndex].cursorPosition = cursorPos;
     }
 
+}
+
+
+Hex.charEditFunc = function(a_newStr) {
+    
+    if (this.programChanged == true) {return;}
+
+     //todo: Make routine of spaghetti code?
+    var ctrlIndex = this.ctrlIndex;
+    var totalCtrlIndex = (ctrlIndex + (Hex.currentPage*Hex.rows));
+    var base = totalCtrlIndex* Hex.rowLength;
+	var len = Core.getHexValueAttr("len");
+    var cursorPos = this.cursorPosition;
+
+    var sublen;
+    if ((base+Hex.rowLength) <= len) {
+        sublen = Hex.rowLength;
+    } else {
+        sublen = (len - base);
+    }
+    var textlength = sublen;
+    
+    if (this.text.length >= textlength) {
+
+    var lineChar = cursorPos-1;
+    var byteIndex = lineChar;
+    var sub = 0;
+    var dataByteIndex = base + byteIndex;
+    if ((byteIndex < sublen) && (dataByteIndex < len)) {
+	   var ccode = this.text.charCodeAt(lineChar);
+
+	    if (ccode <= 255) {
+		Core.setByte(dataByteIndex, ccode);
+	    }
+	    }
+    }
+    
+    Hex.buildString(ctrlIndex);
+    Hex.buildCharString(ctrlIndex);
+    
+    if ((byteIndex == (Hex.rowLength-1)) && (this.ctrlIndex < (Hex.activeRows-1))) {
+        Hex.charCtrl[this.ctrlIndex+1].setFocus();
+        Hex.charCtrl[this.ctrlIndex+1].cursorPosition = 0;
+    } else {
+        Hex.charCtrl[this.ctrlIndex].cursorPosition = cursorPos;
+    }
 
 }

@@ -14,6 +14,15 @@ function initFetch() {
 	return(palObj.fetch());
 }
 
+function initRender(a_bitmapView, a_param) {
+	initCommon();
+	palObj.initRender(a_bitmapView, a_param);
+}
+
+function updateRender(a_bitmapView, a_param) {
+	palObj.updateRender(a_bitmapView, a_param);
+}
+
 function initCommon() {
 	palObj = new CommonPalette();
 	palObj.indexed = false;
@@ -22,10 +31,4 @@ function initCommon() {
 	palObj.channelBitSizes = [5, 5, 5];
 	palObj.channelBitLSBIndex = [0, 5, 10];
 	palObj.bigEndian = false;
-}
-
-//Render Init (Future Idea)
-function initRender(a_bitmapView, a_y1, a_x1, a_y2, a_x2) {
-	initCommon();
-	palObj.render(a_bitmapView, a_y1, a_x1, a_y2, a_x2);
 }

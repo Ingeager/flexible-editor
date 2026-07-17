@@ -68,6 +68,9 @@ function GridHandler(argcellw, argcellh, argw, argh, arg_entries, a_accessname) 
 	this.redrawCellOnSelect = 0;	//0 = None (Grid Only), 1 = Old cell and new cell, 2 = Redraw all cells on select (slow)
 	//this.redrawGridOnSelect = 1; (To be implemented) //0 = Do nothing. 1 = Draw relevant parts. 2 = Redraw whole grid.
 	
+   this.bm_base_x = 0;
+   this.bm_base_y = 0;
+
 	this.setPixel = function(y, x, color) {}
 	this.drawLineX = function(y, x, x2, color) {}
 	this.drawLineY = function(y, y2, x, color) {}
@@ -292,16 +295,16 @@ GridHandler.prototype.redrawCell = function(a_celly, a_cellx) {
 		activecell = false;
 	}
 	if (activecell == false) {
-		var x1 = this.cell_start_x[a_cellx];
-		var x2 = this.cell_start_x[a_cellx+1]-1+this.gridline_w;
-		var y1 = this.cell_start_y[a_celly];
-		var y2 = this.cell_start_y[a_celly+1]-1+this.gridline_h;
+		var x1 = this.cell_start_x[a_cellx] + this.bm_base_x;
+		var x2 = this.cell_start_x[a_cellx+1]-1+this.gridline_w + this.bm_base_x;
+		var y1 = this.cell_start_y[a_celly] + this.bm_base_y;
+		var y2 = this.cell_start_y[a_celly+1]-1+this.gridline_h + this.bm_base_y;
 		this.drawDisabledFunc(this.calculateIndex(a_celly, a_cellx, this.current_page), this.current_page, a_celly, a_cellx, y1, x1, y2, x2);
 	} else {
-		var x1 = this.cell_start_x[a_cellx] + this.gridline_w;
-		var x2 = this.cell_start_x[a_cellx+1]-1;
-		var y1 = this.cell_start_y[a_celly] + this.gridline_h;
-		var y2 = this.cell_start_y[a_celly+1]-1;
+		var x1 = this.cell_start_x[a_cellx] + this.gridline_w + this.bm_base_x;
+		var x2 = this.cell_start_x[a_cellx+1]-1 + this.bm_base_x;
+		var y1 = this.cell_start_y[a_celly] + this.gridline_h + this.bm_base_y;
+		var y2 = this.cell_start_y[a_celly+1]-1 + this.bm_base_y;
 		this.drawItemFunc(this.calculateIndex(a_celly, a_cellx, this.current_page), this.current_page, a_celly, a_cellx, y1, x1, y2, x2);
 	}
 }
@@ -429,22 +432,25 @@ GridHandler.prototype.redrawGrid = function() {
          }
      }
 
+     var basex = this.bm_base_x;
+     var basey = this.bm_base_y;
+
      if ((typev > 0)  && (this.gridline_w > 0)) {
-		x = this.cell_start_x[cellx];
 		colorv = colortable[typev];
 		if (singleGridLineW == true) {
-			this.drawLineY(this.cell_start_y[celly]+vert_y1, this.cell_start_y[celly+1]-1, x, colorv);
+			this.drawLineY(this.cell_start_y[celly]+vert_y1+basey, this.cell_start_y[celly+1]-1+basey,  this.cell_start_x[cellx]+basex, colorv);
 		} else {
-			this.drawBox(this.cell_start_y[celly]+vert_y1, this.cell_start_y[celly+1]-1, x, x+this.gridline_w-1, colorv);
+ 		x = this.cell_start_x[cellx]+basex;
+			this.drawBox(this.cell_start_y[celly]+vert_y1+basey, this.cell_start_y[celly+1]-1+basey, x, x+this.gridline_w-1, colorv);
 		}
       }
       if ((typeh > 0) && (this.gridline_h > 0)) {
-		y = this.cell_start_y[celly];
 		colorh = colortable[typeh];
 		if (singleGridLineH == true) {
-			this.drawLineX(y, this.cell_start_x[cellx]+horz_x1, this.cell_start_x[cellx+1]+this.gridline_w-1, colorh);
+			this.drawLineX(this.cell_start_y[celly]+basey, this.cell_start_x[cellx]+horz_x1+basex, this.cell_start_x[cellx+1]+this.gridline_w-1+basex, colorh);
 		} else {
-			this.drawBox(y, y+this.gridline_h-1, this.cell_start_x[cellx]+horz_x1, this.cell_start_x[cellx+1]+this.gridline_w-1, colorh);
+        var y = this.cell_start_y[celly]+basey;
+			this.drawBox(y, y+this.gridline_h-1, this.cell_start_x[cellx]+horz_x1+basex, this.cell_start_x[cellx+1]+this.gridline_w-1+basex, colorh);
 		}
 	}
 

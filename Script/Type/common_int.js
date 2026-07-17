@@ -180,7 +180,7 @@ CommonInt.prototype.initRender = function(a_bitmapView, a_param) {
 	//}
 	
 	if (a_bitmapView.initialized == false) {
-		var datastring = this.getArrayString(0);
+		var datastring = this.getArrayString(0, false);
 		var chars = datastring.length;
 		this.renderScaling = 5;
 		var height = 6*this.renderScaling;
@@ -199,37 +199,51 @@ CommonInt.prototype.initRender = function(a_bitmapView, a_param) {
 
 CommonInt.prototype.updateRender = function(a_bitmapView, a_param) {
   
-    var index_base = 0;
+	//var fgcolor_default = Number("0x" + Core.customize("color1", "FFFFFF"));
+  
+	var param_arr = [];
+	if (Array.isArray(a_param) == false) {
+		param_arr.push(a_param);
+	} else {
+		param_arr = a_param;
+	}
+  
+	for (var par_ix = 0; par_ix < param_arr.length; par_ix++) {
+		var v_param = param_arr[par_ix];
+		
+/*		var fgcolor = fgcolor_default;
+		*/
+//		var base_x = 0;
+//		var base_y = 0;
 
-   if (a_param.hasOwnProperty("index")) {
-        index_base = Number(a_param.index);
-    }
+		/*if (v_param.hasOwnProperty("palette")) {
+			var index = 0;
+			if (v_param.hasOwnProperty("paletteindex")) {
+				index = v_param.paletteindex;
+			}
+			fgcolor = v_param.palette[0];
+		}*/
 
-    var datastring = this.getArrayString(index_base);
+		var index_base = 0;
+		var use_index = false;
+		if (v_param.hasOwnProperty("index")) {
+			index_base = Number(v_param.index);
+			use_index = true;
+		}
+		var datastring = this.getArrayString(index_base, use_index);
 
-    var fgcolor = Number("0x" + Core.customize("color1", "FFFFFF"));
-    
-    if (a_param.hasOwnProperty("palette")) {
-        var index = 0;
-        if (a_param.hasOwnProperty("paletteindex")) {
-            index = a_param.paletteindex;
-        }
-        fgcolor = a_param.palette[0];
-    }
-
-    var base_x = 0;
-    var base_y = 0;
-    
-    CommonStringRender.drawString(datastring, a_bitmapView, base_x, base_y, 4*this.renderScaling, 6*this.renderScaling, fgcolor, 0);
-   
-   
+		CommonStringRender.drawStringParam(datastring, a_bitmapView, v_param, 4*this.renderScaling, 6*this.renderScaling, true);
+	}
+	
 }
 
-CommonInt.prototype.getArrayString = function(a_index_base) {
+CommonInt.prototype.getArrayString = function(a_index_base, a_use_index) {
    var str = "";
 	var array_size = 1;
-	if (Core.hasAttr("len") == true) {
-		array_size = Core.getHexValueAttr("len");
+	if (a_use_index == false) {
+		if (Core.hasAttr("len") == true) {
+			array_size = Core.getHexValueAttr("len");
+		}
 	}
 	
 	for (var index = 0; index < array_size; index++) {

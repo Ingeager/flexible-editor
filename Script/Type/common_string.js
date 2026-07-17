@@ -1,9 +1,12 @@
 
+//FLEX_INCLUDE "common_stringrender.js"
+
 CommonString = function() {
 	this.textEdit = 0;
 	this.writeBtn = 0;
 	this.statusLabel = 0;
 	this.format = "";
+   this.strCache = "";
 }
 
 CommonString.prototype.init = function() {
@@ -40,6 +43,21 @@ CommonString.prototype.init = function() {
 	this.readString();
 }
 
+CommonString.prototype.initRender = function(a_bmv, a_param) {
+	var str = this.getString();
+	var strlen = str.length;
+	this.strcache = str;
+	if (a_bmv.initialized == false) {
+		CommonStringRender.initBMV(a_bmv, strlen,5*4, 5*6);
+	}
+}
+
+CommonString.prototype.updateRender = function(a_bmv, a_param) {
+    var str = this.strcache;
+    print(str);
+    CommonStringRender.drawStringParam(str, a_bmv, a_param, 5*4, 5*6);
+}
+
 CommonString.prototype.getLen = function() {
 	var len;
 	if (Core.hasAttr("len") == true) {
@@ -51,6 +69,15 @@ CommonString.prototype.getLen = function() {
 }
 
 CommonString.prototype.readString = function() {
+	if (this.format == "UTF-8") {
+       if (Core.versionDate < 251205) {
+ 	        this.statusLabel.text = "Newer version of Flexible Editor required to read UTF-8.";
+       }
+   }
+   this.textEdit.plainText = this.getString();
+}
+
+CommonString.prototype.getString = function() {
 	var len = this.getLen();
 	var makeString = "";
 	var endCode = -1;
@@ -69,7 +96,7 @@ CommonString.prototype.readString = function() {
 			buffer[ccount] = Core.getByte(ccount);
 		}
 		
-		if (this.format != "UTF-8") {
+		if (this.format == "") {
 		
 			for (ccount = 0; ccount < len; ccount++) {
 				ccode = buffer[ccount];
@@ -82,7 +109,8 @@ CommonString.prototype.readString = function() {
 				//}
 			}
 			
-		} else {
+		}
+      if (this.format == "UTF-8") {
 
 			if (Core.versionDate >= 251205) {
 				obj = Core.stringDecode(buffer, len, this.format);
@@ -97,15 +125,15 @@ CommonString.prototype.readString = function() {
 					makeString += String.fromCharCode(ccode);
 				}
 				
-				
-			} else {
-				this.statusLabel.text = "Newer version of Flexible Editor required to read UTF-8.";
 			}
 
 		}
+     if (this.format == "UTF-16") {
+     }
+
 	}
 	
-	this.textEdit.plainText = makeString;
+	return makeString;
 
 }
 
@@ -124,7 +152,7 @@ CommonString.prototype.writeString = function() {
 		return;
 	}
 
-	if (this.format != "UTF-8") {
+	if (this.format == "") {
 		var ccount = 0;
 		if (text.length > 0) {
 			for (; ccount < targetLen; ccount++) {
@@ -148,7 +176,8 @@ CommonString.prototype.writeString = function() {
 		this.statusLabel.text = "Output byte size: " + resultSize;
 		this.readString();
 		
-	} else {
+	}
+   if (this.format == "UTF-8") {
 
 		if (Core.versionDate >= 251205) {
 			var backupText = text;
@@ -183,7 +212,8 @@ CommonString.prototype.writeString = function() {
 		}
 
 	}
-	
-	
+
+   if (this.format == "UTF-16") {
+   }
 	
 }

@@ -15,6 +15,15 @@ function initFetch() {
 	return(palObj.fetch());
 }
 
+function initRender(a_bitmapView, a_param) {
+	initCommon();
+	palObj.initRender(a_bitmapView, a_param);
+}
+
+function updateRender(a_bitmapView, a_param) {
+	palObj.updateRender(a_bitmapView, a_param);
+}
+
 function initCommon() {
 	palObj = new CommonPalette();
 	palObj.indexed = false;

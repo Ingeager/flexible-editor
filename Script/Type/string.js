@@ -10,3 +10,13 @@ function init() {
 	stringHandler.format = "";
 	stringHandler.init();
 }
+
+function initRender(a_bitmapView, a_param) {
+	stringHandler = new CommonString();
+	stringHandler.format = "";
+	stringHandler.initRender(a_bitmapView, a_param);
+}
+
+function updateRender(a_bitmapView, a_param) {
+	stringHandler.updateRender(a_bitmapView, a_param);
+}

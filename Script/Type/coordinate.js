@@ -21,10 +21,21 @@ Coord.lineColorH = 0x606060;
 Coord.bmView = {}
 Coord.editY = {}
 Coord.editX = {}
-Coord.renderHnd = -1;
+Coord.clearBG = true;
+Coord.fgRenderHnd = -1;
+Coord.bgRenderHnd = -1;
+
+Coord.modeNormal = 1;
+Coord.modeRender = 2;
+Coord.modeFetch = 3;
 
 function init() {
 	DefaultControls.init();
+
+	Coord.initCommon(Coord.modeNormal);
+}
+
+Coord.initCommon = function(a_mode, a_bmv) {
 
 	Coord.lineColorV = Number("0x" + Core.customize("color1", "C0C0C0"));
 	Coord.lineColorH = Number("0x" + Core.customize("color2", "606060"));
@@ -37,15 +48,36 @@ function init() {
 	halfcolor |= (Math.round((srccolor & 0xFF0000) * 0.3) & 0xFF0000);
 	 Coord.gridColor = halfcolor;
 
-	var parentWnd = Core.window;
-	Coord.bmView = new BitmapView(parentWnd);
-	Coord.bmView.move(Core.base_x, Core.base_y);
-	Coord.bmView.init(Coord.bmW, Coord.bmH);
+    Coord.clearBG = true;
+
+   var parentWnd;
+   if (a_mode != Coord.modeFetch) {
+
+   var init = true;
+   if (a_mode == Coord.modeNormal) {
+       parentWnd = Core.window;
+	    Coord.bmView = new BitmapView(parentWnd);
+	    Coord.bmView.move(Core.base_x, Core.base_y);
+       init = true;
+   } else {
+       Coord.bmView = a_bmv;
+       init = !a_bmv.initialized;
+       if (init == false) {
+           Coord.clearBG = false;
+       }
+   }
+   if (init == true) {
+	    Coord.bmView.init(Coord.bmW, Coord.bmH);
+   }
+   }
+
+   if (a_mode == Coord.modeNormal) {
 	Coord.bmView.mousePress.connect(Coord, Coord.mouseFunc);
 	if (Core.versionDate >= 260109) {
 		Coord.bmView.mouseMove.connect(Coord, Coord.mouseFunc);    
 	}
 	Coord.bmView.show();
+   }
 
     if (Core.hasAttr("x")) {
         Coord.hasX = true;
@@ -83,6 +115,7 @@ function init() {
         }
     }
 
+    if (a_mode == Coord.modeNormal) {
     if (Coord.hasY == true) {
         Coord.editY = new QLineEdit(parentWnd);
         Coord.editY.move(Core.base_x+Coord.bmW+10, Core.base_y);
@@ -109,6 +142,8 @@ function init() {
     if (Core.hasAttr("snapy") == true) {
         Coord.snapY = Number(Core.getAttr("snapy"));
     }
+    }
+
     if (Core.hasAttr("gridx") == true) {
         Coord.gridX = Number(Core.getAttr("gridx"));
     }
@@ -116,15 +151,85 @@ function init() {
         Coord.gridY = Number(Core.getAttr("gridy"));
     }
 
-	if (Core.versionDate >= 260304) {
+	if ((Core.versionDate >= 260304)  && (a_mode != Coord.modeFetch)) {
 		var elmIndex = Core.childElementIndex("fgimage");
 		if (elmIndex >= 0) {
 			var param = {};
-			Coord.renderHnd = Core.initRender(elmIndex, Coord.bmView, param);
+			Coord.fgRenderHnd = Core.initRender(elmIndex, Coord.bmView, param);
+		}
+		elmIndex = Core.childElementIndex("bgimage");
+		if (elmIndex >= 0) {
+			var param = {};
+			Coord.bgRenderHnd = Core.initRender(elmIndex, Coord.bmView, param);
+		}
+      
+	}
+	
+    if (a_mode == Coord.modeNormal) {
+        Coord.redraw();
+        Coord.bmView.refresh();
+    }
+}
+
+initRender = function(a_bmv, a_param) {
+    Coord.initCommon(Coord.modeRender, a_bmv);
+}
+
+updateRender = function(a_bmv, a_param) {
+    if (a_param.hasOwnProperty("palette")) {
+	/*var index1 = 0;
+	if (a_param.hasOwnProperty("paletteindex")) {
+	    index1 = a_param.paletteindex;
+	}*/
+	Coord.bgColor = a_param.palette[0];
+	
+	if (a_param.hasOwnProperty("paletteentries")) {
+
+		
+		var entries = Number(a_param.paletteentries);
+		if (entries >= 2) {
+
+			var color1 = a_param.palette[1];
+			if (Coord.hasX == true) {
+				Coord.lineColorV = color1;
+			} else {
+				Coord.lineColorH = color1;
+			}
+	
+			if (entries >= 3) {
+			var color2 = a_param.palette[2];
+			if (Coord.hasX == true) {
+				Coord.lineColorH = color2;
+			}
+			}
+			
 		}
 	}
 	
+    }
+    
+    
+    
+    
+    Coord.bmView = a_bmv;
     Coord.redraw();
+}
+
+initFetch = function() {
+    Coord.initCommon(Coord.modeFetch);
+  
+    var returndata = [];
+   if (Coord.hasX == true) {
+        var a = Core.getByte(Coord.pointerX);
+        returndata.push(a);
+    }
+    
+    if (Coord.hasY == true) {
+        var a = Core.getByte(Coord.pointerY);
+         returndata.push(a),
+    }
+
+    return(returndata);
 }
 
 Coord.mouseFunc = function(a_btn, a_y, a_x) {
@@ -150,6 +255,7 @@ Coord.mouseFunc = function(a_btn, a_y, a_x) {
     }
 
     Coord.redraw();
+    Coord.bmView.refresh();
 }
 
 Coord.redraw = function() {
@@ -159,15 +265,15 @@ Coord.redraw = function() {
 	Coord.bmView.drawLineX(y, 0, Coord.bmW-1, c);
     }*/
     
-	
-	Coord.bmView.drawBox(0, Coord.bmH-1, 0, Coord.bmW-1, Coord.bgColor);
-
-   /*
-   if (Core.versionDate >= 999999) {
-       // Draw any Render Elements here
-       Core.renderRefresh(Coord.bmView, 0, 0);
+	if (Coord.clearBG == true) {
+	    Coord.bmView.drawBox(0, Coord.bmH-1, 0, Coord.bmW-1, Coord.bgColor);
    }
-   */
+
+   // update Render for bgimage, if present
+   if (Coord.bgRenderHnd >= 0) {
+			var param = {};
+			Core.updateRender(Coord.bgRenderHnd, Coord.bmView, param);
+	}
 
 if (Coord.gridX > 0) {
         var x = 0;
@@ -216,16 +322,11 @@ if (Coord.gridX > 0) {
 	     Coord.editY.text = "Y: " + dataY;
     }
 
-	if (Core.versionDate >= 260304) {
-		var elmIndex = Core.childElementIndex("fgimage");
-		if ((elmIndex >= 0) && (Coord.renderHnd >= 0)) {
+	if (Coord.fgRenderHnd >= 0) {
 			var param = {};
 			param.x = drawX;
 			param.y = drawY;
-			Core.updateRender(Coord.renderHnd, Coord.bmView, param);
-		}
+			Core.updateRender(Coord.fgRenderHnd, Coord.bmView, param);
 	}
-
-    Coord.bmView.refresh();
 
 }
