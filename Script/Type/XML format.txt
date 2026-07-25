@@ -2,6 +2,10 @@
 Update Notes
 ============
 
+Next binary:
+ - Added BITVALUE data type
+ - Added Render support for all Palette types, String types
+
 Script Update Pack 2026-05-06:
  - Added CHR_GB (GameBoy CHR) data type
  - Added MAP data type
@@ -328,6 +332,41 @@ Supported attributes:
 Advanced - Fetch support:
 	Not available yet.
 
+Bit data Types
+--------------
+
+bitvalue	Edit values stored in any desired bit length. (What the max is hasn't been tested but should at least be 32)
+		Order of bits within the byte is from Least Significant Bit to Most Significant then as long as more bits are needed,
+		it wraps around to the LSB of the next byte.
+		Arrays can be defined. Each value in an array starts at the bit offset for each index
+		and ignores where bytes start and end.
+		You can for example define an array of 5 bit values, with 6 elemenets,
+		that is divided like this:
+		MSB 22211111 LSB
+		    43333322
+		    55554444
+		    ..666665
+ 
+Supported attributes:
+	BITS		Set the bit size of values. Default is 8.
+	SPACING		Optional. Set the bit spacing between each value in an array.
+			When this attribute isn't set, spacing is the same as BITS.
+	STARTPOS	Optional. Set the bit offset of the value (or bit offset of the first value in an Array)
+			0 is LSB of the first byte.
+	LEN		Define an Array. Value is Hexadecimal without prefix.
+			Like with Integers, you can use ARRINDEX_LABLIST or ARRINDEX_LABDEF to provide
+			strings for each array index.
+	LIST		Edit the bit values using a List so each value is described with a string.
+			This attribute refers to the KEY attribute of a list Item.
+
+	If for example you want to edit a string of bits within each byte in an array of bytes,
+	define LEN as the number of bytes,
+	define BITS as the number of bits in each byte,
+	SPACING to where in the byte the bits start, where LSB is 0 and MSB is 7. (if they start at 0/LSB, then it's not needed),
+	then SPACING to 8.
+	If you have the same case, but for an array of 32 bit integers, set SPACING to 32, and so on.
+
+
 String Types
 ------------
 
@@ -349,6 +388,14 @@ Supported attributes:
 
 Known bugs: There is a bug I've been unable to fix for now where the editor will crash, at least for
 "string" in certain cases, though it seems related to unusual character codes.
+
+Advanced - Render support: Supported for "string". Not pretty, but it draws something.
+		It works for "string_utf8" too, but non-ASCII characters will be blank.
+
+		Input parameter support: x, y, index (character index), palette, paletteentries
+			If "palette" is set, the first color will be text color. It's assumed "palette" contains at least one color,
+			so in this case, "paletteentries" don't need to be set.
+			However, if "paletteentries" is at least 2, the *second* color will become the background color.
 
 Types: Graphics - Palette
 -------------------------
@@ -385,9 +432,11 @@ Supported objects for customization attributes, all CHR types (See "GUI Cusomiza
 
 Advanced - Fetch support: Supported for all types. Returns all colors as an array of RGB24.
 
-- TO BE IMPLEMENTED -:
+Advanced - Render support: Supported for all types. Draws the palette as it typically looks like in editing.
 
-Render support: N/A
+		Input parameter support: x, y
+
+- TO BE IMPLEMENTED -:
 
 Supported Render child elements:
 	IMAGE		Shows graphics based on a data type below the standard controls.
@@ -460,14 +509,12 @@ Advanced - Supported as Render type: All types can be used as render type within
 
 Supported Render child elements: N/A
 
-Types: Graphics - Other
------------------------
+Types: Graphics - NameTable/Tilemap address
+-------------------------------------------
 
 nes_nt_addr	NES NameTable Address. 16-bit, Big-endian address. (Upper byte first, then lower.)
 snes_nt_addr	SNES NameTable Address. 16-bit, Little-endian address into a Nametable
 		where each tile occupies 16 bits/2 bytes of data.
-coordinate	Y and/or X coordinate data, 8-bit.
-
 
 Supported attributes for SNES_NT_ADDR:
 	BASE	Set the base VRAM address that the Nametable is supposed to start, in hex.
@@ -476,7 +523,12 @@ Supported attributes for SNES_NT_ADDR:
 		(representing the 11 bits required to describe a typical address)
 		and the upper bits are left alone.
 
-Supported attributes for COORDINATE:
+Types: Graphics - Coordinate
+----------------------------
+
+coordinate	Y and/or X coordinate data, 8-bit.
+
+Supported attributes:
 	Y	Enable Y editing. Value is relative byte pointer for the Y coordinate.
 	X	Enable X editing. Value is relative byte pointer for the X coordinate.
 	
@@ -487,6 +539,18 @@ Supported attributes for COORDINATE:
 	SNAPX	Decimal value. If set, X coordinate will be rounded to values divisible by this value.
 	GRIDY	Decimal value. If set, horizontal lines will be shown for every GRIDY pixel.
 	GRIDX	Decimal value. If set, vertical lines will be shown for every GRIDX pixel.
+
+Advanced - Render child elements:
+	FGIMAGE		Draw image at the current coordinate, based on a data type which supports Render.
+			It will be drawn on top of the coordinate lines.
+			If the coordinate is X or Y only, or any other reason,
+			you can set attributes "render.x" or "render.y" in the FGIMAGE element to set draw coordinates
+			to constant values.
+
+			(updateRender in the target script will be called each time the coordiante is changed.)
+
+			Output parameters: x, y (depending on setup, either of them may always be 0.)
+
 
 Types: Map
 ----------
@@ -510,7 +574,7 @@ Supported attributes for MAP:
 	INDEX_MUL	Decimal value. Sets byte spacing for each index if present.
 			In other words, values will be read from (index * INDEX_MUL).
 
-Supported objects for customization attributes (See "GUI Cusomization"):
+Supported objects for customization attributes (See "GUI Customization"):
 	Type		Name
 
 	GRID		grid		(all grids)
@@ -534,6 +598,13 @@ Advanced - Supported Render child elements:
 Advanced - Supported as Render type: Yes. Interprets "index" parameter, which is added to the data offset.
 
 	Input parameters support: x, y, index
+
+Advanced - Specific data type notes for SUBITEM:
+	string		You can use this data type so that each cell's value is represented by a character from a table of characters.
+			(The cell's value will be the index into the table).
+			LEN should be set to "100" (256) for the LEN attribute in this case, only 1 character will still be drawn.
+	map		This can be used in the SUBITEM Element to create a map made of multiple levels.
+	
 
 
 Deprecated but Supported Data Types 
