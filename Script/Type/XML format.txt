@@ -362,7 +362,7 @@ Supported attributes:
 	If for example you want to edit a string of bits within each byte in an array of bytes,
 	define LEN as the number of bytes,
 	define BITS as the number of bits in each byte,
-	SPACING to where in the byte the bits start, where LSB is 0 and MSB is 7. (if they start at 0/LSB, then it's not needed),
+	STARTPOS to where in the byte the bits start, where LSB is 0 and MSB is 7. (if they start at 0/LSB, then it's not needed),
 	then SPACING to 8.
 	If you have the same case, but for an array of 32 bit integers, set SPACING to 32, and so on.
 
