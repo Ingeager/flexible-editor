@@ -3,7 +3,20 @@
 
 function init() {
 	DefaultControls.init();
+	initCommon();
+	TPObj.init();
+}
 
+function initRender(a_bmv, a_param) {
+	initCommon();
+	TPObj.initRender(a_bmv, a_param);
+}
+
+function updateRender(a_bmv, a_param) {
+	TPObj.updateRender(a_bmv, a_param);
+}
+
+function initCommon() {
 	TPObj = new CommonTilepos();
 	TPObj.width = 32;
 	TPObj.height = 30;
@@ -25,6 +38,4 @@ function init() {
 		Core.setByte(0, (result >> 8));
 		Core.setByte(1, result & 0xFF);
 	}
-	
-	TPObj.init();
 }
