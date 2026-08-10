@@ -68,23 +68,37 @@ CommonPalette.prototype.initRender = function(a_bmv, a_param) {
 
 CommonPalette.prototype.updateRender = function(a_bmv, a_param) {
 
-	if (a_param.hasOwnProperty("x")) {
-		//this.renderBaseX = Number(a_param.x);
-		this.palGrid.bm_base_x = Number(a_param.x);
+	this.BMview = a_bmv;
+
+	var param_arr = [];
+	if (Array.isArray(a_param) == false) {
+		param_arr.push(a_param);
 	} else {
-		//this.renderBaseX = 0;
-		this.palGrid.bm_base_x = 0;
-	}
-	if (a_param.hasOwnProperty("y")) {
-		//this.renderBaseY = Number(a_param.y);
-		this.palGrid.bm_base_y = Number(a_param.y);
-	} else {
-		//this.renderBaseY = 0;
-		this.palGrid.bm_base_y = 0;
+		param_arr = a_param;
 	}
 
-	this.BMview = a_bmv;
-	this.palGrid.redraw();
+	//Supports X and Y params for now with grid drawn. May implement INDEX some time in the future.
+
+	for (var par_ix = 0; par_ix < param_arr.length; par_ix++) {
+		var v_param = param_arr[par_ix];
+
+		if (v_param.hasOwnProperty("x")) {
+			//this.renderBaseX = Number(v_param.x);
+			this.palGrid.bm_base_x = Number(v_param.x);
+		} else {
+			//this.renderBaseX = 0;
+			this.palGrid.bm_base_x = 0;
+		}
+		if (v_param.hasOwnProperty("y")) {
+			//this.renderBaseY = Number(v_param.y);
+			this.palGrid.bm_base_y = Number(v_param.y);
+		} else {
+			//this.renderBaseY = 0;
+			this.palGrid.bm_base_y = 0;
+		}
+
+		this.palGrid.redraw();
+	}
 }
 
 CommonPalette.prototype.initNonGUI = function() {

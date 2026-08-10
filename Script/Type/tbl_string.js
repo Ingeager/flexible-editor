@@ -1,4 +1,5 @@
 //FLEX_INCLUDE "common_default.js"
+//FLEX_INCLUDE "common_stringrender.js"
 
 //FLEX_ATTR "TBL", "Table File", "FILE", "*.tbl"
 
@@ -7,6 +8,18 @@ function init() {
 	tblStringObj = new tblString();
 	tblStringObj.initDefault();
 	tblStringObj.init();
+}
+
+function initFetch() {
+    tblStringObj = new tblString();
+}
+
+function initRender(a_bmv, a_param) {
+   tblStringObj = new tblString();
+}
+
+function updateRender(a_bmv, a_param) {
+
 }
 
 tblString = function() {
@@ -32,6 +45,14 @@ tblString = function() {
 
     this.getByte = function(a_ptr) {return(Core.getByte(a_ptr));}
     this.setByte = function(a_ptr, a_val) {Core.setByte(a_ptr, a_val);}
+    if (Core.versionDate >= 261212) {
+        this.getByteAbsolute = function(a_ptr) {return(Core.getByteAbsolute(a_ptr));}
+        this.setByteAbsolute = function(a_ptr, a_val) {Core.setByteAbsolute(a_ptr, a_val);}
+    }
+    this.textCtrl = 0;
+    this.logCtrl = 0;
+    this.convertBtn = 0;
+    this.clearLogBtn = 0;
 
     this.tableEntries = [];      //  Contains all table entries
     this.tblCollection = [];
@@ -39,36 +60,46 @@ tblString = function() {
     this.registeredEntry = false;      //Used to detect 2nd logical table
     this.currentLogicalTable = 0;
     this.eeArr = [];               //  Contains all possible byte sizes from large to small
-    this.textCtrl = 0;
-    this.logCtrl = 0;
+
     this.currentEntry = 0;
     this.sizeArr = [];
     this.sizeToTableEntry = [];
     this.bracketBehaviour = 0;
             //0: [string] Square brackets allowed in strings
             //1: [$B0BA] Square brackets identifies raw Hex
+    this.caseFlexible = false;
     this.bigEndian = false;
     this.nonNormalCfg = [];
+    this.lineWidth = 0;
+    this.bookmarks = [];
+    this.bookmarkMode = -1;
+
     this.cacheLog = false;
     this.logCache = "";
 }
 
 tblString.prototype.init = function() {
-  this.tblName = "MAIN";
-  this.registeredEntry = false;  
-  this.currentEntry = 0;  //Entry counter across all tables
-  this.sizeArr = [];
 
+  this.caseFlexible = Core.getFlag("CASEFLEXIBLE");
+
+  if (Core.hasAttr("linewidth")) {
+      this.lineWidth = Number(Core.getAttr("linewidth"));
+  }
+
+	var fontpx = 14;
   this.textCtrl = new QPlainTextEdit(Core.window);
   this.textCtrl.move(Core.base_x, Core.base_y);
   this.textCtrl.resize(600, 200);
-  this.textCtrl.styleSheet = Core.customize("edit.stylesheet", "");
+  var addtext = "; font-size: " + fontpx + "px";
+  this.textCtrl.styleSheet = Core.customize("edit.stylesheet", "") + addtext;
   this.textCtrl.show();
 
+	fontpx = 13;
   this.logCtrl = new QPlainTextEdit(Core.window);
   this.logCtrl.move(Core.base_x, Core.base_y+240);
   this.logCtrl.resize(600, 300);
-  this.logCtrl.styleSheet = Core.customize("edit.stylesheet", "");
+  addtext = "; font-size: " + fontpx + "px";
+  this.logCtrl.styleSheet = Core.customize("edit.stylesheet", "") + addtext;
   this.logCtrl.readOnly = true;
   this.logCtrl.show();
 
@@ -79,6 +110,13 @@ tblString.prototype.init = function() {
   this.convertBtn.pressed.connect(this, this.convertBtnFunc);
   this.convertBtn.show();
 
+  this.clearLogBtn = new QPushButton(Core.window);
+  this.clearLogBtn.text = "Clear Log";
+  this.clearLogBtn.move(Core.base_x+205, Core.base_y+208);
+  this.clearLogBtn.resize(120, 25);
+  this.clearLogBtn.pressed.connect(this, this.clearLogBtnFunc);
+  this.clearLogBtn.show();
+
   if (Core.versionDate < 250815) {
       // Needs at least Core.loadTextFile.
       this.log("Error: TBL_STRING needs at least b251111 of Flexible Editor to work") ;
@@ -86,9 +124,9 @@ tblString.prototype.init = function() {
   }
   if (Core.versionDate < 251201) {
       this.log("Warning: UTF-8 tables not supported for b" + Core.versionDate);
-      this.log("(Will be supported in newer build.)");
+      this.log("(Is supported in newer build.)");
   }
-  this.log("Warning: TBL_STRING is still in early development. USE AT OWN RISK!");
+  this.log("!!! Warning: TBL_STRING is still in early development. USE AT OWN RISK !!!");
 
   this.loadTable();
   var inString = "";
@@ -99,6 +137,11 @@ tblString.prototype.init = function() {
 tblString.prototype.convertBtnFunc = function() {
 	var outString = this.textCtrl.plainText;
 	this.translateOut(outString);
+}
+
+tblString.prototype.clearLogBtnFunc = function() {
+    this.logCache = "";
+    this.logCtrl.plainText = "";
 }
 
 tblString.prototype.initDefault = function() { 
@@ -132,17 +175,17 @@ tblString.prototype.lineError = function(a_lineIx, a_line, a_text) {
 
 tblString.prototype.loadTable = function() {
 
-  var tblFile, tblData, tblDataArr;
+  var tblFile, tblData;
   tblFile = Core.getAttr("tbl");
 
   tblData = Core.loadTextFile(tblFile);
   if (tblData.length == 0) {
 	this.log("Failed to load ''" + tblFile + "''");
-	return;
+	return -1;
   }
   this.loadTableFile(tblData);
   this.log("Loaded table ''" + tblFile + "''");
-
+   return 0;
 }
 
 tblString.prototype.tblDetectFunc_comment = function(a_line, a_lineIx) {
@@ -262,7 +305,13 @@ tblString.prototype.InsEndFunc_endToken = function(a_status) {
 
 tblString.prototype.loadTableFile = function(a_tblData) {
 
-  tblLines = a_tblData.replace(/\r/g, "").split(/\n/);
+  this.tblName = "MAIN";
+  this.registeredEntry = false;  
+  this.currentEntry = 0;  //Entry counter across all tables
+
+  //this.sizeArr = [];
+
+  var tblLines = a_tblData.replace(/\r/g, "").split(/\n/);
   
   var lineIx = 0;
 
@@ -275,10 +324,10 @@ tblString.prototype.loadTableFile = function(a_tblData) {
 
     if (line.length == 0) {handle = false;}
    
-  /*  if (handle == true) {
-        //Check if line is whitespace only
-        if (line.trim.length == 0) {handle = false; print("line is blank");}
-    }*/
+  //  if (handle == true) {
+  //      //Check if line is whitespace only
+   //     if (line.trim.length == 0) {handle = false; print("line is blank");}
+   // }
 
     var nonNormalIndex = 0;
     var nonNormal = false;
@@ -322,7 +371,7 @@ tblString.prototype.loadTableFile = function(a_tblData) {
         }
     }
     
-    var eqpos;
+    var eqpos;      // Character position of equal sign
     var readlen;
     var leftSide;
      
@@ -407,13 +456,18 @@ tblString.prototype.loadTableFile = function(a_tblData) {
           this.tableEntries.push(tableEntry);
           this.registeredEntry = true;
 
+          // Check if byte count is already in sizeArr.
+          // If not, add, then sort table from highest to lowest.
           if (this.sizeArr.indexOf(tableEntry.byteCount) < 0) {
               this.sizeArr.push(tableEntry.byteCount);
               this.sizeArr.sort(function(a,b){return(b-a);});
 	  }
+   // Check if the entry in "sizeToTableEntry" for this byte size is empty (undefined).
+   // If it is, create empty array.
 	if (this.sizeToTableEntry[tableEntry.byteCount] == undefined) {
 		this.sizeToTableEntry[tableEntry.byteCount] = [];
 	}
+   // Add the entry index into "sizeToTableEntry".
 	var stteIndex = this.sizeToTableEntry[tableEntry.byteCount].length;
 	this.sizeToTableEntry[tableEntry.byteCount][stteIndex] = entryIndex;
 
@@ -430,7 +484,7 @@ tblString.prototype.loadTableFile = function(a_tblData) {
 //	this.log(this.sizeToTableEntry.toString());
 
     if (this.tblCollection.length > 0) {
-        this.tblCollection[this.tblCollection.length-1].lastEntry = this.entryCount-1;
+        this.tblCollection[this.tblCollection.length-1].lastEntry = this.tableEntries.length-1;
     }
 
 }
@@ -473,6 +527,8 @@ tblString.prototype.translateIn = function() {
     }
 
     var byteCachePos = 0;
+    var lineCharCounter = 0;
+    
     while (byteCachePos < readLen) {
 
     var match = false;
@@ -480,6 +536,8 @@ tblString.prototype.translateIn = function() {
     var matchTotal = false;
     var byteCount = 0;
     var byteSize = 1;
+    var dumpHexFlag = false;
+    var dumpHexArr = [];
 
     // Find binary matches, from largest byte size to smallest.
     for (sizeIndex = 0; sizeIndex < this.sizeArr.length; sizeIndex++) {
@@ -508,18 +566,39 @@ tblString.prototype.translateIn = function() {
     if (matchTotal == true) {
         outputStr += this.tableEntries[matchIndex].string;
         byteCachePos += byteSize;
+
+	if (this.lineWidth > 0) {
+		lineCharCounter += this.tableEntries[matchIndex].string.length;
+		if (lineCharCounter >= this.lineWidth) {
+			outputStr += "\n";
+			lineCharCounter = 0;
+		}
+	}
     } else {
         var byteVal = byteCache[byteCachePos];
         this.log("Dump: No match found for 0x" + byteVal.toString(16).toUpperCase() + " at byte index " + byteCachePos);
         
         if (this.bracketBehaviour >= 1)  {
+             // Brackets [ ] used for special commands
             // todo: add raw hex into string
+            dumpHexArr.push(byteVal);
         }
 
         byteCachePos += 1;
+
+        if ((dumpHexFlag == true)  && (dumpHexArr.length > 0)) {
+            dumpHexFlag = false;
+            outputStr += "[$";
+            for (var ix = 0; ix < dumpHexArr.length; ix++) {
+                
+            }
+            outputStr += "]";
+            dumpHexArr = [];
+        }
     }
     
     } // byte loop
+
     return outputStr;
 }
 
@@ -527,159 +606,182 @@ tblString.prototype.translateIn = function() {
 //"Optimal Path" capable (outputs smallest possible result)
 tblString.prototype.translateOut = function(a_inputStr) {
 
-    var inputStr = a_inputStr;
-    var binaryStrings = [];
-    // ^ Collection of resulting binary strings.
-    //If there ends up being more than one, the shortest one is used.
-    var currentBS = 0;    //Current byte string
-    binaryStrings[0] = [];
-
-    var writeStatusObj = function(a_bytePos, a_charPos, a_entryCount) {
-        this.charPos = a_charPos;
-        this.bytePos = a_bytePos;
-        this.entryCount = a_entryCount;   // Backup of current table entry we are comparing with
-        this.binaryStringIx = 0;      //Backup of binary string index
-        this.valid = true;   //set to false if table entry not found.
-
-        // Info for Non-normal callback
-        this.endEvent = false;
-    }
-
-    var writeStatus = [];
-    // ^ Stack containing backups of write status which is pushed on stack
-    // when there is a fork in the possible path to take.
-    // The function will finish one possible path, pop from this stack
-    // and continue the next alternate path from the point before.
-
-    var curWriteStatus = new writeStatusObj(0, 0, 0);
-    //^ active write status
-
-    var smallestBString = -1;
-    var smallestBStringSz = 0;
-    var smallestBStringValid = true;
-    var largestBStringSz = 0;
-
-    var handlePath = true;
-    while (handlePath == true) {// while writeStatus[] array remains empty
-    while (curWriteStatus.charPos < inputStr.length) {
-        // Check string match in all table entries;
-//	   this.log("cp:"+curWriteStatus.charPos);
-//	   this.log("len:"+inputStr.length);
-       var entryCount = curWriteStatus.entryCount;
- //      	   this.log("ecount:"+entryCount);
-        var overallMatch = false;
-        var alreadyMatch = false;
-        var matchIndex = 0;
-	var matchStringSz = 0;
-	var matchBinSz = 0;
-        var match = false;
-        for (entryCount = entryCount; entryCount < this.tableEntries.length; entryCount++) {
-            var tblStr = this.tableEntries[entryCount].string;
-//		this.log("tblStr:"+ tblStr);
-            var tblStrLen = tblStr.length;
-            if (this.tableEntries[entryCount].entryType >= 0) {
-            
-            }
-            if (tblStrLen > 0) {
-                if ((curWriteStatus.charPos + tblStrLen) <= inputStr.length) {
-                    var pos = curWriteStatus.charPos;
-                    var compareStr = inputStr.slice(pos, pos+tblStrLen);
-               //         this.log("comparestr:" + compareStr);
-                    if (tblStr == compareStr) {
-                        if (alreadyMatch == true) {
-				//Check if string is equally long to previous result, and binary string is just as short, or shorter
-				if ((tblStrLen == matchStringSz) && (this.tableEntries[entryCount].byteCount <= matchBinSz)) {
+	var inputStr = a_inputStr;
 	
-					if (this.tableEntries[entryCount].byteCount < matchBinSz) {
-						//If the byte count is smaller, change to this one.
-						matchIndex = entryCount;
-						matchStringSz = tblStrLen;
-						matchBinSz = this.tableEntries[matchIndex].byteCount;
-					}
-				} else {
-					//Fork.
-				    // Backup write status , break compare loop, continue conversion
-				  
-				    curWriteStatus.entryCount = entryCount;
-				    curWriteStatus.binaryStringIx = currentBS;
-				    writeStatus.push(curWriteStatus);
-				    curWriteStatus.entryCount = 0;
-               break;
-				}
-                            
-                        } else {
-                      //          this.log("match: " + entryCount);
+	var binaryStrings = [];
+	// ^ Collection of resulting binary strings.
+	//If there ends up being more than one, the shortest one is used.
+	var currentBS = 0;    //Current binary string
+	binaryStrings[0] = [];
 
-                            matchIndex = entryCount;
-			    matchStringSz = tblStrLen;
-			    matchBinSz = this.tableEntries[matchIndex].byteCount;
-                            overallMatch = true;
-                            alreadyMatch = true;
-                        } //alreadyMatch == true?
-                    } //match?
-                }  //size is ok?
-            }  //table string not empty?
-        }  // table entry loop
+	var smallestBString = -1;		//Smallest binary string index
+	var smallestBStringSz = 0;		//Smallest binary string size
+	var smallestBStringValid = true;
+	var largestBStringSz = 0;		//Largest binary string size
 
-	var advanceChars = 0;
-        if (overallMatch == false) {
-            var charPos = curWriteStatus.charPos;
-            this.log("Table match not found (character '" + inputStr.at(charPos) + "' at index " + charPos);
-            curWriteStatus.valid = false;  //Mark as invalid (don't favor current result)
-            advanceChars = 1;
-        } else {
-            var binaryPos = curWriteStatus.bytePos;
-            for (var byteIndex = 0; byteIndex < this.tableEntries[matchIndex].byteCount; byteIndex++) {
-                binaryStrings[currentBS][binaryPos] = this.tableEntries[matchIndex].byteArray[byteIndex];
-                binaryPos++;
-            }
-            curWriteStatus.bytePos = binaryPos;
-            advanceChars = this.tableEntries[matchIndex].string.length;
-	    
-        }
+	//Constructor for creating "writeStatusObj"
+	var writeStatusObj = function(a_bytePos, a_charPos, a_entryCount) {
+		this.charPos = a_charPos;
+		this.bytePos = a_bytePos;
+		this.entryCount = a_entryCount;   // Backup of current table entry we are comparing with
+		this.caseFlexibleTestFlag = false;
+		this.binaryStringIx = 0;      //Backup of binary string index
+		this.valid = true;   //set to false if table entry not found.
 
-         curWriteStatus.charPos += advanceChars;
+		// Info for Non-normal callback
+		this.endEvent = false;
+	}
 
-     } // input string loop
+	var writeStatus = [];
+	// ^ Stack containing backups of write status which is pushed on stack
+	// when there is a fork in the possible path to take.
+	// The function will finish one possible path, pop from this stack
+	// and continue the next alternate path from the point before.
 
-     curWriteStatus.endEvent = true;
-     //todo:  call callback (End token)
+	var curWriteStatus = new writeStatusObj(0, 0, 0);
+	//^ active write status
 
-     // keep track of which binary string is most optimal.
-     if (smallestBString < 0) {
-         smallestBString = 0;
-         smallestBStringSz = curWriteStatus.bytePos;
-         largestBStringSz = curWriteStatus.bytePos;
-         smallestBStringValid = curWriteStatus.valid;
-     } else {
-         if (curWriteStatus.bytePos < smallestBStringSz) {
-             var a = smallestBStringValid;
-             var b = curWriteStatus.valid;
-             if ((a == false) || ((a == true) && (b == true))) {
-                 smallestBStringSz = curWriteStatus.bytePos;
-                 smallestBString = currentBS;
-                 smallestBStringValid = curWriteStatus.valid;
-             }
-         }
-         if (curWriteStatus.bytePos > largestBStringSz) {
-             largestBStringSz = curWriteStatus.bytePos;
-         }
-     }
-    // this.log("smallest:" + smallestBString + " - " + smallestBStringSz);  
+	var handlePath = true;
+	while (handlePath == true) { // while writeStatus[] array is non-empty
+		while (curWriteStatus.charPos < inputStr.length) {
+			//this.log("pos: " + curWriteStatus.charPos + " : " + inputStr.length);
+			// Check string match in all table entries;
+			//	   this.log("cp:"+curWriteStatus.charPos);
+			//	   this.log("len:"+inputStr.length);
+			var entryCount = curWriteStatus.entryCount;	//Get table entry index
+			//      	   this.log("ecount:"+entryCount);
+			var overallMatch = false;
+			var alreadyMatch = false;
+			var matchIndex = 0;
+			var matchStringSz = 0;
+			var matchBinSz = 0;
+			var match = false;
+			for (entryCount = entryCount; entryCount < this.tableEntries.length; entryCount++) {
+				    var tblStr = this.tableEntries[entryCount].string;
+				//		this.log("tblStr:"+ tblStr);
+				    var tblStrLen = tblStr.length;
+				    if (this.tableEntries[entryCount].entryType >= 0) {
+				         // todo: add handler
+				    }
+				    if (tblStrLen > 0) {
+					if ((curWriteStatus.charPos + tblStrLen) <= inputStr.length) {
+					    var pos = curWriteStatus.charPos;
+					    var compareStr = inputStr.slice(pos, pos+tblStrLen);
+					   //if flag is set, ignore case.
+					   if (curWriteStatus.caseFlexibleTestFlag == true) {
+					       tblStr = toLowerCase(tblStr);
+					       compareStr = toLowerCase(tblStr);
+					   }
+				       //         this.log("comparestr:" + compareStr);
+					    if (tblStr == compareStr) {
+						if (alreadyMatch == true) {
+							//Check if string is equally long to previous result, and binary string is just as short, or shorter
+							if ((tblStrLen == matchStringSz) && (this.tableEntries[entryCount].byteCount <= matchBinSz)) {
 
-     if (writeStatus.length > 0) {
-          // go back to earlier state (take alternate route)
-          curWriteStatus = writeStatus.pop();
-          //copy binary string up to previous byte position
-          var oldBS = curWriteStatus.binaryStringIx;
-          currentBS++;
-          binaryStrings[currentBS] = [];
-          for (var byteIndex = 0; byteIndex < curWriteStatus.bytePos; byteIndex++) {
-              binaryStrings[currentBS][byteIndex] = binaryStrings[oldBS][byteIndex];
-          }
-     } else {
-         handlePath = false;
-     }
+								if (this.tableEntries[entryCount].byteCount < matchBinSz) {
+									//If the byte count is smaller, change result to this.
+									matchIndex = entryCount;
+									matchStringSz = tblStrLen;
+									matchBinSz = this.tableEntries[matchIndex].byteCount;
+								}
+							} else {
+								//Fork.
+							    // Backup write status , break compare loop, continue conversion
+							  
+							    curWriteStatus.entryCount = entryCount;
+							    curWriteStatus.binaryStringIx = currentBS;
+							    writeStatus.push(curWriteStatus);
+							    curWriteStatus.entryCount = 0;
+								break;
+							}
+						    
+						} else {
+					      //          this.log("match: " + entryCount);
+
+						    matchIndex = entryCount;
+						    matchStringSz = tblStrLen;
+						    matchBinSz = this.tableEntries[matchIndex].byteCount;
+						    overallMatch = true;
+						    alreadyMatch = true;
+						} //alreadyMatch == true?
+					    } //match?
+					}  //size is ok?
+				    }  //table string not empty?
+			}  // table entry loop
+
+			var advanceChars = 0;
+			var charPos = curWriteStatus.charPos;
+			//this.log("overallMatch: " + overallMatch);
+			//this.log("char!!!: " + inputStr.charCodeAt(charPos));
+			
+			//If there's no table match for newline, we will ignore it.
+			if ((overallMatch == false) && (inputStr.charCodeAt(charPos) == 0xA)) {
+				advanceChars = 1;
+			} else if (overallMatch == false) {
+			     if ((this.caseFlexible == true) && (curWriteStatus.caseFlexibleTestFlag == false)) {
+				 curWriteStatus.caseFlexibleTestFlag = true;
+				 advanceChars = 0;
+			     } else {
+				
+				this.log("Table match not found for character '" + inputStr.charAt(charPos) + "' at index " + charPos + ".");
+				//this.log(inputStr.charCodeAt(charPos));
+				curWriteStatus.valid = false;  //Mark as invalid (don't favor current result)
+				advanceChars = 1;
+				curWriteStatus.caseFlexibleTestFlag = false;
+			     }
+			} else {
+			    var binaryPos = curWriteStatus.bytePos;
+			    for (var byteIndex = 0; byteIndex < this.tableEntries[matchIndex].byteCount; byteIndex++) {
+				binaryStrings[currentBS][binaryPos] = this.tableEntries[matchIndex].byteArray[byteIndex];
+				binaryPos++;
+			    }
+			    curWriteStatus.bytePos = binaryPos;
+			    advanceChars = this.tableEntries[matchIndex].string.length;
+			   curWriteStatus.caseFlexibleTestFlag = false;
+			}
+
+			 curWriteStatus.charPos += advanceChars;
+
+	     } // input string loop
+
+	     curWriteStatus.endEvent = true;
+	     //todo:  call callback (End token)
+
+	     // keep track of which binary string is most optimal.
+	     if (smallestBString < 0) {
+		 smallestBString = 0;
+		 smallestBStringSz = curWriteStatus.bytePos;
+		 largestBStringSz = curWriteStatus.bytePos;
+		 smallestBStringValid = curWriteStatus.valid;
+	     } else {
+		 if (curWriteStatus.bytePos < smallestBStringSz) {
+		     var a = smallestBStringValid;
+		     var b = curWriteStatus.valid;
+		     if ((a == false) || ((a == true) && (b == true))) {
+			 smallestBStringSz = curWriteStatus.bytePos;
+			 smallestBString = currentBS;
+			 smallestBStringValid = curWriteStatus.valid;
+		     }
+		 }
+		 if (curWriteStatus.bytePos > largestBStringSz) {
+		     largestBStringSz = curWriteStatus.bytePos;
+		 }
+	     }
+	    // this.log("smallest:" + smallestBString + " - " + smallestBStringSz);  
+
+	     if (writeStatus.length > 0) {
+		  // go back to earlier state (take alternate route)
+		  curWriteStatus = writeStatus.pop();
+		  //copy binary string up to previous byte position
+		  var oldBS = curWriteStatus.binaryStringIx;
+		  currentBS++;
+		  binaryStrings[currentBS] = [];
+		  for (var byteIndex = 0; byteIndex < curWriteStatus.bytePos; byteIndex++) {
+		      binaryStrings[currentBS][byteIndex] = binaryStrings[oldBS][byteIndex];
+		  }
+	     } else {
+		 handlePath = false;
+	     }
     } // handlePath == true? loop
 
     var numOfBinaryStrings = binaryStrings.length;
@@ -706,11 +808,16 @@ tblString.prototype.translateOut = function(a_inputStr) {
         if (writeBytes > maxLen) {
             writeBytes = maxLen;
         }
-
-        var byteIndex = 0;
-        for (byteIndex = 0; byteIndex < writeBytes; byteIndex++) {
-            this.setByte(byteIndex, binaryStrings[bsIx][byteIndex]);
-        }
+        if (this.bookmarkMode < 0) {
+            for  (var byteIndex = 0; byteIndex < writeBytes; byteIndex++) {
+                this.setByte(byteIndex, binaryStrings[bsIx][byteIndex]);
+            }
+        } else {
+            var ptr = this.bookmarks[this.bookmarkMode].address;
+            for  (var byteIndex = 0; byteIndex < writeBytes; byteIndex++) {
+                this.setByteAbsolute(ptr+byteIndex, binaryStrings[bsIx][byteIndex]);
+            }
+       }
        if (remainBytes < 0) {
             this.log((-remainBytes) + " bytes exceeded the space limit and was not inserted.");
         } else {

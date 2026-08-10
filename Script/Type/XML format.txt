@@ -317,7 +317,20 @@ Supported flags for all Integer Types:
  <item name="Potentially negative decimal value" ptr="7F3" type="int24" flag="SIGNED.DECIMAL"/>
 
 Advanced - Fetch support:
-	Yes, Fetch function is available for all types listed here.
+	Yes, with some limitations. Fetch is available for 48 bit integers and below.
+	Since values in the environment is limited to Double Float (53 bit integer precision),
+	Integers with 56 bits and up can't be represented accuratedly. They will be returned as 0.
+	Signed values and Big Endian is supported. BASE and DECIMAL is ignored (all values are returned in base 10).
+
+Advanced - Supported as Render type:
+	Yes, with very basic, low resolution text.
+
+	Input parameter support: x, y, index (array index), palette, paletteentries
+
+		If "palette" is set, the first color will be text color. It's assumed "palette" contains at least one color,
+		so in this case, "paletteentries" don't need to be set.
+		However, if "paletteentries" is at least 2, the *second* color will become the background color.
+
 
 Raw data types
 --------------
@@ -328,9 +341,8 @@ Supported attributes:
 	LEN	Number of bytes in hex. No limit. If it's more than 256 (0x100),
 		the page selector will be shown.
 
-
 Advanced - Fetch support:
-	Not available yet.
+	Yes. Simply returns all bytes as an array.
 
 Bit data Types
 --------------
@@ -339,18 +351,19 @@ bitvalue	Edit values stored in any desired bit length. (What the max is hasn't b
 		Order of bits within the byte is from Least Significant Bit to Most Significant then as long as more bits are needed,
 		it wraps around to the LSB of the next byte.
 		Arrays can be defined. Each value in an array starts at the bit offset for each index
-		and ignores where bytes start and end.
+		and doesn't take into account where bytes start and end.
 		You can for example define an array of 5 bit values, with 6 elemenets,
-		that is divided like this:
-		MSB 22211111 LSB
-		    43333322
-		    55554444
-		    ..666665
+		divided like this:
+
+		MSB b0: 22211111 LSB
+		    b1: 43333322
+		    b2: 55554444
+		    b3: ..666665
  
 Supported attributes:
-	BITS		Set the bit size of values. Default is 8.
+	SIZE		Set the bit size of values. Default is 8.
 	SPACING		Optional. Set the bit spacing between each value in an array.
-			When this attribute isn't set, spacing is the same as BITS.
+			When this attribute isn't set, spacing is the same as SIZE.
 	STARTPOS	Optional. Set the bit offset of the value (or bit offset of the first value in an Array)
 			0 is LSB of the first byte.
 	LEN		Define an Array. Value is Hexadecimal without prefix.
@@ -358,14 +371,28 @@ Supported attributes:
 			strings for each array index.
 	LIST		Edit the bit values using a List so each value is described with a string.
 			This attribute refers to the KEY attribute of a list Item.
+	BIT		Adds controls for editing/toggling the bits of the value.
+			Works the same way as for Integer types.
+			This attribute contains the label texts to describe each bit for
+			each editing control.
+			In order from MSB to LSB, text to describe each bit is placed
+			separated using a dot/period. If a field is empty, the control
+			won't appear.
 
 	If for example you want to edit a string of bits within each byte in an array of bytes,
 	define LEN as the number of bytes,
-	define BITS as the number of bits in each byte,
+	define SIZE as the number of relevant bits in each byte,
 	STARTPOS to where in the byte the bits start, where LSB is 0 and MSB is 7. (if they start at 0/LSB, then it's not needed),
 	then SPACING to 8.
 	If you have the same case, but for an array of 32 bit integers, set SPACING to 32, and so on.
 
+Advanced - Fetch support:
+	Yes. Returns the value, or the array of values if LEN is set.
+
+Advanced - Supported as Render type:
+	Yes. With basic, low resolution text.
+
+	Input parameter support: x, y, index (array index), palette, paletteentries
 
 String Types
 ------------
@@ -636,7 +663,7 @@ Arrays
 ======
 
 If supported, setting the LEN attribute for a fixed-length data type will turn it into an Array.
-(Currently the case for all Integers only).
+(Supported for Integers and BITVALUE data types).
 A slider control will be added for changing the index.
 Attributes ARRINDEX_LABLIST or ARRINDEX_LABDEF can be defined to give the
 Array indexes string labels. In this case the index is changed using a dropdown list.

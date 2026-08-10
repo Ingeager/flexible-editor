@@ -267,13 +267,17 @@ CommonInt.prototype.fetch = function() {
 	}
 	
 	for (var index = 0; index < array_size; index++) {
-		Core.setArrayIndex(index);
-		var str = this.getString();
-		//if (str.length >= 1) {
-			values.push(Number(str));
-		//}
+		if (this.bitSize <= 48) {
+			Core.setArrayIndex(index);
+			var str = this.getString();
+			//if (str.length >= 1) {
+				values.push(Number(str));
+			//}
+		} else {
+			values.push(0);
+		}
 	}
-	
+
 	return values;
 }
 

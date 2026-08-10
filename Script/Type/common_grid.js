@@ -65,7 +65,7 @@ function GridHandler(argcellw, argcellh, argw, argh, arg_entries, a_accessname) 
 	this.current_page = 0;
 	this.gridline_w = Number(Core.customize(a_accessname+".linewidth", "2", "grid.linewidth"));
 	this.gridline_h = Number(Core.customize(a_accessname+".lineheight", "2", "grid.lineheight"));
-	this.redrawCellOnSelect = 0;	//0 = None (Grid Only), 1 = Old cell and new cell, 2 = Redraw all cells on select (slow)
+	this.redrawCellOnSelect = 0;	//0 = None (Grid Only), 1 = Old cell and new cell, 2 = Redraw all cells on select (slow), -1: Don't draw at all
 	//this.redrawGridOnSelect = 1; (To be implemented) //0 = Do nothing. 1 = Draw relevant parts. 2 = Redraw whole grid.
 	
    this.bm_base_x = 0;
@@ -114,7 +114,7 @@ function GridHandler(argcellw, argcellh, argw, argh, arg_entries, a_accessname) 
 }
 
 GridHandler.prototype.timerFunc = function() {
-	if ((this.fadestate >= 0)  && (this.lockflag == false)){
+	if ((this.fadestate >= 0)  && (this.lockflag == false)) {
 		this.lockflag = true;
 		if (this.fadestate >= 1000) {
 			this.fadestate = 1000;
@@ -218,7 +218,6 @@ GridHandler.prototype.eventMousePress = function(a_buttons, a_y, a_x) {
 				}
 			}
 	
-			this.fadestate = 0;
 			if (this.redrawCellOnSelect == 2) {
 				this.redraw();
 			} else if (this.redrawCellOnSelect == 1) {
@@ -233,12 +232,13 @@ GridHandler.prototype.eventMousePress = function(a_buttons, a_y, a_x) {
 					}
 				}
 				this.redrawGrid();
-			} else {
+			} else if (this.redrawCellOnSelect == 0) {
 				this.redrawGrid();
 			}
 
 			this.bmvObject.refresh();
-
+			this.fadestate = 0;
+			
 			//event.dispatch(event.bit.changeindex);
 
 		}

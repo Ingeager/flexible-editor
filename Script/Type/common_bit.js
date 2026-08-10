@@ -19,59 +19,59 @@ CommonBit = function() {
 }
 
 CommonBit.prototype.initBitAttr = function(a_bitCount) {
-  var str = Core.getAttr("bit");
-  this.initString(str, ".", a_bitCount);
+	var str = Core.getAttr("bit");
+	this.initString(str, ".", a_bitCount);
 }
 
 CommonBit.prototype.initString = function(a_captionStr, a_sepChar, a_bitCount) {
-  var captionArr = a_captionStr.split(a_sepChar, a_bitCount);
-  for (var ix = 0; ix < a_bitCount; ix++) {
-    if (ix < captionArr.length) {
-      var caption = captionArr[ix];
-      if (caption.length > 0) {
-        var LSBpos = a_bitCount-1-ix;
-        this.addControl(caption, LSBpos);
-      }
-    }
-  }
+	var captionArr = a_captionStr.split(a_sepChar, a_bitCount);
+	for (var ix = 0; ix < a_bitCount; ix++) {
+		if (ix < captionArr.length) {
+			var caption = captionArr[ix];
+			if (caption.length > 0) {
+				var LSBpos = a_bitCount-1-ix;
+				this.addControl(caption, LSBpos);
+			}
+		}
+	}
 }
 
 
 CommonBit.prototype.addControl = function(a_caption, a_LSBpos) {
-  var ix = this.ctrlCount;
-  
-  this.bit_ix[ix] = a_LSBpos;
-  this.ctrlRef[ix] = [];
-  this.ctrlRef[ix].thisRef = this;
-  this.ctrlRef[ix].index = ix;
-  var parent = Core.window;
-  this.ctrl[ix] = new QCheckBox(parent);
-  this.ctrl[ix].text = " " + a_caption;
-  this.ctrl[ix].styleSheet = "font: 17px";
-  this.ctrl[ix].move(Core.base_x+5, Core.base_y);
-  this.ctrl[ix].resize(550, 25);
-  this.ctrl[ix].programChanged = false;
-  this.ctrl[ix].stateChanged.connect(this.ctrlRef[ix], this.setCheckFunc);
-  this.ctrl[ix].show();
-  
-  this.ctrlCount += 1;
+	var ix = this.ctrlCount;
 
-  this.updateCtrl(ix);
+	this.bit_ix[ix] = a_LSBpos;
+	this.ctrlRef[ix] = [];
+	this.ctrlRef[ix].thisRef = this;
+	this.ctrlRef[ix].index = ix;
+	var parent = Core.window;
+	this.ctrl[ix] = new QCheckBox(parent);
+	this.ctrl[ix].text = " " + a_caption;
+	this.ctrl[ix].styleSheet = "font: 17px";
+	this.ctrl[ix].move(Core.base_x+5, Core.base_y);
+	this.ctrl[ix].resize(550, 25);
+	this.ctrl[ix].programChanged = false;
+	this.ctrl[ix].stateChanged.connect(this.ctrlRef[ix], this.setCheckFunc);
+	this.ctrl[ix].show();
 
-  Core.base_y += this.v_spacing;
+	this.ctrlCount += 1;
+
+	this.updateCtrl(ix);
+
+	Core.base_y += this.v_spacing;
 }
 
 
 CommonBit.prototype.updateCtrl = function(a_ix) {
-  var byte_ix = this.bit_ix[a_ix] >> 3;
-  var sub_bit = this.bit_ix[a_ix] & 7;
-  if (this.bigEndianByteSize > 0) {
-	byte_ix = (Math.floor(byte_ix / this.bigEndianByteSize)*this.bigEndianByteSize) + (this.bigEndianByteSize-1-(byte_ix % this.bigEndianByteSize));
-  }
-  var v = ((Core.getByteWr(byte_ix) & (1<<sub_bit)) > 0);
-  this.ctrl[a_ix].programChanged = true;
-  this.ctrl[a_ix].setChecked(v);
-  this.ctrl[a_ix].programChanged = false;
+	var byte_ix = this.bit_ix[a_ix] >> 3;
+	var sub_bit = this.bit_ix[a_ix] & 7;
+	if (this.bigEndianByteSize > 0) {
+		byte_ix = (Math.floor(byte_ix / this.bigEndianByteSize)*this.bigEndianByteSize) + (this.bigEndianByteSize-1-(byte_ix % this.bigEndianByteSize));
+	}
+	var v = ((Core.getByteWr(byte_ix) & (1<<sub_bit)) > 0);
+	this.ctrl[a_ix].programChanged = true;
+	this.ctrl[a_ix].setChecked(v);
+	this.ctrl[a_ix].programChanged = false;
 
 }
 
@@ -82,18 +82,18 @@ CommonBit.prototype.updateAll = function() {
 }
 
 CommonBit.prototype.setCheckFunc = function(a_state) {
-  var thisRef = this.thisRef;
-  var ix = this.index;
-  if (thisRef.ctrl[ix].programChanged == true) {return;}
-  var bitv = (a_state > 0) ? 1 : 0;
-  var byte_ix = thisRef.bit_ix[ix] >> 3;
-  if (thisRef.bigEndianByteSize > 0) {
-	byte_ix = (Math.floor(byte_ix / thisRef.bigEndianByteSize)*thisRef.bigEndianByteSize) + (thisRef.bigEndianByteSize-1-(byte_ix % thisRef.bigEndianByteSize));
-  }
-  var sub_bit = thisRef.bit_ix[ix] & 7;
-  var bytev = Core.getByteWr(byte_ix);
-  bytev &= (0xFF ^ (1 << sub_bit));
-  bytev |= (bitv << sub_bit);
-  Core.setByteWr(byte_ix, bytev);
-  thisRef.changeFunc(sub_bit);
+	var thisRef = this.thisRef;
+	var ix = this.index;
+	if (thisRef.ctrl[ix].programChanged == true) {return;}
+	var bitv = (a_state > 0) ? 1 : 0;
+	var byte_ix = thisRef.bit_ix[ix] >> 3;
+	if (thisRef.bigEndianByteSize > 0) {
+		byte_ix = (Math.floor(byte_ix / thisRef.bigEndianByteSize)*thisRef.bigEndianByteSize) + (thisRef.bigEndianByteSize-1-(byte_ix % thisRef.bigEndianByteSize));
+	}
+	var sub_bit = thisRef.bit_ix[ix] & 7;
+	var bytev = Core.getByteWr(byte_ix);
+	bytev &= (0xFF ^ (1 << sub_bit));
+	bytev |= (bitv << sub_bit);
+	Core.setByteWr(byte_ix, bytev);
+	thisRef.changeFunc(sub_bit);
 }

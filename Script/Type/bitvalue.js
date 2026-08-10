@@ -1,5 +1,6 @@
 //FLEX_INCLUDE "common_default.js"
 //FLEX_INCLUDE "common_stringrender.js"
+//FLEX_INCLUDE "common_bit.js"
 
 BitValue = {};
 
@@ -21,11 +22,13 @@ BitValue.bitSizeCtrl = 0;
 BitValue.bitSpacingCtrl = 0;
 BitValue.bitOffsetCtrl = 0;
 BitValue.byteOffsetCtrl = 0;
+BitValue.hasBitControls = false;
+BitValue.bitClass = {};
 
 
 function init() {
     DefaultControls.init();
-    initCommon();
+    BitValue.initCommon();
 
 //    BitValue.test();
 
@@ -33,7 +36,7 @@ function init() {
 }
 
 function initFetch() {
-    initCommon();
+    BitValue.initCommon();
 
     var datas = [];
     for (var i = 0; i < BitValue.dataLen; i++) {
@@ -45,20 +48,54 @@ function initFetch() {
 }
 
 function initRender(a_bmv, a_param) {
-    initCommon();
+    BitValue.initCommon();
     if (a_bmv.initialized == false) {
-    var maxvalue = (1 << BitValue.entryBitSize) - 1;
-    var max_string = maxvalue.toString(10);
+        //var maxvalue = (1 << BitValue.entryBitSize) - 1;
+        //var max_string = maxvalue.toString(BitValue.base);
+	var datastring = "";
+             for (var dataix = 0; dataix < BitValue.dataLen; dataix++) {
+                 BitValue.index = dataix;
+                 datastring += BitValue.getString();
+                 if ((dataix+1) < BitValue.dataLen) {
+                     datastring += ",";
+                 }
+             }
 
-    CommonStringRender.initBMV(a_bmv, max_string, (4*5), (6*5));
+        CommonStringRender.initBMV(a_bmv, datastring.length, (4*5), (6*5));
     }
 }
 
 function updateRender(a_bmv, a_param) {
     
+    var params = [];
+    if (Array.isArray(a_param) == true) {
+        params = a_param;
+    } else {
+        params.push(a_param);
+    }
+
+    for (var ix = 0; ix < params.length; ix++) {
+        var datastring = "";
+        var v_param = params[ix];
+        
+        if (v_param.hasOwnProperty("index") == true) {
+             BitValue.index = Number(v_param.index);
+             datastring = BitValue.getString();
+        } else {
+             for (var dataix = 0; dataix < BitValue.dataLen; dataix++) {
+                 BitValue.index = dataix;
+                 datastring += BitValue.getString();
+                 if ((dataix+1) < BitValue.dataLen) {
+                     datastring += ",";
+                 }
+             }
+        }
+
+        CommonStringRender.drawStringParam(datastring, a_bmv, v_param, 4*5, 6*5);
+    }
 }
 
-function initCommon() {
+BitValue.initCommon = function() {
     var dataLength = 1;
     if (Core.hasAttr("len") == true) {
         dataLength = Core.getHexValueAttr("len");
@@ -69,8 +106,8 @@ function initCommon() {
         BitValue.base = Number(Core.getAttr("base"));
     }
     
-   if (Core.hasAttr("bits")) {
-        BitValue.entryBitSize = Number(Core.getAttr("bits"));
+   if (Core.hasAttr("size")) {
+        BitValue.entryBitSize = Number(Core.getAttr("size"));
     }
    if (Core.hasAttr("spacing")) {
         BitValue.entryBitSpacing = Number(Core.getAttr("spacing"));
@@ -90,6 +127,7 @@ BitValue.initCtrl = function() {
        if (BitValue.dataLen> 1) {
             DefaultControls.addArrayTuner();
             Core.setArrayByteSize(0);  // handle arrays internally
+	    BitValue.index = Core.getArrayIndex();	//Set to cached value from the editor
         }
 
 	if (Core.hasAttr("list") == true) {
@@ -154,6 +192,47 @@ BitValue.initCtrl = function() {
 
       }
 
+	if (Core.hasAttr("bit") == true) {
+		BitValue.bitClass = new CommonBit();
+		BitValue.bitClass.updateCtrl = function(a_ix) {
+			var currentBit = (BitValue.index * BitValue.entryBitSpacing) + BitValue.entryBitStart + (BitValue.entryBitSize-1) - a_ix;
+			var byteix = currentBit >> 3;
+			var bytevalue = Core.getByte(byteix);
+			var boolvalue = (((bytevalue >> (currentBit&7))&1) == 1);
+			this.ctrl[a_ix].programChanged = true;
+			this.ctrl[a_ix].setChecked(boolvalue);
+			this.ctrl[a_ix].programChanged = false;
+		}
+		BitValue.bitClass.setCheckFunc = function(a_state) {
+			var thisRef = this.thisRef;
+			var ix = this.index;
+			if (thisRef.ctrl[ix].programChanged == true) {return;}
+			var bitv = (a_state > 0) ? 1 : 0;
+			//var byte_ix = thisRef.bit_ix[ix] >> 3;
+			var value_sub_bit = thisRef.bit_ix[ix];
+			var currentBit = (BitValue.index * BitValue.entryBitSpacing) + BitValue.entryBitStart + value_sub_bit;
+			var byte_ix = currentBit >> 3;
+			var sub_bit = currentBit & 7;
+			var bytev = Core.getByte(byte_ix);
+			bytev &= (0xFF ^ (1 << sub_bit));
+			bytev |= (bitv << sub_bit);
+			Core.setByte(byte_ix, bytev);
+			//thisRef.changeFunc(sub_bit);
+			if (BitValue.usingList == false) {
+				BitValue.editSpin.value = BitValue.getValue(BitValue.index);
+			}
+			BitValue.updateString();
+		}
+		BitValue.bitClass.initBitAttr(BitValue.entryBitSize);
+		//this.bitClass.parentClass = this;
+		//this.bitClass.changeFunc = function(a_bit_index) {
+			//this.parentIntClass.updateControl();
+		//}
+		BitValue.hasBitControls = true;
+		Core.base_y += 12;
+	}
+
+
       BitValue.bitSizeCtrl = BitValue.addLabel("Value bit size: " +  BitValue.entryBitSize);
       if (BitValue.entryBitSize != BitValue.entryBitSpacing) {
            BitValue.bitSpacingCtrl = BitValue.addLabel("Value bit spacing: " + BitValue.entryBitSpacing);
@@ -163,6 +242,7 @@ BitValue.initCtrl = function() {
             BitValue.bitOffsetCtrl = BitValue.addLabel("Bit offset: 0");
             BitValue.byteOffsetCtrl = BitValue.addLabel("Byte offset: 0");
         }
+	
 
       BitValue.updateString();
 
@@ -227,25 +307,28 @@ BitValue.editTextFunc = function(a_text) {
 
    BitValue.editSpin.value = BitValue.getValue(BitValue.index);
 	
-	/*if (BitValue.hasBitControls == true) {
-		BitValue.bitClass.updateStringAll();
-	}*/
+    if (BitValue.hasBitControls == true) {
+	BitValue.bitClass.updateAll();
+    }
 
 }
 
 BitValue.upDownFunc = function(a_value) {
     BitValue.setValue(BitValue.index, a_value);
     BitValue.updateString();
+    if (BitValue.hasBitControls == true) {
+	BitValue.bitClass.updateAll();
+    }
 }
 
 BitValue.listChangeFunc = function(a_value) {
 
-   BitValue.setValue(BitValue.index, a_value);
-	this.statusCtrl.text = "";
+	BitValue.setValue(BitValue.index, a_value);
+	BitValue.statusCtrl.text = "";
 
-	/*if (this.hasBitControls == true) {
-		this.bitClass.updateAll();
-	}*/
+	if (BitValue.hasBitControls == true) {
+		BitValue.bitClass.updateAll();
+	}
 }
 
 
@@ -256,10 +339,22 @@ BitValue.eventFunc = function(a_eventBits) {
     }
     BitValue.updateString();
 
+    if (BitValue.hasBitControls == true) {
+	BitValue.bitClass.updateAll();
+    }
+
     var bitoffset = BitValue.entryBitStart +  (BitValue.index * BitValue.entryBitSpacing);
     var byteoffset = bitoffset >> 3;
     BitValue.bitOffsetCtrl.text = "Bit offset: " + bitoffset;
     BitValue.byteOffsetCtrl.text = "Byte offset: " + byteoffset;
+    
+    if (Core.versionDate >= 251202) {
+	if (typeof DefaultControls.ctrlAPtrEdit == "object") {
+		//Directly update the default control "Active Pointer" display from here.
+		var activePtr = Core.getActivePtr() + byteoffset;
+		DefaultControls.ctrlAPtrEdit.text = "0x" + activePtr.toString(16).toUpperCase();
+	}
+    }
 }
 
 BitValue.updateString = function(a_sourceLength) {
@@ -303,12 +398,12 @@ BitValue.updateString = function(a_sourceLength) {
 
 BitValue.getString = function() {
     var num = BitValue.getValue(BitValue.index);
-    var str = num.toString(10);
+    var str = num.toString(BitValue.base);
     return(str);
 }
 
 BitValue.setString = function(a_str) {
-    var num = parseInt(a_str, 10);
+    var num = parseInt(a_str, BitValue.base);
     if (isNaN(num) == true) {num = 0;}
     var max = (1 << BitValue.entryBitSize)-1;
     if (num < 0) {num = 0;}

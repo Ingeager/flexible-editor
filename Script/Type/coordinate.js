@@ -176,43 +176,52 @@ initRender = function(a_bmv, a_param) {
 }
 
 updateRender = function(a_bmv, a_param) {
-    if (a_param.hasOwnProperty("palette")) {
-	/*var index1 = 0;
-	if (a_param.hasOwnProperty("paletteindex")) {
-	    index1 = a_param.paletteindex;
-	}*/
-	Coord.bgColor = a_param.palette[0];
-	
-	if (a_param.hasOwnProperty("paletteentries")) {
-
-		
-		var entries = Number(a_param.paletteentries);
-		if (entries >= 2) {
-
-			var color1 = a_param.palette[1];
-			if (Coord.hasX == true) {
-				Coord.lineColorV = color1;
-			} else {
-				Coord.lineColorH = color1;
-			}
-	
-			if (entries >= 3) {
-			var color2 = a_param.palette[2];
-			if (Coord.hasX == true) {
-				Coord.lineColorH = color2;
-			}
-			}
-			
-		}
+	    Coord.bmView = a_bmv;
+	    
+	var param_arr = [];
+	if (Array.isArray(a_param) == false) {
+		param_arr.push(a_param);
+	} else {
+		param_arr = a_param;
 	}
-	
+  
+	for (var par_ix = 0; par_ix < param_arr.length; par_ix++) {
+		var v_param = param_arr[par_ix];
+		
+	    if (v_param.hasOwnProperty("palette")) {
+		/*var index1 = 0;
+		if (v_param.hasOwnProperty("paletteindex")) {
+		    index1 = v_param.paletteindex;
+		}*/
+		Coord.bgColor = v_param.palette[0];
+		
+		if (v_param.hasOwnProperty("paletteentries")) {
+
+			
+			var entries = Number(v_param.paletteentries);
+			if (entries >= 2) {
+
+				var color1 = v_param.palette[1];
+				if (Coord.hasX == true) {
+					Coord.lineColorV = color1;
+				} else {
+					Coord.lineColorH = color1;
+				}
+		
+				if (entries >= 3) {
+				var color2 = v_param.palette[2];
+				if (Coord.hasX == true) {
+					Coord.lineColorH = color2;
+				}
+				}
+				
+			}
+		}
+		
+	    }
+	    
+	    Coord.redraw();
     }
-    
-    
-    
-    
-    Coord.bmView = a_bmv;
-    Coord.redraw();
 }
 
 initFetch = function() {
@@ -226,7 +235,7 @@ initFetch = function() {
     
     if (Coord.hasY == true) {
         var a = Core.getByte(Coord.pointerY);
-         returndata.push(a),
+         returndata.push(a);
     }
 
     return(returndata);

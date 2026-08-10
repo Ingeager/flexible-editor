@@ -314,11 +314,10 @@ DefaultControls.arraySliderFunc = function() {
 
 	if (Core.versionDate >= 250823) {
 		Core.setArrayIndex(DefaultControls.arrayTuner.value);
-		Event.dispatch(Event.bit.changeIndex);
 	} else {
 		Core.arrayIndex = DefaultControls.arrayTuner.value;
-		event.dispatch(event.bit.changeindex);
 	}
+
 	DefaultControls.ctrlArraySpinBox.programChanged = true;
 	DefaultControls.ctrlArraySpinBox.value = DefaultControls.arrayTuner.value;
 	DefaultControls.ctrlArraySpinBox.programChanged = false;
@@ -326,20 +325,25 @@ DefaultControls.arraySliderFunc = function() {
 	if (DefaultControls.ctrlAPtrEdit != 0) {
 		DefaultControls.refreshActivePointer();
 	}
+
+	if (Core.versionDate >= 250823) {
+		Event.dispatch(Event.bit.changeIndex);
+	} else {
+		event.dispatch(event.bit.changeindex);
+	}
 }
 
 DefaultControls.arraySpinBoxFunc = function(a_value) {
 	if (DefaultControls.ctrlArraySpinBox.programChanged == true) {
 		return;
 	}
-
- 	if (Core.versionDate >= 250823) {
-	  	Core.setArrayIndex(a_value);
-	  	Event.dispatch(Event.bit.changeIndex);
-	 } else {
+	
+	if (Core.versionDate >= 250823) {
+		Core.setArrayIndex(a_value);
+	} else {
 		Core.arrayIndex = a_value;
-		event.dispatch(event.bit.changeindex);
 	}
+
 	DefaultControls.arrayTuner.programChanged = true;
 	DefaultControls.arrayTuner.value = a_value;
 	DefaultControls.arrayTuner.programChanged = false;
@@ -347,19 +351,30 @@ DefaultControls.arraySpinBoxFunc = function(a_value) {
 	if (DefaultControls.ctrlAPtrEdit != 0) {
 		DefaultControls.refreshActivePointer();
 	}
+
+	if (Core.versionDate >= 250823) {
+		Event.dispatch(Event.bit.changeIndex);
+	} else {
+		event.dispatch(event.bit.changeindex);
+	}
 }
 
 DefaultControls.arrayComboFunc = function(a_value) {
- 	if (Core.versionDate >= 250823) {
-	  	Core.setArrayIndex(a_value);
-	  	Event.dispatch(Event.bit.changeIndex);
-	 } else {
-		Core.arrayIndex = a_value;
-		event.dispatch(event.bit.changeindex);
-	}
 
+	if (Core.versionDate >= 250823) {
+		Core.setArrayIndex(a_value);
+	} else {
+		Core.arrayIndex = a_value;
+	}
+	
 	if (DefaultControls.ctrlAPtrEdit != 0) {
 		DefaultControls.refreshActivePointer();
+	}
+
+	if (Core.versionDate >= 250823) {
+		Event.dispatch(Event.bit.changeIndex);
+	} else {
+		event.dispatch(event.bit.changeindex);
 	}
 }
 

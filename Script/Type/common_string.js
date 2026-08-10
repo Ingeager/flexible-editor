@@ -54,7 +54,6 @@ CommonString.prototype.initRender = function(a_bmv, a_param) {
 
 CommonString.prototype.updateRender = function(a_bmv, a_param) {
     var str = this.strcache;
-    print(str);
     CommonStringRender.drawStringParam(str, a_bmv, a_param, 5*4, 5*6);
 }
 
