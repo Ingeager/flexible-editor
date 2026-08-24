@@ -51,34 +51,10 @@ Instead of writing everything from scratch you may be able to use one of the scr
 You can include scripts for some general handlers. These all start with "common_" in the filenames.
 For example, for palettes, Check out "common_palette.js" or the scripts that includes it.
 
-initFetch / Data fetch function
--------------------------------
-
-The script can have a function, initFetch, that returns an array of data based on an XML element,
-for that data to be used by other scripts. In this environment, all "Core" functions and other
-works the same way, except that GUI elements can't be created.
-An example of this functionality being used is when a PALETTE element is placed under an ITEM element
-with "CHR_" data type.
-
-Example:
-
-function initFetch() {
-
-	//Return an array of 10 elements where each contains a byte of data
-
-	var returnArray = [];
-	for (var a = 0; a < 10; a++) {
-		var byteData = Core.getByte(a);
-		returnArray.push(byteData);
-	}
-
-	return returnArray;
-} 
-
 Creating Q widgets (controls)
 -----------------------------
 
-New-able objects are available that wraps the functionality of Qt widget classes.
+New-able objects are available that wraps the functionality of Qt Widget classes.
 These can be added to the editing window by creating them with "new"
 and setting their properties, and so on.
 Here is a simple example on creating a widget for editing text:
@@ -105,7 +81,8 @@ QFrame
 QSlider
 QCheckBox
 QSpinBox
-QTimer . . . (added for 260205)
+QTimer . . . (added 260205)
+QScrollBar . . . (added 260412)
 
 These are all members of the global object.
 
@@ -136,7 +113,7 @@ QFrame functions:
 
 void	setFrameStyle(int style)
 
-QSlider functions:
+QSlider and QScrollBar functions:
 
 void	setRange(int min, int max)
 void	setSingleStep(int value)
@@ -176,6 +153,10 @@ void	drawBuffer(y1, y2, x1, x2, buffer)	Draws data from the array "buffer" where
 
 (rgb24 is an int containing all 24 bits of the RGB values combined.)
 
+The control has a property:
+
+bool	initialized			Is True if BitmapView has been initialized, False otherwise. . . . (Added 260528)
+
 The control has the following Signals that can be connected to functions:
 
 void	mousePress(button, y, x)
@@ -209,17 +190,125 @@ from and to the binary relative to the pointer described by PTR and RELPTR attri
 
 Often the script only needs to concern itself with that XML Element, but some times references
 to other elements in the XML is involved.
-Most elements in the XML will get an unique Index when it is parsed.
+Most elements in the XML will get an unique Index when it is parsed, counting from 0 and up as
+the document is parsed from  top to bottom.
 (This is not related to "id" attribute, if present any any Element)
 When "Element Index" is mentioned in this document, it refers to this index.
+
+You can obtain the active element's index from "Core.elmRefIndex".
+You can get the indexes of its children using "Core.childElementIndex" or "Core.childElementIndexList".
+You can get the total number of indexes from "Core.getElementCount".
 
 Speed optimizations
 -------------------
 
 If speed is important, the fewer calls to the API, the better. It really is the bottleneck.
-It is probably worth storing datas in buffers even though JS uses 8 bytes to store every Number value.
+It is probably worth storing datas in buffers some times even though JS uses 8 bytes to store every Number value.
 For example, call Core.getByteArray instead of Core.getByte, and BitmapView.drawBuffer as few
 times as possible instead of multiple calls to its other methods.
+
+initFetch / Data fetch function
+-------------------------------
+
+The script can have a function, initFetch, that returns an array of data based on an XML element,
+for that data to be used by other scripts. In this environment, all "Core" functions and other
+works the same way, except that GUI elements can't be created.
+An example of this functionality being used is when a PALETTE element is placed under an ITEM element
+with "CHR_" data type.
+
+Array values are passed to the destination script with the same limitation as JavaScript Numbers (Double Float).
+
+Example:
+
+function initFetch() {
+
+	//Return an array of 10 elements where each contains a byte of data
+
+	var returnArray = [];
+	for (var a = 0; a < 10; a++) {
+		var byteData = Core.getByte(a);
+		returnArray.push(byteData);
+	}
+
+	return returnArray;
+}
+
+initRender / updateRender / Render interface functions
+------------------------------------------------------
+
+The script can have the functions "initRender" and "updateRender".
+If these are present they allow the script to be used with the Render interface,
+meaning it can be used as a type in a Render Child Element.
+
+Both functions have two arguments: A BitmapView object and a Parameter object.
+
+
+function initRender(a_bitmapview, a_parameter) {
+	//Initialize your's scripts data (read attributes, set up object values etc.)
+	//...
+
+	MyObject.bitmapview = a_bitmapview;
+
+	if (a_bitmapview.initialized == false) {
+		var width = 800;
+		var height = 600;
+		MyObject.bitmapview.init(width, height);
+	}
+}
+
+The BitmapView passed from the parent element script can either be initialized or not.
+"initRender" needs to check if the BitmapView object is initalized, and initialize if it's not.
+Check the "initialized" boolean property of the BitmapView object.
+The "a_parameter" argument can be ignored for this function.
+
+function updateRender(a_bitmapview, a_parameter) {
+	//Redraw graphics
+
+	MyObject.bitmapview = a_bitmapview;
+
+	var param_arr = [];
+	if (Array.isArray(a_parameter) == false) {
+		param_arr.push(a_parameter);
+	} else {
+		param_arr = a_parameter;
+	}
+	
+	for (var par_ix = 0; par_ix < param_arr.length; par_ix++) {
+
+		var v_param = param_arr[par_ix];
+
+		var x = 0;
+		var y = 0;
+		var data_index = 0;
+
+		if (v_param.hasOwnProperty("x")) {x = Number(v_param.x);}
+		if (v_param.hasOwnProperty("y")) {y = Number(v_param.y);}
+		if (v_param.hasOwnProperty("index")) {data_index = Number(v_param.index);}
+
+		MyObject.redraw(x, y, data_index);
+
+	}
+}
+
+"updateRender" is called whenever the parent element's script instance needs this script to redraw graphics.
+Be ware that a_bitmapview can be a different BitmapView than the one passed in initRender, so make sure you draw to
+the one passed as the argument here.
+(This is examplified in the MAP data type, which calls updateRender on the same script but for two different BitmapView.)
+
+The parameter argument was designed so that for speed concerns, it can contain parameters for multiple draw requests.
+It's either an object of parameters or an *array* of those objects.
+In other words, if it's an array, you need to draw as many times as there is elements in the array,
+based on the parameters of each index in the array.
+The above code shows a way this can be done.
+
+The "x" and "y" parameters should be checked and used. These are the coordinates into the BitmapView where graphics should be drawn.
+If possible, "index" should be also checked and used as a relative data index. How it's used is up to the script
+(for example array index, string character index or tile index).
+
+See "XML - Render.txt" for a full list of default parameters. You can check for your own custom parameters also.
+
+On the opposite side of things, scripts will call "Core.initRender" and "Core.updateRender" to request a script draw graphics.
+See "Core object members" further down.
 
 Global Objects
 ==============
@@ -271,13 +360,13 @@ For use within Data Type scripts
 
 QWindow window
 
-	Object that wraps the QWindow of the current item.
+	Object that wraps the QWindow of the current Item, in other words the currently open MDI child window.
 	Used when creating new controls, this is passed as argument in the constructor.
 
 Number winpal.bgcolor
 
 	Get the window (background) color of the editing window, represented as a 24 bit (8+8+8) value.
-	(You can't set it however)
+	(You can't set this value however)
 
 void setByte(Number index, Number value)
 
@@ -298,14 +387,14 @@ Number getByteAbs(Number pointer) · · · (Added 251112)
 Array getByteArray(Number bytePointer, Number numOfBytes) . . . (Added 260206)
 
 	Get array of bytes for current Item, starting from "bytePointer".
-	In operations that includes reading and handling a lot of data,
+	In operations which involves reading and handling a lot of data,
 	this is going to be much faster.
 
 void setByteArray(Number bytePointer, Array byteArray, Number numOfBytes) . . . (Added 260221)
 
 	Set array of bytes "byteArray" for current Item, starting from "bytePointer".
 	"numOfBytes" is the number of bytes to write, the array must contain at least that many values.
-	In operations that includes writing a lot of data, calling this is going to be much faster.
+	In operations which involves writing long strings of data, calling this is going to be much faster.
 
 Number getBinarySize() . . . (Added 251201)
 
@@ -315,13 +404,15 @@ Number getActivePtr() . . . (Added 251202)
 
 	Get the calculated active pointer for current Item (position read/written by getByte() and setByte())
 
-Bool hasAttr(String name)
+Bool hasAttr(String name, (Optional) Number elmRefIndex)
 
 	Check if the Item element contains attribute 'name'.
+	You can also check this for another Element in the XML by defining 'elmRefIndex' as the Element Index.
 
-String getAttr(String name)
+String getAttr(String name, (Optional) Number elmRefIndex)
 
 	Returns the value of Item element attribute 'name' as a string.
+	You can also get an attribute of another Element in the XML by defining 'elmRefIndex' as the Element Index.
 
 Number getHexValueAttr(String name)
 
@@ -343,6 +434,18 @@ void setArrayByteSize(Number bytes) · · · (Added 250823)
 
 	Set the byte size of each index in the array. The default is 1.
 
+void setBigEndianByteSize(Number bytes) . . . (Added 251117)
+
+	Toggle internal Big-Endian mode where 'bytes' is size of each value.
+	When data is read or written, the order of each value's bytes is reversed.
+	This is done to the byte index passed to Core.setByte and other routines,
+	not the final calculated pointer.
+	The setting does not affect Core.getByteAbs or Core.getByteAbs.
+	
+Number getElementCount() . . . (Added 260530)
+
+	Get the total number of elements in the registry. (total number of Element Indexes)
+
 Bool hasText()
 
 	Check if the item element has text. (If anything is contained within <item> </item>)
@@ -351,10 +454,37 @@ String getText()
 
 	Obtain the element's text.
 
-Number childElementIndex(String tagName) · · · (Added 260129)
+Number childElementIndex((Optional) String tagName, (Optional) elementIndex) · · · (Added 260129)
 
-	Find first child element of current Item element that has the tag name (tagName),
-	then return its Element Index.
+	Find first child element of current Item element that has the tag name 'tagName',
+	then return its Element Index. OR, if 'elementIndex' is defined, it looks for matching
+	child elements of that Element Index, and returns the index of the first matching child element.
+	If 'tagName' is omitted or blank (""), it returns the first child element of any tag, if it exists.
+	This returns -1 if no matching Element is found.
+
+	(Fix 260226: Returns index of elements of any TAG, not just PALETTE.)
+	(2nd argument added 260801)
+
+Array childElementIndexList((Optional) String tagName, (Optional) elementIndex) . . . (Added 260629)
+
+	Looks for child elements of current Item element that has the tag name 'tagName',
+	then returns an array of the Element Indexes of the matching elements (in order from first to last).
+	OR, if 'elementIndex' is defined, looks for and returns a list of matching child elements for that element.
+	If 'tagName' is omitted or blank (""), it returns the indexes of any child elements regardless of tag.
+	If no children is found, it returns an empty Array.
+
+Number parentElementIndex((Optional) elementIndex) . . . (Added 260801)
+
+	Get the Parent Element Index of the current Item element, or that of
+	the XML Element referenced by "elementIndex" if defined.
+	Returns -1 if there isn't one (will be returned if parent is root Element).
+
+Number getElementTag((Optional) elementIndex) . . . (Added 260701)
+
+	Get the tag of the XML element associated with the script, or that of
+	the XML element referenced by 'elementIndex', if defined.
+	If you want to search through the XML to check if elements has a specific tag,
+	you can create a loop where you call this with every value from 0 to (Core.getElementCount()-1).
 
 Array fetchElementData(Number elmRefIndex) · · · (Added 260129)
 
@@ -362,9 +492,43 @@ Array fetchElementData(Number elmRefIndex) · · · (Added 260129)
 	(This is used by CHR_NES and CHR_SNES data types to get palette data through a PALETTE element)
 	The Element must have a TYPE attribute and the TYPE must have an "initFetch" function
 	in its corresponding script that returns an array of data.
-	(Currently PAL_NES and PAL_15).
-	You can use the "childElementIndex" function as a way to get the element index of a
-	child element.
+	You can use the "childElementIndex" or "childElementIndexList" functions as a way to get the
+	element index of a child element.
+	If there was a problem, this returns an empty array.
+
+Number initRender(Number elmRefIndex, BitmapView bitmapView, Object/Array parameter) . . . (Added 260530)
+
+	Initialize a Render script based on an XML Element with Element Index as elmRefIndex reference.
+	Based on that Element's TYPE attribute, the "initRender" function of the associated script is called.
+	If it doesn't have an initRender function or doesn't support it, nothing will happen.
+	bitmapView must be a BitmapView object that exist, but it can either be initialized, or not, either way is fine.
+	The script called will check if it's initialized and if not, it will initialize the BitmapView
+	with fitting Height and Width settings.
+	"parameter" passes parameters to the initRender function, but is currently unused in this case.
+	This function returns a Handle Index that is later passed in "updateRender", or it
+	returns -1 if there was a problem. I would recommended checking for -1 in the script here.
+
+Number updateRender(Number handle, BitmapView bitmapView, Object/Array parameter) . . . (Added 260530)
+
+	Call the "updateRender" function of a Render script previously initialized with "initRender".
+	"handle" must be a Handle Index returned from initRender when it was called.
+	bitmapView is the target BitmapView to draw to. This CAN be a different one as the one passed
+	in initRender as long as the image is large enough to contain what will be drawn.
+	"parameter" is either an Object with misc. information passed to the script, or an Array of such objects.
+	What members is relevant of "parameter" depends on the context, that is what information that the
+	caller script can pass, and what the receiving script can use.
+	The default members are: x, y, index, palette (Array of RGB24), paletteentries, paletteindex.
+	You should pass as much information as possible.
+
+	updateRender is called whenever needed, whenever you need the graphics redrawn or,
+	you need to redraw with additional or changed parameter information. (like different coordinates or
+	different palette).
+
+	The reason "parameter" can be an Array of these objects is that, if you need to call updateRender
+	multiple times but with different parameters, it is going to be MUCH faster to call it once and
+	pass an array. 
+
+	Returns -1 if there was a problem, otherwise returns 0.
 
 Array getList(String listname)
 
