@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'itemview.h'
 **
-** Created: Mon 8. Dec 21:51:33 2025
+** Created: Mon 24. Aug 23:39:27 2026
 **      by: The Qt Meta Object Compiler version 63 (Qt 4.8.0)
 **
 ** WARNING! All changes made in this file will be lost!

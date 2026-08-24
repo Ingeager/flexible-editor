@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'script.h'
 **
-** Created: Sun 1. Feb 23:59:42 2026
+** Created: Mon 24. Aug 23:39:29 2026
 **      by: The Qt Meta Object Compiler version 63 (Qt 4.8.0)
 **
 ** WARNING! All changes made in this file will be lost!
@@ -820,6 +820,98 @@ int QTimerSC::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
         return _id;
     return _id;
 }
+static const uint qt_meta_data_QScrollBarSC[] = {
+
+ // content:
+       6,       // revision
+       0,       // classname
+       0,    0, // classinfo
+       8,   14, // methods
+       0,    0, // properties
+       0,    0, // enums/sets
+       0,    0, // constructors
+       0,       // flags
+       0,       // signalCount
+
+ // methods: signature, parameters, type, tag, flags
+      18,   14,   13,   13, 0x02,
+      40,   32,   13,   13, 0x02,
+      73,   69,   13,   13, 0x02,
+      97,   89,   13,   13, 0x02,
+     121,  115,   13,   13, 0x02,
+     140,  115,   13,   13, 0x02,
+     169,  157,   13,   13, 0x02,
+     189,  115,   13,   13, 0x02,
+
+       0        // eod
+};
+
+static const char qt_meta_stringdata_QScrollBarSC[] = {
+    "QScrollBarSC\0\0x,y\0move(int,int)\0x,y,w,h\0"
+    "setGeometry(int,int,int,int)\0w,h\0"
+    "resize(int,int)\0min,max\0setRange(int,int)\0"
+    "value\0setSingleStep(int)\0setPageStep(int)\0"
+    "orientation\0setOrientation(int)\0"
+    "setValue(int)\0"
+};
+
+void QScrollBarSC::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+{
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        Q_ASSERT(staticMetaObject.cast(_o));
+        QScrollBarSC *_t = static_cast<QScrollBarSC *>(_o);
+        switch (_id) {
+        case 0: _t->move((*reinterpret_cast< int(*)>(_a[1])),(*reinterpret_cast< int(*)>(_a[2]))); break;
+        case 1: _t->setGeometry((*reinterpret_cast< int(*)>(_a[1])),(*reinterpret_cast< int(*)>(_a[2])),(*reinterpret_cast< int(*)>(_a[3])),(*reinterpret_cast< int(*)>(_a[4]))); break;
+        case 2: _t->resize((*reinterpret_cast< int(*)>(_a[1])),(*reinterpret_cast< int(*)>(_a[2]))); break;
+        case 3: _t->setRange((*reinterpret_cast< int(*)>(_a[1])),(*reinterpret_cast< int(*)>(_a[2]))); break;
+        case 4: _t->setSingleStep((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 5: _t->setPageStep((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 6: _t->setOrientation((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 7: _t->setValue((*reinterpret_cast< int(*)>(_a[1]))); break;
+        default: ;
+        }
+    }
+}
+
+const QMetaObjectExtraData QScrollBarSC::staticMetaObjectExtraData = {
+    0,  qt_static_metacall 
+};
+
+const QMetaObject QScrollBarSC::staticMetaObject = {
+    { &QScrollBar::staticMetaObject, qt_meta_stringdata_QScrollBarSC,
+      qt_meta_data_QScrollBarSC, &staticMetaObjectExtraData }
+};
+
+#ifdef Q_NO_DATA_RELOCATION
+const QMetaObject &QScrollBarSC::getStaticMetaObject() { return staticMetaObject; }
+#endif //Q_NO_DATA_RELOCATION
+
+const QMetaObject *QScrollBarSC::metaObject() const
+{
+    return QObject::d_ptr->metaObject ? QObject::d_ptr->metaObject : &staticMetaObject;
+}
+
+void *QScrollBarSC::qt_metacast(const char *_clname)
+{
+    if (!_clname) return 0;
+    if (!strcmp(_clname, qt_meta_stringdata_QScrollBarSC))
+        return static_cast<void*>(const_cast< QScrollBarSC*>(this));
+    return QScrollBar::qt_metacast(_clname);
+}
+
+int QScrollBarSC::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+{
+    _id = QScrollBar::qt_metacall(_c, _id, _a);
+    if (_id < 0)
+        return _id;
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        if (_id < 8)
+            qt_static_metacall(this, _c, _id, _a);
+        _id -= 8;
+    }
+    return _id;
+}
 static const uint qt_meta_data_BitmapView[] = {
 
  // content:
@@ -827,7 +919,7 @@ static const uint qt_meta_data_BitmapView[] = {
        0,       // classname
        0,    0, // classinfo
       12,   14, // methods
-       0,    0, // properties
+       1,   74, // properties
        0,    0, // enums/sets
        0,    0, // constructors
        0,       // flags
@@ -849,6 +941,9 @@ static const uint qt_meta_data_BitmapView[] = {
      379,  355,   11,   11, 0x02,
      420,   11,   11,   11, 0x02,
 
+ // properties: name, type, flags
+     435,  430, 0x01095103,
+
        0        // eod
 };
 
@@ -866,7 +961,7 @@ static const char qt_meta_stringdata_BitmapView[] = {
     "drawBox(int,int,int,int,int)\0"
     "aY1,aY2,aX1,aX2,aBuffer\0"
     "drawBuffer(int,int,int,int,QVariantList)\0"
-    "refresh()\0"
+    "refresh()\0bool\0initialized\0"
 };
 
 void BitmapView::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
@@ -928,6 +1023,33 @@ int BitmapView::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
             qt_static_metacall(this, _c, _id, _a);
         _id -= 12;
     }
+#ifndef QT_NO_PROPERTIES
+      else if (_c == QMetaObject::ReadProperty) {
+        void *_v = _a[0];
+        switch (_id) {
+        case 0: *reinterpret_cast< bool*>(_v) = getInitialized(); break;
+        }
+        _id -= 1;
+    } else if (_c == QMetaObject::WriteProperty) {
+        void *_v = _a[0];
+        switch (_id) {
+        case 0: setInitialized(*reinterpret_cast< bool*>(_v)); break;
+        }
+        _id -= 1;
+    } else if (_c == QMetaObject::ResetProperty) {
+        _id -= 1;
+    } else if (_c == QMetaObject::QueryPropertyDesignable) {
+        _id -= 1;
+    } else if (_c == QMetaObject::QueryPropertyScriptable) {
+        _id -= 1;
+    } else if (_c == QMetaObject::QueryPropertyStored) {
+        _id -= 1;
+    } else if (_c == QMetaObject::QueryPropertyEditable) {
+        _id -= 1;
+    } else if (_c == QMetaObject::QueryPropertyUser) {
+        _id -= 1;
+    }
+#endif // QT_NO_PROPERTIES
     return _id;
 }
 

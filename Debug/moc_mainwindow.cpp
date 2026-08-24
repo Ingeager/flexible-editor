@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'mainwindow.h'
 **
-** Created: Thu 5. Feb 23:51:33 2026
+** Created: Mon 24. Aug 23:39:25 2026
 **      by: The Qt Meta Object Compiler version 63 (Qt 4.8.0)
 **
 ** WARNING! All changes made in this file will be lost!
@@ -17,13 +17,74 @@
 #endif
 
 QT_BEGIN_MOC_NAMESPACE
+static const uint qt_meta_data_tConfig[] = {
+
+ // content:
+       6,       // revision
+       0,       // classname
+       0,    0, // classinfo
+       0,    0, // methods
+       0,    0, // properties
+       0,    0, // enums/sets
+       0,    0, // constructors
+       0,       // flags
+       0,       // signalCount
+
+       0        // eod
+};
+
+static const char qt_meta_stringdata_tConfig[] = {
+    "tConfig\0"
+};
+
+void tConfig::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+{
+    Q_UNUSED(_o);
+    Q_UNUSED(_id);
+    Q_UNUSED(_c);
+    Q_UNUSED(_a);
+}
+
+const QMetaObjectExtraData tConfig::staticMetaObjectExtraData = {
+    0,  qt_static_metacall 
+};
+
+const QMetaObject tConfig::staticMetaObject = {
+    { &QObject::staticMetaObject, qt_meta_stringdata_tConfig,
+      qt_meta_data_tConfig, &staticMetaObjectExtraData }
+};
+
+#ifdef Q_NO_DATA_RELOCATION
+const QMetaObject &tConfig::getStaticMetaObject() { return staticMetaObject; }
+#endif //Q_NO_DATA_RELOCATION
+
+const QMetaObject *tConfig::metaObject() const
+{
+    return QObject::d_ptr->metaObject ? QObject::d_ptr->metaObject : &staticMetaObject;
+}
+
+void *tConfig::qt_metacast(const char *_clname)
+{
+    if (!_clname) return 0;
+    if (!strcmp(_clname, qt_meta_stringdata_tConfig))
+        return static_cast<void*>(const_cast< tConfig*>(this));
+    return QObject::qt_metacast(_clname);
+}
+
+int tConfig::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+{
+    _id = QObject::qt_metacall(_c, _id, _a);
+    if (_id < 0)
+        return _id;
+    return _id;
+}
 static const uint qt_meta_data_MainWindow[] = {
 
  // content:
        6,       // revision
        0,       // classname
        0,    0, // classinfo
-      19,   14, // methods
+      25,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -50,6 +111,12 @@ static const uint qt_meta_data_MainWindow[] = {
      589,   11,   11,   11, 0x08,
      627,   11,   11,   11, 0x08,
      663,   11,   11,   11, 0x08,
+     696,   11,   11,   11, 0x08,
+     731,   11,   11,   11, 0x08,
+     764,   11,   11,   11, 0x08,
+     798,   11,   11,   11, 0x08,
+     828,   11,   11,   11, 0x08,
+     863,   11,   11,   11, 0x08,
 
        0        // eod
 };
@@ -74,6 +141,12 @@ static const char qt_meta_stringdata_MainWindow[] = {
     "on_actionViewWBufferStats_triggered()\0"
     "on_actionThemeIceDragon_triggered()\0"
     "on_actionThemeNormal_triggered()\0"
+    "on_actionSetBaseOffset_triggered()\0"
+    "on_actionHexEditMode_triggered()\0"
+    "on_actionReloadBinary_triggered()\0"
+    "on_actionAutoLoad_triggered()\0"
+    "on_actionHelpDataTypes_triggered()\0"
+    "on_actionHelpXML_triggered()\0"
 };
 
 void MainWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
@@ -101,6 +174,12 @@ void MainWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         case 16: _t->on_actionViewWBufferStats_triggered(); break;
         case 17: _t->on_actionThemeIceDragon_triggered(); break;
         case 18: _t->on_actionThemeNormal_triggered(); break;
+        case 19: _t->on_actionSetBaseOffset_triggered(); break;
+        case 20: _t->on_actionHexEditMode_triggered(); break;
+        case 21: _t->on_actionReloadBinary_triggered(); break;
+        case 22: _t->on_actionAutoLoad_triggered(); break;
+        case 23: _t->on_actionHelpDataTypes_triggered(); break;
+        case 24: _t->on_actionHelpXML_triggered(); break;
         default: ;
         }
     }
@@ -138,9 +217,9 @@ int MainWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 19)
+        if (_id < 25)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 19;
+        _id -= 25;
     }
     return _id;
 }
