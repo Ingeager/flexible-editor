@@ -1,5 +1,6 @@
 <drd>
-	<item ptr="4" type="byte" name="Header Bits" bit="....CLUT is present..BPP Upper Bit.BPP Lower Bit" list="header"/>
+	<item ptr="4" type="bitvalue" name="Header Bits (CLUT bit)" bit="CLUT is present" size="1" startpos="3"/>
+	<item ptr="4" type="bitvalue" name="Header Bits (Bitmap BPP)" size="2" startpos="0" list="header2"/>
 	<item ptr="8" name="CLUT (If present)">
 		<item relptr="0" name="CLUT byte length" type="int32"/>
 		<item relptr="4" type="int16" name="Frame Buffer X Coordinate"/>
@@ -12,6 +13,8 @@
 		<item key="header"> "4-bit (No CLUT)" "8-bit (No CLUT)" "16-bit (No CLUT)" "24-bit (No CLUT)"
 		"" "" "" ""
 		"4-bit (CLUT)" "8-bit (CLUT)" "16-bit (CLUT)" "24-bit (CLUT)"
+		"" "" "" ""
 		</item>
+		<item key="header2"> "4-bit" "8-bit" "16-bit" "24-bit"</item>
 	</list>
 </drd>

@@ -1,4 +1,52 @@
 <drd>
+	<item name="Stages">
+		<item name="Gravityman Meta16" ptr="D10" len="20" width="2" type="map" pixelh="16" pixelw="16" index_bitsize="10" index_ror="2" screenheight="32" lab="Note: Experimental features - subject to change">
+			<subitem type="chr_nes" ptr="60010" len="1" scale="2">
+				<palette type="pal_nes" ptr="9A0" len="10"/>
+			</subitem>
+		</item>
+		<item name="Gravityman Meta32" ptr="1210" type="map" width="2" len="20" pixelh="32" pixelw="32" screenheight="32">
+			<parameter map.index_src="index" map.dest="paletteindex" map.val_mul="4" ptr="1110" type="bitvalue" len="100" size="2" spacing="8"/>
+			<subitem ptr="D10" type="map" width="2" len="4" pixelh="16" pixelw="16" index_bitsize="10" index_ror="2">
+				<subitem type="chr_nes" ptr="60010" len="1" scale="2">
+					<palette type="pal_nes" ptr="998" len="10"/>
+				</subitem>
+			</subitem>
+		</item>
+		<item name="Gravityman Screen" ptr="1610" type="map" width="8" len="40" pixelh="32" pixelw="32" screenwidth="32">
+			<subitem ptr="1210" parentindex_mul="4" type="map" width="2" len="4" pixelh="16" pixelw="16">
+				<parameter map.index_src="index" map.dest="paletteindex" map.val_mul="4" ptr="1110" type="bitvalue" len="100" size="2" spacing="8"/>
+				<subitem ptr="D10" type="map" width="2" len="4" pixelh="8" pixelw="8" index_bitsize="10" index_ror="2">
+					<subitem type="chr_nes" ptr="60010" len="1" scale="1">
+						<palette type="pal_nes" ptr="998" len="10"/>
+					</subitem>
+				</subitem>
+			</subitem>
+		</item>
+		<item name="Waveman Meta16" ptr="2D10" len="20" width="2" type="map" pixelh="16" pixelw="16" index_bitsize="10" index_ror="2" screenheight="32" lab="Note: Experimental features - subject to change">
+			<subitem type="chr_nes" ptr="61010" len="1" scale="2">
+				<palette type="pal_nes" ptr="2998" len="10"/>
+			</subitem>
+		</item>
+		<item name="Waveman Meta32" ptr="3210" type="map" width="2" len="20" pixelh="32" pixelw="32" screenheight="32">
+			<subitem ptr="2D10" type="map" width="2" len="4" pixelh="16" pixelw="16" index_bitsize="10" index_ror="2">
+				<subitem type="chr_nes" ptr="61010" len="1" scale="2">
+					<palette type="pal_nes" ptr="2998" len="10"/>
+				</subitem>
+			</subitem>
+		</item>
+		<item name="Waveman Screen" ptr="3610" type="map" width="8" len="40" pixelh="32" pixelw="32" screenwidth="32">
+			<subitem ptr="3210" parentindex_mul="4" type="map" width="2" len="4" pixelh="16" pixelw="16">
+				<parameter map.index_src="index" map.dest="paletteindex" map.val_mul="4" ptr="3110" type="bitvalue" len="100" size="2" spacing="8"/>
+				<subitem ptr="2D10" type="map" width="2" len="4" pixelh="8" pixelw="8" index_bitsize="10" index_ror="2">
+					<subitem type="chr_nes" ptr="61010" len="1" scale="1">
+						<palette type="pal_nes" ptr="2998" len="10"/>
+					</subitem>
+				</subitem>
+			</subitem>
+		</item>
+
+	</item>
 	<item name="Music" lab="Song ID's used at different points in the game">
 		<item name="Introduction" type="byte" list="SONGID" ptr="18011"/>
 		<item name="Title Screen" type="byte" ptr="2E09D"/>
@@ -10,18 +58,54 @@
 		<item name="Music for each Level Id" type="byte" len="10" list="SONGID" ptr="3D4E2"/>
 	</item>
 	<item name="Palette" icon="palette">
-		<item ptr="3D4C2" type="pal_nes" len="8" name="Megaman's Sprite Palette" icon="palette"/>
+		<item ptr="3D4C2" type="pal_nes" len="8" name="Megaman's Sprite Palette" icon="palette">
+			<image ptr="40010" len="80" type="chr_nes"/>
+		</item>
 	</item>
 	<item ptr="0" name="CHR">
 		<item ptr="60010" type="chr_nes" len="100" name="Gravityman CHR">
-	<palette type="pal_nes" ptr="9A0" len="4"/>
-</item>
+			<palette type="pal_nes" ptr="998" len="10"/>
+		</item>
+		<item ptr="61010" type="chr_nes" len="100" name="Waveman CHR">
+			<palette type="pal_nes" ptr="2998" len="10"/>
+		</item>
+		<item ptr="62010" type="chr_nes" len="100" name="Stoneman CHR">
+			<palette type="pal_nes" ptr="4998" len="10"/>
+		</item>
+		<item ptr="63010" type="chr_nes" len="100" name="Gyroman CHR">
+			<palette type="pal_nes" ptr="6998" len="10"/>
+		</item>
+		<item ptr="64010" type="chr_nes" len="100" name="Starman CHR">
+			<palette type="pal_nes" ptr="8998" len="10"/>
+		</item>
+		<item ptr="65010" type="chr_nes" len="100" name="Chargeman CHR">
+			<palette type="pal_nes" ptr="A998" len="10"/>
+		</item>
+		<item ptr="66010" type="chr_nes" len="100" name="Napalmman CHR">
+			<palette type="pal_nes" ptr="C998" len="10"/>
+		</item>
+		<item ptr="67010" type="chr_nes" len="100" name="Crystalman CHR">
+			<palette type="pal_nes" ptr="E998" len="10"/>
+		</item>
+					
 	</item>
 	<item name="Misc" icon="value">
 		<item name="Stage Select Layout" type="byte" list="LEVELS" ptr="2EDB4" len="9" icon="array"/>
-		<item name="MM Health Bar X coordinate" ptr="3E2F4" type="coordinate" x="0" icon="cross" gridx="8"/>
-		<item name="Weapon Energy Bar X coordinate" ptr="3E2F5" type="coordinate" x="0" icon="cross" gridx="8"/>
-		<item name="Enemy Health Bar X coordinate" ptr="3E2F6" type="coordinate" x="0" icon="cross" gridx="8"/>
+		<item name="MM Health Bar X coordinate" ptr="3E2F4" type="coordinate" x="0" icon="cross" gridx="8" gridy="8">
+			<fgimage param.y="32" ptr="41250" type="chr_nes" len="1" scale="2">
+				<palette ptr="3D4C6" type="pal_nes" len="8"/>
+			</fgimage>
+		</item>
+		<item name="Weapon Energy Bar X coordinate" ptr="3E2F5" type="coordinate" x="0" icon="cross" gridx="8" gridy="8">
+			<fgimage param.y="32" ptr="41250" type="chr_nes" len="1" scale="2">
+				<palette ptr="3D4C2" type="pal_nes" len="8"/>
+			</fgimage>
+		</item>
+		<item name="Enemy Health Bar X coordinate" ptr="3E2F6" type="coordinate" x="0" icon="cross" gridx="8" gridy="8">
+			<fgimage param.y="32" ptr="41250" type="chr_nes" len="1" scale="2">
+				<palette ptr="3D4C2" type="pal_nes" len="8"/>
+			</fgimage>
+		</item>
 	</item>
 	<item name="MM Stats" icon="value">
 		<item name="Jump Gravity" type="byte" ptr="3DDFC" icon="value"/>
