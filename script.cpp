@@ -3,7 +3,7 @@
 #include "mainwindow.h"
 
 #include <QMessageBox>
-
+#include <QScriptValueIterator>
 
 static QScriptValue scriptF_hasText(QScriptContext *aContext, QScriptEngine *aEngine) {
     QDomElement vElement = Core.getEngineElmRef(aEngine).toElement();
@@ -30,25 +30,10 @@ static QScriptValue scriptF_getText(QScriptContext *aContext, QScriptEngine *aEn
     return(text);
 }
 
-static QScriptValue scriptF_hasAttr(QScriptContext *aContext, QScriptEngine *aEngine) {
-
-    if (aContext->argumentCount() > 0) {
-        QString vAttrName = aContext->argument(0).toString();
-        
-        if (Core.itemHasAttr(vAttrName, Core.getEngineElmRef(aEngine))) {
-            return (true);
-        } else {
-            return (false);
-        }
-    }
-    
-    return (false);
-}
-
 
 static QScriptValue scriptF_getByte(QScriptContext *aContext, QScriptEngine *aEngine) {
 
-    if (aContext->argumentCount() > 0) {
+    if (aContext->argumentCount() >= 1) {
         qint32 vArgPointer = aContext->argument(0).toUInt32();
         int vIndex = Core.getEngineElmIndex(aEngine);
        
@@ -60,7 +45,7 @@ static QScriptValue scriptF_getByte(QScriptContext *aContext, QScriptEngine *aEn
 
 static QScriptValue scriptF_setByte(QScriptContext *aContext, QScriptEngine *aEngine) {
     
-    if (aContext->argumentCount() > 1) {
+    if (aContext->argumentCount() >= 2) {
         qint32 vArgPointer = aContext->argument(0).toUInt32();
         quint32 vValue = aContext->argument(1).toUInt32();
         int vIndex = Core.getEngineElmIndex(aEngine);
@@ -73,7 +58,7 @@ static QScriptValue scriptF_setByte(QScriptContext *aContext, QScriptEngine *aEn
 
 static QScriptValue scriptF_getByteAbs(QScriptContext *aContext, QScriptEngine *aEngine) {
 
-    if (aContext->argumentCount() > 0) {
+    if (aContext->argumentCount() >= 1) {
         quint64 vArgPointer = aContext->argument(0).toVariant().toULongLong();
         return(Core.getFileByte(vArgPointer));
     
@@ -83,7 +68,7 @@ static QScriptValue scriptF_getByteAbs(QScriptContext *aContext, QScriptEngine *
 
 static QScriptValue scriptF_setByteAbs(QScriptContext *aContext, QScriptEngine *aEngine) {
 
-    if (aContext->argumentCount() > 1) {
+    if (aContext->argumentCount() >= 2) {
         quint64 vArgPointer = aContext->argument(0).toVariant().toULongLong();
         quint32 vValue = aContext->argument(1).toUInt32();
         Core.setFileByte(vArgPointer, vValue);
@@ -128,35 +113,56 @@ static QScriptValue scriptF_setByteArray(QScriptContext *aContext, QScriptEngine
 }
 
 
-static QScriptValue scriptF_getAttr(QScriptContext *aContext, QScriptEngine *aEngine) {
+static QScriptValue scriptF_hasAttr(QScriptContext *aContext, QScriptEngine *aEngine) {
 
-    QScriptValue vDefaultReturnVal;
-    
-    if (aContext->argumentCount() > 0) {
+    if (aContext->argumentCount() >= 1) {
         QString vAttrName = aContext->argument(0).toString();
+        QDomElement vElmRef = Core.getEngineElmRef(aEngine);
+        if (aContext->argumentCount() >= 2) {
+            int vElmRefIndex = aContext->argument(1).toInteger();
+            vElmRef = Core.mItemElmTable[vElmRefIndex].mElmRef;
+        }
         
-        QString vAttr = Core.getItemAttr(vAttrName, Core.getEngineElmRef(aEngine));
-        return vAttr;
+        if (Core.itemHasAttr(vAttrName, vElmRef)) {
+            return (true);
+        } else {
+            return (false);
+        }
     }
     
-    return vDefaultReturnVal;
+    return (false);
+}
+
+
+static QScriptValue scriptF_getAttr(QScriptContext *aContext, QScriptEngine *aEngine) {
+
+    QScriptValue vReturnVal = 0;
+    
+    if (aContext->argumentCount() >= 1) {
+        QString vAttrName = aContext->argument(0).toString();
+        QDomElement vElmRef = Core.getEngineElmRef(aEngine);
+        if (aContext->argumentCount() >= 2) {
+            int vElmRefIndex = aContext->argument(1).toInteger();
+            vElmRef = Core.mItemElmTable[vElmRefIndex].mElmRef;
+        }
+        
+        return(Core.getItemAttr(vAttrName, vElmRef));
+    }
+    
+    return vReturnVal;
 }
 
 static QScriptValue scriptF_getHexValueAttr(QScriptContext *aContext, QScriptEngine *aEngine) {
 
-    QScriptValue vReturnVal;
     QScriptValue vHexV = scriptF_getAttr(aContext, aEngine);
-    
-    int vRetVInt = vHexV.toString().toInt(0, 16);
-    vReturnVal = vRetVInt;
-    return vReturnVal;
+    return( vHexV.toString().toInt(0, 16) );
 }
 
 
 static QScriptValue scriptF_getFlag(QScriptContext *aContext, QScriptEngine *aEngine) {
    QScriptValue vDefaultReturnVal = false;
     
-    if (aContext->argumentCount() > 0) {
+    if (aContext->argumentCount() >= 1) {
         QString vFlagName = aContext->argument(0).toString();
         
         bool vFlagBool = Core.getItemFlag(vFlagName, Core.getEngineElmRef(aEngine));
@@ -169,7 +175,7 @@ static QScriptValue scriptF_getFlag(QScriptContext *aContext, QScriptEngine *aEn
 static QScriptValue scriptF_setArrayIndex(QScriptContext *aContext, QScriptEngine *aEngine) {
 
     QScriptValue vReturnVal;
-    if (aContext->argumentCount() > 0) {
+    if (aContext->argumentCount() >= 1) {
         int vArrIndex = aContext->argument(0).toInt32();
         int vElmIndex = Core.getEngineElmIndex(aEngine);
         Core.mItemElmTable[vElmIndex].mArrayIndex = vArrIndex;
@@ -188,7 +194,7 @@ static QScriptValue scriptF_getArrayIndex(QScriptContext *aContext, QScriptEngin
 
 static QScriptValue scriptF_setArrayByteSize(QScriptContext *aContext, QScriptEngine *aEngine) {
 
-    if (aContext->argumentCount() > 0) {
+    if (aContext->argumentCount() >= 1) {
         int vByteSize = aContext->argument(0).toInt32();
         int vElmIndex = Core.getEngineElmIndex(aEngine);
         Core.mItemElmTable[vElmIndex].mArrayByteSz = vByteSize;
@@ -198,7 +204,7 @@ static QScriptValue scriptF_setArrayByteSize(QScriptContext *aContext, QScriptEn
 
 static QScriptValue scriptF_setBigEndianByteSize(QScriptContext *aContext, QScriptEngine *aEngine) {
 
-    if (aContext->argumentCount() > 0) {
+    if (aContext->argumentCount() >= 1) {
         int vByteSize = aContext->argument(0).toInt32();
         int vElmIndex = Core.getEngineElmIndex(aEngine);
         Core.mItemElmTable[vElmIndex].mBigEndianByteSz = vByteSize;
@@ -214,6 +220,13 @@ static QScriptValue scriptF_getElementIndex(QScriptContext *aContext, QScriptEng
     QScriptValue vCore = vGlob.property("Core");
     int vIndex = vCore.property("elmRefIndex").toInteger();
     vReturnVal = vIndex;
+    return vReturnVal;
+}
+
+static QScriptValue scriptF_getElementCount(QScriptContext *aContext, QScriptEngine *aEngine) {
+
+    QScriptValue vReturnVal = 0;    
+    vReturnVal = Core.mItemElmTable.count();
     return vReturnVal;
 }
 
@@ -240,15 +253,16 @@ static QScriptValue scriptF_getActivePtr(QScriptContext *aContext, QScriptEngine
 
     QScriptValue vReturnVal;
     int vIndex = Core.getEngineElmIndex(aEngine);
-    qsreal vPtr = Core.calcItemPtr(0, Core.mItemElmTable[vIndex].mElmRef, vIndex, false);
+    qsreal vPtr = Core.calcItemPtr(0, Core.mItemElmTable[vIndex].mElmRef, vIndex, false, false);
     return QScriptValue(vPtr);
 }
 
 static QScriptValue scriptF_fetchElementData(QScriptContext *aContext, QScriptEngine *aEngine) {
 
-    QScriptValue vReturnVal;
-    QScriptEngine vFetchEngine;
-    if (aContext->argumentCount() > 0) {
+    QScriptValue vReturnVal = aEngine->newArray(); //Return empty array if there are any problems
+
+    if (aContext->argumentCount() >= 1) {
+        QScriptEngine vFetchEngine;
         int vIndex = aContext->argument(0).toInteger();
 
         Core.initTypeScript(vIndex, &vFetchEngine);
@@ -260,40 +274,258 @@ static QScriptValue scriptF_fetchElementData(QScriptContext *aContext, QScriptEn
         QScriptValue vData = vInitFunc.call();
 
         if (vFetchEngine.hasUncaughtException()) {
-            QMessageBox vErrorBox;
-            QString vError;
-            vError = vFetchEngine.uncaughtException().toString();
-            vErrorBox.setText(vError);
-            vErrorBox.exec();
+            Core.error("Error when calling \"initFetch\":\n" + vFetchEngine.uncaughtException().toString(), 3);
             return vReturnVal;
         }
 
         QVariant vData2 = vData.toVariant();
         QList<QVariant> vData3 = vData2.toList();
-        QScriptValue vData4 = aEngine->newArray(vData3.count());
+        QScriptValue vDataNew = aEngine->newArray(vData3.count());
         for (int vIx = 0; vIx < vData3.count(); vIx++) {
-            vData4.setProperty(vIx, vData3.at(vIx).toInt());
+            vDataNew.setProperty(vIx, vData3.at(vIx).toDouble());
         }
-        return vData4;
+
+        return vDataNew;
     }
     return vReturnVal;
 }
 
-static QScriptValue scriptF_childElementIndex(QScriptContext *aContext, QScriptEngine *aEngine) {
-    QScriptValue vReturnVal = -1;
-    if (aContext->argumentCount() > 0) {
-        QString vElementName = aContext->argument(0).toString();
-        int vElementRef = Core.getEngineElmIndex(aEngine);
-        for (int vCount = 0; vCount < Core.mItemElmTable[vElementRef].mChildIndexes.count(); vCount++) {
-            int vChildElementIndex = Core.mItemElmTable[vElementRef].mChildIndexes.at(vCount);
-            QDomElement vChildElm = Core.mItemElmTable[vChildElementIndex].mElmRef;
-            if (vChildElm.nodeName().compare(vElementName, Qt::CaseInsensitive) == 0) {
-                vReturnVal = vChildElementIndex;
-                break;
-            } 
+static QScriptValue scriptF_initRender(QScriptContext *aContext, QScriptEngine *aEngine) {
+    if (aContext->argumentCount() >= 3) {
+        int vAIndex = aContext->argument(0).toInteger();
+    
+        int vRenderEngCount = Core.mRenderScriptEngine.count();
+        QScriptEngine *vRenderEngine = new QScriptEngine;
+        Core.mRenderScriptEngine.append(vRenderEngine);
+        
+        Core.initTypeScript(vAIndex, vRenderEngine);
+        scriptEnvSetup(vRenderEngine, 0, vAIndex);
+
+        QObject *vBitmapViewQO = aContext->argument(1).toQObject();
+        QScriptValue vABitmapView = vRenderEngine->newQObject(vBitmapViewQO);
+        QScriptValue vAData = vRenderEngine->newObject();
+
+        QScriptValue vGlob = vRenderEngine->globalObject();
+        QScriptValue vInitFunc = vGlob.property("initRender");
+        
+        QScriptValueList vArguments;
+        vArguments.append(vABitmapView);
+        vArguments.append(vAData);
+        
+        QScriptValue vData = vInitFunc.call(vGlob, vArguments);
+        if (vRenderEngine->hasUncaughtException()) {
+            Core.error("Error when calling \"initRender\":\n" + vRenderEngine->uncaughtException().toString(), 3);
+            return -1;
+        }
+
+        return vRenderEngCount; //Return handle
+    }
+    return -1;
+}
+
+static QScriptValue scriptF_updateRender(QScriptContext *aContext, QScriptEngine *aEngine) {
+    if (aContext->argumentCount() < 3) {return -1;}
+
+    int vHandle = aContext->argument(0).toInteger();
+    if ((vHandle < 0) || (vHandle >= Core.mRenderScriptEngine.count())) {return -1;}
+    
+    QScriptEngine *vRenderEngine = Core.mRenderScriptEngine[vHandle];
+    
+    QScriptValue vRenderGlob = vRenderEngine->globalObject();
+
+    QObject *vBitmapViewQO = aContext->argument(1).toQObject();
+    QScriptValue vOldParamData = aContext->argument(2);
+    
+    //Check for parameter setup in the XML. (Hacky way of finding elmRefIndex, will probably change it).
+    QStringList vXMLParamName;
+    QStringList vXMLParamValue;
+    QScriptValue vCoreElmRef = vRenderGlob.property("Core");
+    int vElmRef = vCoreElmRef.property("elmRefIndex").toInteger();
+    if ((vElmRef >= 0) && (vElmRef < Core.mItemElmTable.size())) {
+        QDomElement vElm = Core.mItemElmTable[vElmRef].mElmRef;
+        QDomNamedNodeMap vMap = vElm.attributes();
+        for (int vIx = 0; vIx < vMap.length(); vIx++) {
+            QString vName = vMap.item(vIx).nodeName();
+            if (vName.length() > 6) {
+                if (vName.left(6).compare("param.", Qt::CaseInsensitive) == 0) {
+
+                    QString vRightSide = vName.remove(0, 6);
+                    QString vValue = vMap.item(vIx).nodeValue();
+                    vXMLParamName.append(vRightSide);
+                    vXMLParamValue.append(vValue);
+                }
+            }
         }
     }
+    
+    //Go through parameters from the calling script and "convert" all properties to script values
+    //passed to the receiving Render script.
+    //This doesn't support objects at the moment, except the base property being an array.
+    
+    QScriptValue vNewParamArray = vRenderEngine->newArray(0);
+    int vLoopCount = 1;
+    bool vArrayMode = false;
+    if (vOldParamData.isArray()) {
+        vLoopCount = vOldParamData.property("length").toInteger();
+        vArrayMode = true;
+    }
+    QScriptValue vNewParamData;
+    for (int vIx = 0; vIx < vLoopCount; vIx++) {
+        vNewParamData = vRenderEngine->newObject();
+        QScriptValue vThisOldParamData;
+        if (vArrayMode == false) {
+            vThisOldParamData = vOldParamData;
+        } else {
+            vThisOldParamData = vOldParamData.property(vIx);
+        }
+        QScriptValueIterator vOldParamIterator(vThisOldParamData);
+        while (vOldParamIterator.hasNext()) {
+            vOldParamIterator.next();
+            QString vName = vOldParamIterator.name();
+            QScriptValue vPropertyValue = vOldParamIterator.value();
+            QScriptValue vNewValue;
+            if (vPropertyValue.isNumber()) {
+                vNewValue = vPropertyValue.toNumber();
+            } else if (vPropertyValue.isBool()) {
+                vNewValue = vPropertyValue.toBool();
+            } else if (vPropertyValue.isString()) {
+                vNewValue = vPropertyValue.toString();
+            } else if (vPropertyValue.isArray()) {
+                QScriptValueIterator vArrayProps(vPropertyValue);
+                vNewValue = vRenderEngine->newArray();
+                while (vArrayProps.hasNext()) {
+                    vArrayProps.next();
+                    QString vArrayPropName = vArrayProps.name();
+                    bool vOk;
+                    int vIndex = vArrayPropName.toInt(&vOk);
+                    if (vOk == true) {
+                        vNewValue.setProperty(vIndex, vArrayProps.value().toNumber());
+                    }
+                }
+            }
+            vNewParamData.setProperty(vName, vNewValue);
+        }
+        
+        for (int vIx = 0; vIx < vXMLParamName.count(); vIx++) {
+            vNewParamData.setProperty(vXMLParamName[vIx], QScriptValue(vXMLParamValue[vIx]));
+        }
+        
+        if (vArrayMode == true) {
+            vNewParamArray.setProperty(vIx, vNewParamData);
+        }
+    }
+
+    if (vArrayMode == true) {
+        vNewParamData = vNewParamArray;
+    }
+    
+    QScriptValue vABitmapView = vRenderEngine->newQObject(vBitmapViewQO);
+    
+    QScriptValue vInitFunc = vRenderGlob.property("updateRender");
+    
+    //Pass BitmapView as 1st argument, and parameters as the 2nd.
+    QScriptValueList vArguments;
+    vArguments.append(vABitmapView);
+    vArguments.append(vNewParamData);
+    
+    vInitFunc.call(vRenderGlob, vArguments);
+    if (vRenderEngine->hasUncaughtException()) {
+        Core.error("Error when calling \"updateRender\":\n" + vRenderEngine->uncaughtException().toString(), 3);
+        return -1;
+    }
+    
+    return 0;
+}
+
+static QScriptValue scriptF_childElementIndex(QScriptContext *aContext, QScriptEngine *aEngine) {
+    QScriptValue vReturnVal = -1;
+    bool vListAny = true;
+    QString vElementName = "";
+    int vElementRef = 0;
+    if (aContext->argumentCount() >= 2) {
+        vElementRef = aContext->argument(1).toInt32();
+    } else {
+        vElementRef = Core.getEngineElmIndex(aEngine);
+    }
+    if (aContext->argumentCount() >= 1) {
+        vElementName = aContext->argument(0).toString();
+        vListAny = vElementName.isEmpty();
+    }
+    
+
+    for (int vCount = 0; vCount < Core.mItemElmTable[vElementRef].mChildIndexes.count(); vCount++) {
+        int vChildElementIndex = Core.mItemElmTable[vElementRef].mChildIndexes.at(vCount);
+        QDomElement vChildElm = Core.mItemElmTable[vChildElementIndex].mElmRef;
+        if ((vListAny == true) || (vChildElm.nodeName().compare(vElementName, Qt::CaseInsensitive) == 0)) {
+            return(vChildElementIndex);
+        } 
+    }
     return vReturnVal;
+}
+
+static QScriptValue scriptF_childElementIndexList(QScriptContext *aContext, QScriptEngine *aEngine) {
+    
+    bool vListAll = true;
+    QString vElementName = "";
+    int vElementRef = 0;
+    if (aContext->argumentCount() >= 2) {
+        vElementRef = aContext->argument(1).toInt32();
+    } else {
+        vElementRef = Core.getEngineElmIndex(aEngine);
+    }
+    
+    if (aContext->argumentCount() >= 1) {
+        vElementName = aContext->argument(0).toString();
+        vListAll = vElementName.isEmpty();
+    }
+
+    QList<int> vIndexQList;
+    for (int vCount = 0; vCount < Core.mItemElmTable[vElementRef].mChildIndexes.count(); vCount++) {
+        int vChildElementIndex = Core.mItemElmTable[vElementRef].mChildIndexes.at(vCount);
+        QDomElement vChildElm = Core.mItemElmTable[vChildElementIndex].mElmRef;
+
+        if ((vListAll == true) || (vChildElm.nodeName().compare(vElementName, Qt::CaseInsensitive) == 0)) {
+            vIndexQList.append(vChildElementIndex);
+        }
+    }
+    QScriptValue vIndexScriptList = aEngine->newArray(vIndexQList.size());
+    for (int vIndex = 0; vIndex < vIndexQList.size(); vIndex++) {
+        vIndexScriptList.setProperty(vIndex, vIndexQList[vIndex]);
+    }
+    return vIndexScriptList; //Returns an empty array if there are no results.
+
+}
+
+static QScriptValue scriptF_parentElementIndex(QScriptContext *aContext, QScriptEngine *aEngine) {
+
+    int vElementRef = 0; 
+    if (aContext->argumentCount() >= 1) {
+        vElementRef = aContext->argument(0).toInt32();
+    } else {
+        vElementRef = Core.getEngineElmIndex(aEngine);
+    }
+    
+    if ((vElementRef >= 0) && (vElementRef < Core.mItemElmTable.size())) {
+        return(Core.mItemElmTable[vElementRef].mParentIndex);
+    }
+
+    return -1;
+}
+
+
+static QScriptValue scriptF_getElementTag(QScriptContext *aContext, QScriptEngine *aEngine) {
+    int vElmRefIndex = 0;
+    if (aContext->argumentCount() >= 1) {
+       vElmRefIndex = aContext->argument(0).toInteger();
+    } else {
+       vElmRefIndex = Core.getEngineElmIndex(aEngine);
+    }
+    if ((vElmRefIndex >= 0) && (vElmRefIndex < Core.mItemElmTable.size())) {
+        QDomElement vElmRef = Core.mItemElmTable[vElmRefIndex].mElmRef;
+        return vElmRef.tagName();
+    } else {
+        return "";
+    }
 }
 
 static QScriptValue scriptF_customize(QScriptContext *aContext, QScriptEngine *aEngine) {
@@ -397,7 +629,7 @@ static QScriptValue scriptF_loadTextFile(QScriptContext *aContext, QScriptEngine
         Core.error("Core.loadTextFile could not load: " + vFileName, 1);
     }
     
-    return (vReturnVal);
+    return vReturnVal;
 }
 
 static QScriptValue scriptF_stringDecode(QScriptContext *aContext, QScriptEngine *aEngine) {
@@ -463,6 +695,19 @@ static QScriptValue scriptF_stringEncode(QScriptContext *aContext, QScriptEngine
     return (vReturnVal);
 }
 
+void QSliderSC::setValue(int value) {
+    programChanged = true;
+    QAbstractSlider::setValue(value);
+    programChanged = false;
+}
+
+void QScrollBarSC::setValue(int value) {
+    programChanged = true;
+    QAbstractSlider::setValue(value);
+    programChanged = false;
+}
+
+
 #ifdef QT_DEBUG
 
 static QScriptValue scriptF_getMSTimer(QScriptContext *aContext, QScriptEngine *aEngine) {
@@ -473,6 +718,8 @@ static QScriptValue scriptF_getMSTimer(QScriptContext *aContext, QScriptEngine *
 }
 
 #endif
+
+
 
 void BitmapView::init (int aWidth, int aHeight) {
     
@@ -495,6 +742,7 @@ void BitmapView::init (int aWidth, int aHeight) {
    
     setScene(&mScene);
    // scale(1, 1);
+   mInitialized = true;
 }
 
 void BitmapView::mouseMoveEvent(QMouseEvent *event) {   
@@ -519,6 +767,11 @@ void BitmapView::refresh() {
 }
 
 void BitmapView::setPixel(int aY, int aX, int aValue) {
+
+    if ((aY >= mImage.height()) || (aX >= mImage.width())) {
+        return;
+    }
+    
 //    Note sure which is faster.
 //    mImage.setPixel(aX, aY, aValue);
     quint32 *pixp = (QRgb*) mImage.scanLine(aY);
@@ -527,6 +780,12 @@ void BitmapView::setPixel(int aY, int aX, int aValue) {
 }
 
 void BitmapView::drawLineX(int aY, int aX1, int aX2, int aValue) {
+
+    if ((aY >= mImage.height()) ||
+        (aX1 >= mImage.width()) || (aX2 >= mImage.width())) {
+            return;
+    }
+    
     QRgb vTo = aValue;
 
     int vLenX = (aX2 - aX1)+1;
@@ -538,8 +797,13 @@ void BitmapView::drawLineX(int aY, int aX1, int aX2, int aValue) {
 }
 
 void BitmapView::drawLineY(int aY1, int aY2, int aX, int aValue) {
+
+    if ((aY1 >= mImage.height()) || (aY2 >= mImage.height()) ||
+        (aX >= mImage.width())) {
+            return;
+    }
+    
     QRgb vTo = aValue;
-   
     int vLenY = (aY2 - aY1)+1;
     int vLineByteJump = mImage.width();
     QRgb *pixp = (QRgb*) mImage.scanLine(aY1);
@@ -551,8 +815,13 @@ void BitmapView::drawLineY(int aY1, int aY2, int aX, int aValue) {
 }
 
 void BitmapView::drawBox(int aY1, int aY2, int aX1, int aX2, int aValue) {
-    QRgb vTo = aValue;
 
+
+    if ((aY1 >= mImage.height()) || (aY2 >= mImage.height()) ||
+        (aX1 >= mImage.width()) || (aX2 >= mImage.width())) {
+            return;
+    }
+    QRgb vTo = aValue;
     int vLenY = (aY2 - aY1)+1;
     int vLenX = (aX2 - aX1)+1;
     int vLineByteJump = mImage.width();
@@ -571,6 +840,11 @@ void BitmapView::drawBox(int aY1, int aY2, int aX1, int aX2, int aValue) {
 
 void BitmapView::drawBuffer(int aY1, int aY2, int aX1, int aX2, QVariantList aBuffer) {
 
+
+    if ((aY1 >= mImage.height()) || (aY2 >= mImage.height()) ||
+        (aX1 >= mImage.width()) || (aX2 >= mImage.width())) {
+            return;
+    }
     int vIndexCount = 0;
     int vLenY = (aY2 - aY1)+1;
     int vLenX = (aX2 - aX1)+1;
@@ -596,6 +870,8 @@ void tEventForScript::dispatch(int aEventCode) {
 }
 
 void scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElmRefIndex ) {
+    //aEngine->setProcessEventsInterval(10);
+
     QScriptValue vGlob = aEngine->globalObject();    
 
     QScriptValue vEvent = aEngine->newQObject(Core.mEventForScript);
@@ -618,6 +894,7 @@ void scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElmRefInde
     vGlob.setProperty("QCheckBox", aEngine->scriptValueFromQMetaObject<QCheckBoxSC>());
     vGlob.setProperty("QSpinBox", aEngine->scriptValueFromQMetaObject<QSpinBoxSC>());
     vGlob.setProperty("QTimer", aEngine->scriptValueFromQMetaObject<QTimerSC>());
+    vGlob.setProperty("QScrollBar", aEngine->scriptValueFromQMetaObject<QScrollBarSC>());
     
     vGlob.setProperty("BitmapView", aEngine->scriptValueFromQMetaObject<BitmapView>());
 
@@ -638,6 +915,7 @@ void scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElmRefInde
     vCore.setProperty("getByteArray", aEngine->newFunction(&scriptF_getByteArray, 2));
     vCore.setProperty("setByteArray", aEngine->newFunction(&scriptF_setByteArray, 3));
     vCore.setProperty("getElementIndex", aEngine->newFunction(&scriptF_getElementIndex, 0));
+    vCore.setProperty("getElementCount", aEngine->newFunction(&scriptF_getElementCount, 0));
     vCore.setProperty("getBinarySize", aEngine->newFunction(&scriptF_getBinarySize, 0));
     vCore.setProperty("getActivePtr", aEngine->newFunction(&scriptF_getActivePtr, 0));
     vCore.setProperty("setArrayIndex", aEngine->newFunction(&scriptF_setArrayIndex, 1));
@@ -645,7 +923,13 @@ void scriptEnvSetup(QScriptEngine *aEngine, QWidget *aWindowVar, int aElmRefInde
     vCore.setProperty("setBigEndianByteSize", aEngine->newFunction(scriptF_setBigEndianByteSize, 1));
     vCore.setProperty("setArrayByteSize", aEngine->newFunction(&scriptF_setArrayByteSize, 1));
     vCore.setProperty("childElementIndex", aEngine->newFunction(&scriptF_childElementIndex, 1));
-    vCore.setProperty("fetchElementData", aEngine->newFunction(&scriptF_fetchElementData, 1));  
+    vCore.setProperty("childElementIndexList", aEngine->newFunction(&scriptF_childElementIndexList, 1));
+    vCore.setProperty("parentElementIndex", aEngine->newFunction(&scriptF_parentElementIndex, 1));
+    vCore.setProperty("getElementTag", aEngine->newFunction(&scriptF_getElementTag, 1));
+    
+    vCore.setProperty("fetchElementData", aEngine->newFunction(&scriptF_fetchElementData, 1)); 
+    vCore.setProperty("initRender", aEngine->newFunction(&scriptF_initRender, 3));
+    vCore.setProperty("updateRender", aEngine->newFunction(&scriptF_updateRender, 3));
     vCore.setProperty("customize", aEngine->newFunction(&scriptF_customize, 3));
     vCore.setProperty("getList", aEngine->newFunction(&scriptF_getList, 1));
     vCore.setProperty("loadTextFile", aEngine->newFunction(&scriptF_loadTextFile, 1));

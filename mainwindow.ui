@@ -82,6 +82,9 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="styleSheet">
+          <string notr="true">background-image: rgb(255, 0, 0)</string>
+         </property>
          <property name="verticalScrollBarPolicy">
           <enum>Qt::ScrollBarAsNeeded</enum>
          </property>
@@ -206,6 +209,7 @@
     </property>
     <addaction name="actionOpenBinary"/>
     <addaction name="actionOpenBinBufMode"/>
+    <addaction name="actionReloadBinary"/>
     <addaction name="actionSaveBinary"/>
     <addaction name="separator"/>
     <addaction name="actionOpenXML"/>
@@ -213,6 +217,10 @@
     <addaction name="actionReloadXML"/>
     <addaction name="actionSaveXML"/>
     <addaction name="actionImport_XML"/>
+    <addaction name="separator"/>
+    <addaction name="actionAutoLoad"/>
+    <addaction name="separator"/>
+    <addaction name="actionHexEditMode"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
@@ -225,6 +233,8 @@
     <addaction name="actionDeleteItem"/>
     <addaction name="separator"/>
     <addaction name="actionClearXML"/>
+    <addaction name="separator"/>
+    <addaction name="actionSetBaseOffset"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -239,10 +249,18 @@
     <addaction name="actionThemeNormal"/>
     <addaction name="actionThemeIceDragon"/>
    </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionHelpDataTypes"/>
+    <addaction name="actionHelpXML"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
    <addaction name="menuThemes"/>
+   <addaction name="menuHelp"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
@@ -346,6 +364,36 @@
    </property>
    <property name="text">
     <string>Ice Dragon</string>
+   </property>
+  </action>
+  <action name="actionSetBaseOffset">
+   <property name="text">
+    <string>Set Base Offset</string>
+   </property>
+  </action>
+  <action name="actionHexEditMode">
+   <property name="text">
+    <string>Hex Editor mode</string>
+   </property>
+  </action>
+  <action name="actionReloadBinary">
+   <property name="text">
+    <string>Reload Binary</string>
+   </property>
+  </action>
+  <action name="actionAutoLoad">
+   <property name="text">
+    <string>Auto-load this XML and Bin</string>
+   </property>
+  </action>
+  <action name="actionHelpDataTypes">
+   <property name="text">
+    <string>Data Types Overview</string>
+   </property>
+  </action>
+  <action name="actionHelpXML">
+   <property name="text">
+    <string>Full XML Documentation</string>
    </property>
   </action>
  </widget>

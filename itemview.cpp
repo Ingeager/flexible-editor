@@ -30,6 +30,10 @@ void ItemView::closeEvent(QCloseEvent *aEventData) {
     Core.mItemElmTable[mElementRef].mItemViewRef = 0;
     #ifdef SUBWINDOWTYPE
     #endif
+    for (int vRenderEng = 0; vRenderEng < Core.mRenderScriptEngine.count(); vRenderEng++) {
+        delete Core.mRenderScriptEngine[vRenderEng];
+    }
+    Core.mRenderScriptEngine.clear();
     ItemViewWindow::closeEvent(aEventData);
 }
 
@@ -53,34 +57,9 @@ void ItemView::initTypeScript() {
     ui->wXMLedit->setPlainText(vNiceText);
     ui->wXMLedit->hide();
     
- /*   QString vType;
-    
-    if (Core.itemHasAttr("type", Core.mItemElmTable[mElementRef].mElmRef) == true) {
-        vType = Core.getItemAttr("type", Core.mItemElmTable[mElementRef].mElmRef);
-    } else {
-        vType = "blank";
-    }
-    
-    QString vTypeFile = vType + ".js";
-    QString vTypeFileFull = Core.mTypeScriptPath + vTypeFile;
-    
-    QFileInfo vFI;
-    vFI.setFile(vTypeFileFull);
-    if (vFI.exists() == false) {
-        QMessageBox vErrorBox;
-        QString vError = "Couldn't find script file for data type: " + vTypeFile;
-        vErrorBox.setText(vError);
-        vErrorBox.exec();
-        vTypeFileFull = Core.mTypeScriptPath + "blank.js";
-    }
-
-
-    Core.scriptLoad(vTypeFileFull, &mScriptEngine);
-    */
-    
     Core.initTypeScript(mElementRef, &mScriptEngine);
     scriptEnvSetup(&mScriptEngine, this->ui->widget, mElementRef);
-        
+    
     QScriptValue vGlob = mScriptEngine.globalObject();
     QScriptValue vInitFunc = vGlob.property("init");
    
@@ -93,7 +72,40 @@ void ItemView::initTypeScript() {
         vErrorBox.exec();
         return;
     }
-   
+    
+    bool vGroup = Core.mItemElmTable[mElementRef].mIsGroup;
+    if (vGroup) {
+        QList<int> vList = Core.mItemElmTable[mElementRef].mChildIndexes;
+        int vX = 15;
+        int vY = 12;
+        for (int vIx = 0; vIx < vList.count(); vIx++) {
+            //int vRenderEngCount = Core.mRenderScriptEngine.count();
+            QScriptEngine *vEngine = new QScriptEngine;
+            Core.mGroupScriptEngine.append(vEngine);
+            
+            int vChildElmRef = vList[vIx];
+            Core.initTypeScript(vChildElmRef, vEngine);
+            scriptEnvSetup(vEngine, this->ui->widget, vChildElmRef);
+            
+            QScriptValue vGlob = vEngine->globalObject();
+            QScriptValue vInitFunc = vGlob.property("init");
+            
+            vInitFunc.call();
+            if (mScriptEngine.hasUncaughtException()) {
+                QMessageBox vErrorBox;
+                QString vError;
+                vError = mScriptEngine.uncaughtException().toString();
+                vErrorBox.setText(vError);
+                vErrorBox.exec();
+                return;
+            }
+            
+            vY = vGlob.property("base_y").toInt32() + 10;
+            vX = vGlob.property("base_x").toInt32();
+
+        }
+    }
+    
    
 }
 

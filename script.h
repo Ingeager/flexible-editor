@@ -16,6 +16,7 @@
 #include <QSpinBox>
 #include <QGraphicsView>
 #include <QTimer>
+#include <QScrollBar>
 
 
 class QLabelSC : public QLabel {
@@ -168,14 +169,37 @@ public:
 
 Q_SCRIPT_DECLARE_QMETAOBJECT(QTimerSC, QWidget*)
 
+class QScrollBarSC : public QScrollBar {
+    Q_OBJECT
+public:
+    QScrollBarSC(QWidget *parent) : QScrollBar(parent) {programChanged = false;}
+    
+    bool programChanged;
+    
+    Q_INVOKABLE void move(int x, int y) {QWidget::move(x, y);} 
+    Q_INVOKABLE void setGeometry ( int x, int y, int w, int h ) {QWidget::setGeometry(x, y, w, h);}
+    Q_INVOKABLE void resize(int w, int h) {QWidget::resize(w, h);}
+    
+    Q_INVOKABLE void setRange(int min, int max) {QAbstractSlider::setRange(min, max);}
+    Q_INVOKABLE void setSingleStep(int value) {QAbstractSlider::setSingleStep(value);}
+    Q_INVOKABLE void setPageStep(int value) {QAbstractSlider::setPageStep(value);}
+    Q_INVOKABLE void setOrientation(int orientation) {QAbstractSlider::setOrientation((Qt::Orientation)orientation);}
+    Q_INVOKABLE void setValue(int value);
+};
+
+Q_SCRIPT_DECLARE_QMETAOBJECT(QScrollBarSC, QWidget*)
+
 
 
 class BitmapView : public QGraphicsView {
     Q_OBJECT
 
 public:
-    BitmapView(QWidget *parent) : QGraphicsView(parent) {}
+    BitmapView(QWidget *parent) : QGraphicsView(parent) {mInitialized = false;}
     //~BitmapView();
+    
+    Q_PROPERTY(bool initialized READ getInitialized WRITE setInitialized)
+    bool mInitialized;
 
     QPixmap mPixmap;
     QImage mImage;
@@ -204,6 +228,13 @@ public:
     Q_INVOKABLE void drawBuffer(int aY1, int aY2, int aX1, int aX2, QVariantList aBuffer);
     
     Q_INVOKABLE void refresh();
+    
+    void setInitialized(bool aValue) {
+        mInitialized = aValue;
+    }
+    bool getInitialized() {
+        return mInitialized;
+    }
 
 signals:
     void mousePress(int aButtons, int aY, int aX);

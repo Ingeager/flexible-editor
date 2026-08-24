@@ -10,6 +10,7 @@
 #include <QRgb>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QInputDialog>
 #include <qmath.h>
 #include <QTextCodec>
 #include <QMetaProperty>
@@ -23,7 +24,7 @@ tCore::tCore() {
     
     mDRD_intSize = 16;
     
-    mVersionDate = 260226;
+    mVersionDate = 260824;
     
     mBinFileOpened = false;
     mBinFileName = "";
@@ -32,11 +33,11 @@ tCore::tCore() {
     mXMLFileOpened = false;
     mXMLEditIndex = -1;
     mXMLSourceHasEditBackup = false;
+    mHexEditorMode = false;
     
     mLowLevelErrorFlag = false;
     
     mBaseOffset = 0;
-    
 
 }
 
@@ -154,11 +155,11 @@ void tCore::setFileByte(qint64 aPtr, quint32 aValue) {
 }
 
 quint32 tCore::getItemByte(qint32 aPtr, QDomElement aElmRef, int aElmIndex) {
-    return(getFileByte(calcItemPtr(aPtr, aElmRef, aElmIndex, true)));
+    return(getFileByte(calcItemPtr(aPtr, aElmRef, aElmIndex, true, false)));
 }
 
 void tCore::setItemByte(qint32 aPtr, quint32 aValue, QDomElement aElmRef, int aElmIndex) {
-    setFileByte(calcItemPtr(aPtr, aElmRef, aElmIndex, true), aValue);
+    setFileByte(calcItemPtr(aPtr, aElmRef, aElmIndex, true, false), aValue);
 }
 
 void tCore::saveXML() {
@@ -377,7 +378,7 @@ bool tCore::getItemFlag(QString aFlagName, QDomElement aElmRef) {
     return false;
 }
 
-qint64 tCore::calcItemPtr(qint32 aPtr, QDomElement aElmRef, int aElmIndex, bool aCheckBigEndian) {
+qint64 tCore::calcItemPtr(qint32 aPtr, QDomElement aElmRef, int aElmIndex, bool aCheckBigEndian, bool aRecursive) {
     
     if (aElmIndex >= 0) {
         if (aCheckBigEndian == true) {
@@ -393,8 +394,11 @@ qint64 tCore::calcItemPtr(qint32 aPtr, QDomElement aElmRef, int aElmIndex, bool 
     }
     //Work in 64-bit mode from here.
     qint64 vWorkPtr = aPtr;
-    //Add relative base offset.
-    vWorkPtr += mBaseOffset;
+    
+    if (aRecursive == false) {
+        //Add relative base offset, only if calcItemPtr wasn't called recursively.
+        vWorkPtr += mBaseOffset;
+    }
     
     // "ptr" is absolute. No deeper search is needed.
     if (itemHasAttr("ptr", aElmRef)) {
@@ -413,7 +417,7 @@ qint64 tCore::calcItemPtr(qint32 aPtr, QDomElement aElmRef, int aElmIndex, bool 
             if (aElmIndex >= 0) {
                 vParentIndex = mItemElmTable[aElmIndex].mParentIndex;
             }
-            vWorkPtr += calcItemPtr(0, vParent.toElement(), vParentIndex, false);
+            vWorkPtr += calcItemPtr(0, vParent.toElement(), vParentIndex, false, true);
         }
         }
     }
@@ -464,6 +468,8 @@ void tCore::loadConfig() {
     mConfig.setProperty("autoLoadXMLFile", "demo.xml");
     mConfig.setProperty("autoLoadBINFile", "demo.bin");
     mConfig.setProperty("bufferBlockSize", 4096);
+    mConfig.setProperty("bufMode_FileSizeAsk", 300);
+    mConfig.setProperty("XMLEditHeight", 53);
     
     bool vOk = false;
     QFile vCfgFile("FlexibleEdit.cfg");
@@ -580,6 +586,7 @@ void MainWindow::init() {
     
     Core.mBufferBlockSize = Core.mConfig.property("bufferBlockSize").toInt();
     
+    Core.mMDIbackgroundBackup = ui->mdiArea->background();
     themeChange();
     
     load_NES_Palette(Core.getConfigStr("NESPaletteFile"));
@@ -592,6 +599,7 @@ void MainWindow::init() {
     QString vAutoLoadBINFile = Core.getConfigStr("autoLoadBINFile");
     loadXMLFile(vAutoLoadXMLFile);
     loadBinFile(vAutoLoadBINFile, eBufferSystem_Single);
+    //dev_init_();
     #else
     dev_init_();
     #endif
@@ -600,9 +608,16 @@ void MainWindow::init() {
     ui->mainToolBar->hide();
     ui->actionImport_XML->setVisible(false);
     
+    int vEditorHeight = Core.mConfig.property("XMLEditHeight").toInt();
+    ui->wXMLEdit->setMaximumHeight(vEditorHeight);
+    
     disableDirectEdit();
 
     updateWindowTitle();
+
+  //  ui->actionSaveXML->setEnabled(false);
+  //  ui->actionReloadXML->setEnabled(false);
+
 }
 
 void MainWindow::selectXMLfile() {
@@ -624,7 +639,7 @@ void MainWindow::selectBinFile(bool aForceBufferMode) {
 
 void MainWindow::dev_init_() {
 
-    int vBufferMode = eBufferSystem_WriteBuffer;
+    int vBufferMode = eBufferSystem_Single;
     dev_init_combo_("demo.xml", "demo.bin", vBufferMode);
   //  dev_init_combo_("demo_high.xml", "j:/vx", vBufferMode);
     
@@ -637,6 +652,7 @@ void MainWindow::dev_init_() {
     //dev_init_combo_("C:/web/geocities/megaman5.xml", "D:/roms/nes/Mega Man 5 (U).nes");
   // dev_init_combo_("XML/Mega Man 5 (NES).xml", "D:/roms/nes/Mega Man 5 (U).nes", vBufferMode);
    // dev_init_combo_("XML/Magic Sword (SNES).xml", "C:/work/magicsword/ms_clean.sfc", vBufferMode);
+  // dev_init_combo_("XML/Tom & Jerry (NES).xml", "D:/roms/nes/Tom & Jerry (and Tuffy) (U).nes", vBufferMode);
 }
 
 void MainWindow::dev_init_combo_(QString aXML, QString aBIN, int aBufferMode) {
@@ -653,17 +669,20 @@ void MainWindow::unloadXML() {
     Core.mListElmIndexTable.clear();
     Core.mIconTable.clear();
     Core.mMainXML.setContent(QString(""));
+    
 }
 
-void MainWindow::loadBinFile(QString aFName, int aMode) {
+void MainWindow::loadBinFile(QString aFName, int aMode, bool aReload) {
 
-    if (aMode == eBufferSystem_Single) {
+    if ((aMode == eBufferSystem_Single) && (aReload == false)) {
         QFileInfo vFI;
         vFI.setFile(aFName);
         quint64 vFileSize = vFI.size();
-        if (vFileSize > 300000000) {
+        int vAskSizeMB = Core.mConfig.property("bufMode_FileSizeAsk").toInt();
+        quint64 vAskSizeBig = vAskSizeMB*1000000;
+        if (vFileSize > vAskSizeBig) {
             int vResult = QMessageBox::question(this, Core.getConfigStr("programTitle"), \
-            "The file is larger than 300MB. Do you wish to open it in Write Buffer mode?\n(Loading might fail otherwise)", 
+            "The file is larger than " + QString::number(vAskSizeMB) + "MB. Do you wish to open it in Write Buffer mode?\n(Otherwise, load might fail if it's above 1 GB)", 
             QMessageBox::Yes|QMessageBox::No, QMessageBox::No);
             if (vResult == QMessageBox::Yes) {
                 aMode = eBufferSystem_WriteBuffer;
@@ -672,15 +691,18 @@ void MainWindow::loadBinFile(QString aFName, int aMode) {
     }
 
     ui->mdiArea->closeAllSubWindows();
-    if (Core.mEditFileFullBuffer.size() > 0) {
-        Core.mEditFileFullBuffer.clear();
+    
+    if (Core.mBinFileOpened == true) {
+        if (Core.mEditFileFullBuffer.size() > 0) {
+            Core.mEditFileFullBuffer.clear();
+        }
+        if (Core.mBufferSystem == eBufferSystem_WriteBuffer) {
+            Core.mLockedBinQFile.close();
+            Core.mBufferBlockData.clear();
+            Core.mBufferBlockLocations.clear();
+        }
+        Core.mBinFileOpened = false;
     }
-    if (Core.mBufferSystem == eBufferSystem_WriteBuffer) {
-        Core.mLockedBinQFile.close();
-        Core.mBufferBlockData.clear();
-        Core.mBufferBlockLocations.clear();
-    }
-    Core.mBinFileOpened = false;
     Core.mBinFileName = "";
 
     if (aMode == eBufferSystem_Single) {
@@ -689,7 +711,6 @@ void MainWindow::loadBinFile(QString aFName, int aMode) {
             Core.mBinFileOpened = true;
             Core.mBinFileName = aFName;
             Core.mBufferSystem = eBufferSystem_Single;
-            ui->actionSaveBinary->setEnabled(true);
         } else {
             //Error message given in loadFileCommon.
         }
@@ -711,8 +732,16 @@ void MainWindow::loadBinFile(QString aFName, int aMode) {
     
     if (Core.mBinFileOpened == true) {
         ui->actionSaveBinary->setEnabled(true);
+        ui->actionReloadBinary->setEnabled(true);
+        
+        //If we are in Hex Editor mode, set up the XML again here.
+        if (Core.mHexEditorMode == true) {
+            on_actionHexEditMode_triggered();
+        }
+        
     } else {
-        ui->actionSaveBinary->setEnabled(false); 
+        ui->actionSaveBinary->setEnabled(false);
+        ui->actionReloadBinary->setEnabled(false);
     }
 }
 
@@ -1048,6 +1077,7 @@ void MainWindow::loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus, 
         vNewItemElm.mBigEndianByteSz = 0;
         vNewItemElm.mParentIndex = aStatus->mParentIndex;
         vNewItemElm.mHasCharPos = true;
+        vNewItemElm.mIsGroup = false;
         
         if (aStatus->mValidCharPos == true) {
             bool vValid = true;
@@ -1222,15 +1252,15 @@ void MainWindow::themeChange() {
 
 
     //Theme: Gothic WIP
-/*    Core.mCustomizeId.append("window.stylesheet"); Core.mCustomizeString.append("color: #F8F8F8; background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(120, 10, 10, 255), stop:1 rgba(220, 40, 40, 255))");
-    Core.mCustomizeId.append("grid.color"); Core.mCustomizeString.append("200000");    
-    Core.mCustomizeId.append("grid.selcolor"); Core.mCustomizeString.append("FF6060");
-    Core.mCustomizeId.append("color1"); Core.mCustomizeString.append("40DFFF");
-    Core.mCustomizeId.append("color2"); Core.mCustomizeString.append("FFFF40");
-    Core.mCustomizeId.append("bgcolor"); Core.mCustomizeString.append("003040");
-    Core.mCustomizeId.append("edit.stylesheet"); Core.mCustomizeString.append("font: \"Cambria\"; color: #E83030; background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0, 0, 0, 255), stop:1 rgba(60, 30, 30, 255))");
-*/
-
+    /*if (Core.getConfigStr("theme").compare("gothic", Qt::CaseInsensitive) == 0) {
+        Core.mCustomizeId.append("window.stylesheet"); Core.mCustomizeString.append("color: #F8F8F8; background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(120, 10, 10, 255), stop:1 rgba(220, 40, 40, 255))");
+        Core.mCustomizeId.append("grid.color"); Core.mCustomizeString.append("200000");    
+        Core.mCustomizeId.append("grid.selcolor"); Core.mCustomizeString.append("FF6060");
+        Core.mCustomizeId.append("color1"); Core.mCustomizeString.append("40DFFF");
+        Core.mCustomizeId.append("color2"); Core.mCustomizeString.append("FFFF40");
+        Core.mCustomizeId.append("bgcolor"); Core.mCustomizeString.append("003040");
+        Core.mCustomizeId.append("edit.stylesheet"); Core.mCustomizeString.append("font: \"Cambria\"; color: #E83030; background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0, 0, 0, 255), stop:1 rgba(60, 30, 30, 255))");
+    }*/
 
     int vStyleIx = Core.mCustomizeId.indexOf("window.stylesheet");
     if (vStyleIx >= 0) {
@@ -1245,6 +1275,19 @@ void MainWindow::themeChange() {
     } else {
        ui->wTree->setStyleSheet("");
        ui->wXMLEdit->setStyleSheet("");
+    }
+    vStyleIx = Core.mCustomizeId.indexOf("bgcolor");
+    if (vStyleIx >= 0) {
+    //    QString vBGstyleSheet = "background-color: #" + Core.mCustomizeString[vStyleIx];
+        bool vOk = false;
+        quint32 rgb = Core.mCustomizeString[vStyleIx].toUInt(&vOk, 16);
+        if (vOk) {
+            QRgb qrgb = rgb;
+            QColor vColor(qrgb);
+            ui->mdiArea->setBackground(vColor);
+        }
+    } else {
+        ui->mdiArea->setBackground(Core.mMDIbackgroundBackup);
     }
 }
 
@@ -1324,12 +1367,18 @@ void MainWindow::on_wTree_itemClicked(QTreeWidgetItem *item, int column)
 void MainWindow::on_actionOpenXML_triggered()
 {
     selectXMLfile();
+    
+    ui->actionSaveXML->setEnabled(true);
+    ui->actionReloadXML->setEnabled(true);
+    Core.mHexEditorMode = false;
 }
 
 void MainWindow::on_actionReloadXML_triggered()
 {
     if (Core.mXMLFileOpened == true) {
         loadXMLFile(Core.mXMLFileName);
+    } else {
+        Core.error("No XML file is open.", 3);
     }
 }
 
@@ -1337,6 +1386,8 @@ void MainWindow::on_actionSaveXML_triggered()
 {
     if (Core.mXMLFileOpened == true) {
         Core.saveXML();
+    } else {
+        Core.error("No XML file is open.", 3);
     }
 }
 
@@ -1352,7 +1403,12 @@ void MainWindow::on_actionNewXML_triggered()
         Core.saveXML();
         
         loadXML_L2(Core.mXMLFileName);
-    }        
+        
+        ui->actionSaveXML->setEnabled(true);
+        ui->actionReloadXML->setEnabled(true);
+        Core.mHexEditorMode = false;
+    }
+    
 }
 
 void MainWindow::on_actionOpenBinary_triggered()
@@ -1363,6 +1419,15 @@ void MainWindow::on_actionOpenBinary_triggered()
 void MainWindow::on_actionOpenBinBufMode_triggered()
 {
     selectBinFile(true);
+}
+
+void MainWindow::on_actionReloadBinary_triggered()
+{
+    if (Core.mBinFileOpened == false) {return;}
+    
+    QString vFileName = Core.mBinFileName;
+    int vMode = Core.mBufferSystem;
+    loadBinFile(vFileName, vMode, true);
 }
 
 void MainWindow::on_actionSaveBinary_triggered()
@@ -1668,7 +1733,7 @@ Do you wish to continue?", QMessageBox::Yes|QMessageBox::No, QMessageBox::No);
 
     if (vResult == QMessageBox::Yes) {
         unloadXML();
-        Core.mXMLSource = "<drd>\r\n</drd>";
+        Core.mXMLSource = "<xml>\r\n</xml>";
         loadXML_L3();
     }
 }
@@ -1721,6 +1786,117 @@ void MainWindow::on_actionViewWBufferStats_triggered()
     QMessageBox::information(this, "Write Buffer segment log", vLog);
 }
 
+void MainWindow::on_actionSetBaseOffset_triggered()
+{
+    QInputDialog vDia;
+    bool vOk = false;
+    QString vStr = vDia.getText(this, Core.getConfigStr("programTitle"), "Enter base offset (in hexadecimal, can be negative):", QLineEdit::Normal, "", &vOk);
+    if (vOk == true) {
+        qint64 vOffset = vStr.toLongLong(&vOk, 16);
+        if (vOk == true) {
+            Core.mBaseOffset = vOffset;
+            unloadXML();
+            loadXML_L3();
+        } else {
+            Core.error("Couldn't convert to 64-bit Integer value.", 2);
+        }
+    }
+}
+
+void MainWindow::on_actionHexEditMode_triggered()
+{
+    qint64 vSize = 0;
+    if (Core.mBufferSystem == eBufferSystem_Single) {
+        vSize = Core.mEditFileFullBuffer.size();
+    } else if (Core.mBufferSystem == eBufferSystem_WriteBuffer) {
+        vSize = Core.mLockedBinQFile.size();
+    }
+    QString vFileLenHex = QString::number(vSize, 16);
+    
+    unloadXML();
+    Core.mXMLSource = "<drd>\r\n";
+    Core.mXMLSource += "<item name=\"Hex Editor\" icon=\"hex\" ptr=\"0\" type=\"hex\" len=\"" + vFileLenHex + "\"/>\r\n";
+    Core.mXMLSource += "<icon key=\"hex\" filename=\"icons/0x.png\"/>";
+    Core.mXMLSource += "</drd>";
+    Core.mXMLFileName = "[hex editor mode]";
+    updateWindowTitle();
+    Core.mXMLFileOpened = false;
+    loadXML_L3();
+    
+    QTreeWidgetItem *vItem = ui->wTree->topLevelItem(0);
+    ui->wTree->setCurrentItem(vItem, 0, QItemSelectionModel::Select);
+    on_wTree_itemClicked(vItem, 0);
+
+    ui->actionSaveXML->setEnabled(false);
+    ui->actionReloadXML->setEnabled(false);
+    
+    Core.mHexEditorMode = true;
+}
+
+void MainWindow::on_actionAutoLoad_triggered()
+{
+    if (Core.mXMLFileOpened == true) {
+        Core.mConfig.setProperty("autoLoadXMLFile", Core.mXMLFileName);   
+    }
+    if (Core.mBinFileOpened == true) {
+        Core.mConfig.setProperty("autoLoadBINFile", Core.mBinFileName);
+    }
+}
+
+void MainWindow::on_actionHelpDataTypes_triggered()
+{
+    QString vDocument;
+    bool vFound;
+    vFound = Core.loadDocument("Script/Type/Overview.txt", &vDocument);
+    if (vFound) {
+        MainWindow::displayDocument("Data Types Overview", vDocument);
+    }
+}
+
+void MainWindow::on_actionHelpXML_triggered()
+{
+    QString vDocument;
+    bool vFound;
+    vFound = Core.loadDocument("Script/Type/XML Format.txt", &vDocument);
+    if (vFound) {
+        MainWindow::displayDocument("Full XML Documentation", vDocument);
+    }
+}
+
+void MainWindow::displayDocument(QString aHeader, QString aDocument) {
+    QWidget *vDocuWnd = new QWidget(this);
+    vDocuWnd->setMinimumSize(800, 600);
+
+    ui->mdiArea->addSubWindow(vDocuWnd);
+
+    vDocuWnd->setWindowTitle(aHeader);
+    vDocuWnd->setWindowState(Qt::WindowActive|Qt::WindowMaximized);
+    vDocuWnd->show();
+ 
+    
+    /*QWidget *vCentralWidget = new QWidget(vDocuWnd);
+    vCentralWidget->show();
+    vDocuWnd->setCentralWidget(vCentralWidget);
+    QWidget *vLayoutWidget = new QWidget(vCentralWidget);
+    vLayoutWidget->show();
+    QHBoxLayout *vLayout = new QHBoxLayout(vLayoutWidget);
+    vLayout->setGeometry(QRect(20, 10, 841, 662));
+    vCentralWidget->setLayout(vLayout);*/
+    
+    QPlainTextEdit *vTextEdit = new QPlainTextEdit(vDocuWnd);
+    vTextEdit->resize(850, 650);
+    vTextEdit->setReadOnly(true);
+    vTextEdit->setPlainText(aDocument);
+    int vIx = Core.mCustomizeId.indexOf("edit.stylesheet");
+    if (vIx >= 0) {
+        vTextEdit->setStyleSheet(Core.mCustomizeString[vIx] + "; font: 14px");
+    }
+    vTextEdit->show();
+
+    vDocuWnd->updateGeometry();
+    vDocuWnd->update();
+
+}
 
 void MainWindow::on_mdiArea_subWindowActivated(QMdiSubWindow *arg1)
 {
@@ -1746,8 +1922,5 @@ void MainWindow::on_wUpdate_clicked()
     
 }
 
-void QSliderSC::setValue(int value) {
-    programChanged = true;
-    QAbstractSlider::setValue(value);
-    programChanged = false;
-}
+
+

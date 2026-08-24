@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Wed 25. Feb 02:13:07 2026
+** Created: Mon 24. Aug 23:39:11 2026
 **      by: Qt User Interface Compiler version 4.8.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -50,6 +50,12 @@ public:
     QAction *actionViewWBufferStats;
     QAction *actionThemeNormal;
     QAction *actionThemeIceDragon;
+    QAction *actionSetBaseOffset;
+    QAction *actionHexEditMode;
+    QAction *actionReloadBinary;
+    QAction *actionAutoLoad;
+    QAction *actionHelpDataTypes;
+    QAction *actionHelpXML;
     QWidget *centralWidget;
     QWidget *horizontalLayoutWidget;
     QHBoxLayout *horizontalLayout;
@@ -66,6 +72,7 @@ public:
     QMenu *menuEdit;
     QMenu *menuView;
     QMenu *menuThemes;
+    QMenu *menuHelp;
     QToolBar *mainToolBar;
     QStatusBar *statusBar;
 
@@ -111,6 +118,18 @@ public:
         actionThemeIceDragon = new QAction(MainWindow);
         actionThemeIceDragon->setObjectName(QString::fromUtf8("actionThemeIceDragon"));
         actionThemeIceDragon->setCheckable(true);
+        actionSetBaseOffset = new QAction(MainWindow);
+        actionSetBaseOffset->setObjectName(QString::fromUtf8("actionSetBaseOffset"));
+        actionHexEditMode = new QAction(MainWindow);
+        actionHexEditMode->setObjectName(QString::fromUtf8("actionHexEditMode"));
+        actionReloadBinary = new QAction(MainWindow);
+        actionReloadBinary->setObjectName(QString::fromUtf8("actionReloadBinary"));
+        actionAutoLoad = new QAction(MainWindow);
+        actionAutoLoad->setObjectName(QString::fromUtf8("actionAutoLoad"));
+        actionHelpDataTypes = new QAction(MainWindow);
+        actionHelpDataTypes->setObjectName(QString::fromUtf8("actionHelpDataTypes"));
+        actionHelpXML = new QAction(MainWindow);
+        actionHelpXML->setObjectName(QString::fromUtf8("actionHelpXML"));
         centralWidget = new QWidget(MainWindow);
         centralWidget->setObjectName(QString::fromUtf8("centralWidget"));
         horizontalLayoutWidget = new QWidget(centralWidget);
@@ -153,6 +172,7 @@ public:
         sizePolicy1.setVerticalStretch(0);
         sizePolicy1.setHeightForWidth(mdiArea->sizePolicy().hasHeightForWidth());
         mdiArea->setSizePolicy(sizePolicy1);
+        mdiArea->setStyleSheet(QString::fromUtf8("background-image: rgb(255, 0, 0)"));
         mdiArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
         mdiArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 
@@ -215,6 +235,8 @@ public:
         menuView->setObjectName(QString::fromUtf8("menuView"));
         menuThemes = new QMenu(menuBar);
         menuThemes->setObjectName(QString::fromUtf8("menuThemes"));
+        menuHelp = new QMenu(menuBar);
+        menuHelp->setObjectName(QString::fromUtf8("menuHelp"));
         MainWindow->setMenuBar(menuBar);
         mainToolBar = new QToolBar(MainWindow);
         mainToolBar->setObjectName(QString::fromUtf8("mainToolBar"));
@@ -227,8 +249,10 @@ public:
         menuBar->addAction(menuEdit->menuAction());
         menuBar->addAction(menuView->menuAction());
         menuBar->addAction(menuThemes->menuAction());
+        menuBar->addAction(menuHelp->menuAction());
         menuFile->addAction(actionOpenBinary);
         menuFile->addAction(actionOpenBinBufMode);
+        menuFile->addAction(actionReloadBinary);
         menuFile->addAction(actionSaveBinary);
         menuFile->addSeparator();
         menuFile->addAction(actionOpenXML);
@@ -237,15 +261,23 @@ public:
         menuFile->addAction(actionSaveXML);
         menuFile->addAction(actionImport_XML);
         menuFile->addSeparator();
+        menuFile->addAction(actionAutoLoad);
+        menuFile->addSeparator();
+        menuFile->addAction(actionHexEditMode);
+        menuFile->addSeparator();
         menuFile->addAction(actionExit);
         menuEdit->addAction(actionInsertItem);
         menuEdit->addAction(actionInsertChild);
         menuEdit->addAction(actionDeleteItem);
         menuEdit->addSeparator();
         menuEdit->addAction(actionClearXML);
+        menuEdit->addSeparator();
+        menuEdit->addAction(actionSetBaseOffset);
         menuView->addAction(actionViewWBufferStats);
         menuThemes->addAction(actionThemeNormal);
         menuThemes->addAction(actionThemeIceDragon);
+        menuHelp->addAction(actionHelpDataTypes);
+        menuHelp->addAction(actionHelpXML);
 
         retranslateUi(MainWindow);
 
@@ -271,11 +303,18 @@ public:
         actionViewWBufferStats->setText(QApplication::translate("MainWindow", "WBuffer stats", 0, QApplication::UnicodeUTF8));
         actionThemeNormal->setText(QApplication::translate("MainWindow", "None", 0, QApplication::UnicodeUTF8));
         actionThemeIceDragon->setText(QApplication::translate("MainWindow", "Ice Dragon", 0, QApplication::UnicodeUTF8));
+        actionSetBaseOffset->setText(QApplication::translate("MainWindow", "Set Base Offset", 0, QApplication::UnicodeUTF8));
+        actionHexEditMode->setText(QApplication::translate("MainWindow", "Hex Editor mode", 0, QApplication::UnicodeUTF8));
+        actionReloadBinary->setText(QApplication::translate("MainWindow", "Reload Binary", 0, QApplication::UnicodeUTF8));
+        actionAutoLoad->setText(QApplication::translate("MainWindow", "Auto-load this XML and Bin", 0, QApplication::UnicodeUTF8));
+        actionHelpDataTypes->setText(QApplication::translate("MainWindow", "Data Types Overview", 0, QApplication::UnicodeUTF8));
+        actionHelpXML->setText(QApplication::translate("MainWindow", "Full XML Documentation", 0, QApplication::UnicodeUTF8));
         wUpdate->setText(QApplication::translate("MainWindow", "Update", 0, QApplication::UnicodeUTF8));
         menuFile->setTitle(QApplication::translate("MainWindow", "File", 0, QApplication::UnicodeUTF8));
         menuEdit->setTitle(QApplication::translate("MainWindow", "Edit", 0, QApplication::UnicodeUTF8));
         menuView->setTitle(QApplication::translate("MainWindow", "View", 0, QApplication::UnicodeUTF8));
         menuThemes->setTitle(QApplication::translate("MainWindow", "Themes", 0, QApplication::UnicodeUTF8));
+        menuHelp->setTitle(QApplication::translate("MainWindow", "Help", 0, QApplication::UnicodeUTF8));
     } // retranslateUi
 
 };

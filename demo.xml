@@ -1,4 +1,4 @@
-<drd>
+<xml>
 	<item name="-- Demonstration XML --"/>
 	<item name="Single values" icon="value">
 		<item icon="value" name="Byte" type="byte" ptr="8"/>
@@ -9,12 +9,13 @@
 		<item icon="value" name="Byte + Bit toggle" type="int8" ptr="78" bit="Bit 7 (MSB).Bit 6.Bit 5.Bit 4.Bit 3.Bit 2.Bit 1.Bit 0 (LSB)"/>
 		<item icon="value" name="Word + Limited Bit toggle" type="int16" ptr="88" bit="Bit 15 (MSB)...............Bit 0 (LSB)"/>
 		<item icon="value" name="Word (Decimal)" type="int16" ptr="18" flag="DECIMAL"/>
+		<test/>
 		<item icon="value" name="Signed Int (Decimal, Word)" type="int16" ptr="58" flag="SIGNED.DECIMAL"/>
 		<item icon="value" name="Big-Endian Word" type="int16" ptr="A8" flag="BIGENDIAN.SIGNED.COLLAPSE" bit="Bit 15 (MSB).Bit 14.Bit 13.Bit 12.........Bit 3.Bit 2.Bit 1.Bit 0 (LSB)">
 			<item icon="hex" name="Raw Data" relptr="0" type="hex" len="2"/>
 		</item>
 		<item icon="text" name="List value" type="int8" ptr="98" list="colors"/>
-		<item icon="text" name="List (Big Endian Word)" type="int16" ptr="B8" list="colors" flag="BIGENDIAN">
+		<item icon="text" name="List (Big Endian Word)" type="int16" ptr="B8" list="colors" flag="BIGENDIAN.COLLAPSE">
 			<item icon="hex" name="Raw Data" relptr="0" type="hex" len="2"/>
 		</item>
 		<item icon="value" name="Integer (Base 2)" ptr="8" type="int8" base="2"/>
@@ -35,9 +36,15 @@
 	<item name="Strings" icon="text">
 		<item name="ANSI String (Fixed size)" icon="text" type="string" len="37" ptr="660"/>
 		<item name="ANSI String (End-of-string code)" icon="text" type="string" endcode="0" ptr="6B0"/>
-		<item name="UTF-8 String" icon="text" type="string_utf8" len="100" ptr="D00">
+		<item name="UTF-8 String" icon="text" type="string_utf8" len="100" ptr="D00" flag="COLLAPSE">
 			<item relptr="0" type="hex" name="Raw Data" len="100" icon="hex"/>
 		</item>
+	</item>
+	<item name="Bit Values" icon="hex">
+		<item name="Bit Value" icon="hex" type="bitvalue" ptr="7690" len="10" size="3" spacing="5" bit="Top.Middle.Bottom" flag="COLLAPSE">
+			<item name="Raw Data" icon="hex" relptr="0" type="hex" len="10"/>
+		</item>
+		<item name="Bit Value (Lists)" icon="hex" type="bitvalue" ptr="7690" len="8" size="1" arrindex_lablist="colors" list="noyes"/>
 	</item>
 	<item name="General data">
 		<item name="24-bit Palette (RGB888)" icon="palette" type="pal_24" len="100" ptr="7C0">Age of Empires</item>
@@ -48,18 +55,24 @@
 	</item>
 	<item name="NES data" icon="box">
 		<item name="NES Palette" icon="palette" type="pal_nes" ptr="110" len="20">World 1-1</item>
-		<item name="NES CHR" ptr="1330" icon="tile" type="chr_nes" len="100" scale="4">
-			<palette ptr="4350" type="pal_nes" len="4"/>
+		<item name="NES CHR" ptr="1330" icon="tile" type="chr_nes" len="100" scale="4" flag="COLLAPSE">
+			<palette ptr="4350" type="pal_nes" len="10"/>
 		</item>
-		<item name="NES NameTable Address" icon="text" type="nes_nt_addr" ptr="3AE"/>
+		<item name="NES NameTable Address" icon="text" type="nes_nt_addr" ptr="3AE" pixelw="16" pixelh="16" flag="COLLAPSE"/>
 	</item>
 	<item name="SNES data" icon="box">
 		<item name="SNES Palette (pal_15)" icon="palette" type="pal_15" ptr="140" len="100">Yoshi's Island 1</item>
 		<item name="SNES CHR" ptr="2340" icon="tile" type="chr_snes" len="100" scale="3" palette="00C0F0.F8F8F8.282828.B80810.F82820.F88008.F0A068.F8D098.E06888.784020.682898.A048B8.D078D8.F8B808.C88808.A06018"/>
-		<item name="SNES NameTable Address" icon="text" type="snes_nt_addr" ptr="33E" base="303"/>
+		<item name="SNES NameTable Address" icon="text" type="snes_nt_addr" ptr="33E" base="303" flag="COLLAPSE">
+			<item name="Raw Value" relptr="0" type="int16"/>
+		</item>
 	</item>
-	<item name="GameBoy Color data" icon="handheld">
+	<item name="GameBoy / GBC data" icon="handheld">
 		<item name="GBC Palette (pal_15)" icon="palette" type="pal_15" ptr="5D0" len="40">Link's Awakening DX Overworld</item>
+		<item name="GameBoy CHR" icon="tile" ptr="4380" type="chr_gb" len="100" palette="B8C020.E8F070.788000.384000.B0B0B0.F0F0F0.707070.303030"/>
+		<item name="GameBoy TileMap Address" icon="text" type="gb_nt_addr" ptr="76D0" flag="COLLAPSE">
+			<item name="Raw Value" relptr="0" type="int16"/>
+		</item>
 	</item>
 	<item name="GameBoy Advance data" icon="handheld">
 		<item name="GBA Palette (pal_15)" icon="palette" type="pal_15" ptr="3C0" len="100">Palm Tree Paradise</item>
@@ -70,23 +83,54 @@
 	<item name="Sega Master System data" icon="box">
 		<item name="SMS Palette" icon="palette" type="pal_6" ptr="380" len="20">Green Hill Zone 1</item>
 	</item>
+	<item name="Map Data Type">
+		<item name="Basic" type="map" ptr="5390" pixelw="16" pixelh="16" width="16" height="16" screenwidth="3" screenheight="3" flag="COLLAPSE" lab="Basic use of MAP data type with multiple screens.">
+			<item name="Raw Data" relptr="0" len="900" type="hex"/>
+		</item>
+		<item name="Map (Text Tilemap)" ptr="5CA0" type="map" pixelh="16" pixelw="16" len="10" lab="MAP example that uses a SUBITEM child element with CHR_NES data type, mapping byte data values to tile indexes.">
+			<subitem type="chr_nes" ptr="5530" len="1" scale="2">
+				<palette type="pal_nes" len="4" ptr="6540"/>
+			</subitem>
+		</item>
+		<item name="Map (Tilemap)" pixelw="16" pixelh="16" ptr="6560" type="map" width="14" height="14" lab="NES NameTable data example. Uses a SUBITEM with CHR_NES data type, mapping data values to tile indexes.">
+			<subitem ptr="6640" len="1" type="chr_nes" scale="2">
+				<palette ptr="7660" len="4" type="pal_nes"/>
+			</subitem>
+		</item>		
+	</item>
 	<item name="Common Element demo">
 		<item name="4 color palette 1" icon="palette" common="4color" ptr="144"/>
 		<item name="4 color palette 2" icon="palette" common="4color" ptr="3C4"/>
 	</item>
 	<item name="Misc.">
 		<item icon="palette" name="Customize Example (Integer)" type="int16" ptr="18" window.stylesheet="color: #C0C0FF; background: #106040"  edit.stylesheet="color: #80FF80; background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0, 0, 0, 0), stop:1 rgba(130, 150, 130, 255))"/>
+		<item name="Palette + Image" icon="palette" type="pal_nes" ptr="4350" len="10" lab="Example of Item with a Palette type that uses an IMAGE child element to display/update graphics using palette RGB data.">
+			<image type="chr_nes" len="100" ptr="1330" scale="2"/>
+		</item>
+		<item name="NES NT Addr + Render" icon="text" type="nes_nt_addr" ptr="3AE" pixelw="16" pixelh="16" flag="COLLAPSE">
+			<fgcellimage render.len="10" ptr="5CA0" type="map" pixelh="16" pixelw="16" len="1">
+				<subitem type="chr_nes" ptr="5530" len="1" scale="2">
+					<palette type="pal_nes" len="4" ptr="6540"/>
+				</subitem>
+			</fgcellimage>
+			<bgcellimage param.index="255" type="chr_nes" ptr="5530" len="1" scale="2">
+				<palette type="pal_nes" len="4" ptr="6540"/>
+			</bgcellimage>
+			<item name="Raw Value" relptr="0" type="int16" flag="BIGENDIAN"/>
+		</item>
 		<item name="Nameless Item">
 			<item type="int16" ptr="18"/>
 			<item type="int24" ptr="28"/>
 		</item>
 		<item name="Insanely large integer" icon="clown" ptr="B80" type="int" intsize="512"/>
 		<item name="Under development">
-			<item name="Table String" icon="text" ptr="1220" type="tbl_string" tbl="bc.tbl" len="45">
+			<item name="Table String" icon="text" ptr="1220" type="tbl_string" tbl="bc.tbl" len="45" linewidth="16" text.stylesheet="font: 24px &quot;Fixedsys&quot;; background-color: #000000; color: #FFFFFF">
 				<item relptr="0" type="hex" name="Raw Data" len="45" icon="hex"/>
 			</item>
 			<item icon="text" name="ユニコードテスト">これを読むことができれば、UTF-8 サポートが機能しています。</item>
 			<item icon="text" name="JS Debug" ptr="ABBA" type="debug/_test"/>
+			<item icon="text" name="Debug - Fetch Any" element_index="0" type="debug/FetchAny"/>
+			<item icon="text" name="Debug - Render Any" element_index="0" type="debug/RenderAny"/>
 		</item>
 	</item>
 	<common key="4color" type="pal_15" len="4"/>
@@ -102,9 +146,10 @@
 	<icon key="tile" filename="icons/tile.png"/>
 	<list>
 		<item key="colors">"Red" "Orange" "Yellow" "Lime" "Green" "Cyan" "Blue" "Purple"</item>
+		<item key="noyes">"No" "Yes"</item>
 	</list>
 	<nespal filename="fr_nesB.pal"/>
 	
 	<info headicon="icon"/>
-</drd>
+</xml>
 

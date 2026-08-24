@@ -41,6 +41,7 @@ struct tItemElmType {
     ItemView *mItemViewRef;
     int mParentIndex;
     QList<int> mChildIndexes;
+    bool mIsGroup;
     int mArrayIndex;
     int mArrayByteSz;
     int mBigEndianByteSz;
@@ -73,6 +74,7 @@ public:
     QString mXMLFileBasePath;
     bool mXMLSourceHasEditBackup;
     QString mXMLSourceRevertBackup;
+    bool mHexEditorMode;
     
     int mXMLEditIndex;
 
@@ -113,11 +115,15 @@ public:
     int mVersionDate;
     
     QIcon mDefaultIcon;
+    QBrush mMDIbackgroundBackup;
     
     QStringList mCustomizeId;
     QStringList mCustomizeString;
     
     bool mLowLevelErrorFlag;
+    
+    QList<QScriptEngine*> mRenderScriptEngine;
+    QList<QScriptEngine*> mGroupScriptEngine;
     
     #ifdef QT_DEBUG
     QTime mBenchmarkTime;
@@ -130,7 +136,7 @@ public:
     bool qElementGetHasAttribute(QDomElement aElement, QString aName, QString *aReturnStr);
     quint32 getItemByte(qint32 aPtr, QDomElement aElmRef, int aElmIndex = -1);
     void setItemByte(qint32 aPtr, quint32 aValue, QDomElement aElmRef, int aElmIndex = -1);
-    qint64 calcItemPtr(qint32 aPtr, QDomElement aElmRef, int aElmIndex = -1, bool aCheckBigEndian = true);
+    qint64 calcItemPtr(qint32 aPtr, QDomElement aElmRef, int aElmIndex = -1, bool aCheckBigEndian = true, bool aRecursive = false);
     bool itemHasAttr(QString aName, QDomElement aElmRef, bool aCheckCommon = true, bool aCheckRegular = true);
     QString getItemAttr(QString aName, QDomElement aElmRef);
     bool qElementGetFlag(QString aFlagName, QDomElement aElmRef);
@@ -186,6 +192,18 @@ private slots:
     
     void on_actionThemeNormal_triggered();
     
+    void on_actionSetBaseOffset_triggered();
+    
+    void on_actionHexEditMode_triggered();
+    
+    void on_actionReloadBinary_triggered();
+    
+    void on_actionAutoLoad_triggered();
+    
+    void on_actionHelpDataTypes_triggered();
+    
+    void on_actionHelpXML_triggered();
+    
 public:
     void dev_init_();
     void loadXMLFile(QString aFName);
@@ -195,7 +213,7 @@ public:
     void loadXMLRecursive();
     void loadXMLRecursive(QDomElement aElement, XMLReadStatus *aStatus, QXmlStreamReader *aReader);
     void loadXMLRecursive_findReaderToken(int aToken, XMLReadStatus *aStatus, QXmlStreamReader *aReader);
-    void loadBinFile(QString aFName, int aMode);
+    void loadBinFile(QString aFName, int aMode, bool aReload = false);
     void saveBinFile(QString aFName);
     void dev_init_combo_(QString aXML, QString aBIN, int aBufferMode = eBufferSystem_Single);
     void load_NES_Palette(QString aFName);
@@ -208,7 +226,7 @@ public:
     void closeEvent(QCloseEvent *aCEvent);
     int calculateTabOrder(int aStart);
     void themeChange();
-    
+    void displayDocument(QString aHeader, QString aDocument);
 private:
     Ui::MainWindow *ui;
 };

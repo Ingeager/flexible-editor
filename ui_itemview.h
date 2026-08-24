@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'itemview.ui'
 **
-** Created: Fri 30. Jan 03:05:57 2026
+** Created: Mon 24. Aug 23:39:11 2026
 **      by: Qt User Interface Compiler version 4.8.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!

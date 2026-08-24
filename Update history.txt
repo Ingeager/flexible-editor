@@ -1,4 +1,53 @@
 
+Release 2026-02-05:
+ - XML format additions:
+	- Added data types CHR_NES and CHR_SNES (tiles can be edited).
+	- Added PALETTE Element, that can be placed as child elements of CHR data types.
+	- Added BIGENDIAN flag for Integers.
+  	(Support for Sega Mega Drive, Wii, etc. multi-byte values)
+	- Added data type STRING_UTF8.
+	- Palette types now has a page selector and can be larger than 256 entries.
+	- Added data types PAL_15A, PAL24_BGR, PAL_32, PAL_32ABGR, PAL32_ARGB, and PAL32_BGRA.
+	- Added "BGR" flag for all palette types.
+	- Added LAB attribute for all Items.
+	- Added SNAPX, SNAPY, GRIDX and GRIDY attributes for COORDINATE data type.
+ - Added a simple theme selector, with a simple alternate theme.
+ - Added Write Buffer mode, which allows using the editor with files of any size. (larger than 1GB)
+   when the user opens those. Also added "Open in W-Buffer mode.." from File menu.
+ - Added option to undo latest XML edit if it results in a parsing error.
+ - Bugfix: Prevented program from hanging (infinite loop) if parsing errors are encountered.
+ - XML files are loaded as UTF-8 if valid and saved as UTF-8. (bugfix in part)
+ - Bugfix: Fixed UI control placement when main window gets larger than a certain size
+ - Bugfix: Fixed Child Items from getting inserted in off places when the Parent Item has text and no children.
+ - Bugfix: XML Reader: Fixed support for both uppercase and lowercase in various cases including:
+	- List Item and Common "key" attribute can be upppercase.
+	- ICON Elements can also be both cases.
+ - Bugfix: Title bar updates to show correct file name when opening in Write Buffer mode.
+ - Data type UI:
+	- Rewrote HEX data type script (greatly improved).
+	- Bugfix: Integers: Bit editing controls and List control now reflect each other's changes.
+	- Added "Active Pointer" to default controls (common_default.js)
+	- Fix: "pal_smd" shows the "Value:" bytes in correct order.
+	- Various improvements and bugfixes.
+ - XML editing: When removing an Item, if it's the last child of another,
+	the XML is now cleaned up so the parent element becomes self-closing.
+ - Script API: Changed Core.loadTextFile to load files as UTF-8 if possible.
+ - Script API additions: QTimer control, Core.setBigEndianByteSize, Core.getByteAbs, Core.setByteAbs,
+   Core.getBinarySize, Core.getActivePtr, Core.stringDecode, Core.stringEncode,
+   Core.fetchElementData, Core.childElementIndex, Core.customize,
+   BitmapView.drawBuffer, and BitmapView.mouseMove signal.
+ - XML subfolder: Added Mega Man 5 (NES).xml, NES Palette File.xml, PSX TIM.xml.
+
+Script Update Pack 2025-12-22:
+ - Added BIGENDIAN flag for Integer types.
+ - Added LAB Item attribute.
+ - Palette types now has a page selector and can be larger than 256 entries.
+ - Added PAL_32 Type (RGBA8888), also added PAL32_ABGR, PAL32_ARGB and PAL32_BGRA.
+ - Added PAL_24BGR Type (BGR888)
+ - Added PAL_15A Type (RGB555 with MSB as Transparency toggle)
+ - Added BGR Flag for all Palette types.
+ - Bugfix: Integers: Bit editing controls and List control now reflect each other's changes.
+
 Release 2025-11-11:
  - Added more file management actions under File menu.
  - Added XML editing actions under Edit menu.
