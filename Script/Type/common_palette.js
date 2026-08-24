@@ -47,6 +47,7 @@ CommonPalette = function() {
 //Fetch palette data, each array index is 24-bit RGB value of a color.
 
 CommonPalette.prototype.fetch = function() {
+	
 	this.initNonGUI();
 	
 	var entries = Core.getHexValueAttr("len");
@@ -149,17 +150,20 @@ CommonPalette.prototype.initGUI = function(a_mode, a_renderBMV) {
 		cellSize = 30;
 	}
 	
-  var parentWnd = Core.window;
-   var initBMV = true;
-   if (a_mode == this.modeNormal) {
-     	this.BMView = new BitmapView(parentWnd);
-	    this.BMView.move(Core.base_x, Core.base_y);
-   } else {
-       this.BMView = a_renderBMV;
-       if (this.BMView.initialized == true) {
-           initBMV = false;
-       }
-   }
+	var parentWnd = Core.window;
+	var initBMV = true;
+	if (a_mode == this.modeNormal) {
+		this.BMView = new BitmapView(parentWnd);
+		this.BMView.move(Core.base_x, Core.base_y);
+		/*this.BMView.refresh = function() {
+			BitmapView.prototype.refresh.call(this);
+		}*/
+	} else {
+		this.BMView = a_renderBMV;
+		if (this.BMView.initialized == true) {
+			initBMV = false;
+		}
+	}
 
 	this.palGrid = new GridHandler(cellSize, cellSize, cellsx, cellsy, entries, "entrygrid");
 	this.palGrid.redrawCellOnSelect = 0;

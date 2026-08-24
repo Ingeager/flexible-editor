@@ -1,0 +1,106 @@
+Data Types (TYPE attribute) Overview
+====================================
+
+General Attributes:
+
+NAME, PTR, RELPTR, LEN, FLAG, COMMON, ICON, LAB
+
+An ITEM Element represents one entry of data and
+can be set to have one of several data types, set with the TYPE attribute.
+Pointer to data is set with the PTR attribute (hex without prefix)
+For some data types, LEN (data length) needs to be set (also hex without prefix)
+
+example: <item type="int16" name="Hero Stat" ptr="1AA" icon="staticon" lab="Change Hero HP Stat"/>
+
+Flags are set by adding the FLAG attribute and set its
+value to the desired flag strings seperated using '.' (dot)
+
+example: <item type="int24" ptr="BC" flag="signed.bigendian"/>
+
+See "XML Format.txt" in the root folder or "Full XML Documentation" from the Help menu
+for complete and in-depth documentation.
+
+Integers
+--------
+INT	(INT16/Word by default)
+INT8
+BYTE	(Same as INT8)
+INT16
+INT24
+INT32
+INT64
+
+Optional Attributes: INTSIZE, LIST, BIT, BASE, LEN
+Available flags: SIGNED, DECIMAL, BIGENDIAN
+
+Raw/Hex
+-------
+HEX
+
+Attributes: LEN
+
+Bit data
+--------
+BITVALUE
+
+Attributes: SIZE
+Optional Attributes: SPACING, STARTPOS, LEN, LIST, BIT
+
+Strings
+-------
+STRING
+STRING_UTF8
+
+Attributes: LEN
+Optional Attribute: ENDCODE
+
+Palette
+-------
+PAL_6		(Sega Master System)
+PAL_15		(SNES, GBC, GBA)
+PAL_15A		(Same as pal_15 but with alpha bit)
+PAL_24
+PAL_24BGR
+PAL_32
+PAL_32ABGR
+PAL_32ARGB
+PAL_32BGRA
+PAL_NES
+PAL_SMD		(Sega Mega Drive / Game Gear)
+
+Attributes: LEN
+Available Flags: BGR
+Render Child Elements: IMAGE
+
+CHR/Tiles
+---------
+CHR_NES
+CHR_SNES
+CHR_GB		(GameBoy / GameBoy Color)
+
+Attributes: LEN, PALETTE, SCALE, ROWLENGTH
+Child Elements: PALETTE
+
+NameTable/Tilemap Address
+--------------------------
+NES_NT_ADDR
+SNES_NT_ADDR
+GB_NT_ADDR
+
+Optional Attributes: PIXELW, PIXELH, BASE (for "SNES_NT_ADDR" only)
+Render Child Elements: BGIMAGE, FGIMAGE, BGCELLIMAGE, FGCELLIMAGE
+
+Coordinate
+----------
+COORDINATE
+
+Optional Attributes: Y, X, LEN, SNAPY, SNAPX, GRIDY, GRIDX
+Render Child Elements: BGIMAGE, FGIMAGE
+
+Map
+---
+MAP
+
+Attributes: WIDTH, HEIGHT, LEN, PIXELW, PIXELH
+Optional Attributes: TOTALWIDTH, TOTALHEIGHT, INDEX_MUL, PARENTINDEX_MUL
+Render Child Elements: SUBITEM

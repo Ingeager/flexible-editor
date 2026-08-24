@@ -90,16 +90,25 @@ tblString.prototype.init = function() {
   this.textCtrl = new QPlainTextEdit(Core.window);
   this.textCtrl.move(Core.base_x, Core.base_y);
   this.textCtrl.resize(600, 200);
-  var addtext = "; font-size: " + fontpx + "px";
-  this.textCtrl.styleSheet = Core.customize("edit.stylesheet", "") + addtext;
+	if (Core.hasAttr("text.stylesheet")) {
+		this.textCtrl.styleSheet = Core.getAttr("text.stylesheet");
+	} else {
+		var addtext = "; font-size: " + fontpx + "px";
+		this.textCtrl.styleSheet = Core.customize("edit.stylesheet", "") + addtext;
+	}
   this.textCtrl.show();
 
 	fontpx = 13;
   this.logCtrl = new QPlainTextEdit(Core.window);
   this.logCtrl.move(Core.base_x, Core.base_y+240);
   this.logCtrl.resize(600, 300);
-  addtext = "; font-size: " + fontpx + "px";
-  this.logCtrl.styleSheet = Core.customize("edit.stylesheet", "") + addtext;
+
+	if (Core.hasAttr("log.stylesheet")) {
+		this.logCtrl.styleSheet = Core.getAttr("log.stylesheet");
+	} else {
+		addtext = "; font-size: " + fontpx + "px";
+		this.logCtrl.styleSheet = Core.customize("edit.stylesheet", "") + addtext;
+	}
   this.logCtrl.readOnly = true;
   this.logCtrl.show();
 
@@ -112,7 +121,7 @@ tblString.prototype.init = function() {
 
   this.clearLogBtn = new QPushButton(Core.window);
   this.clearLogBtn.text = "Clear Log";
-  this.clearLogBtn.move(Core.base_x+205, Core.base_y+208);
+  this.clearLogBtn.move(Core.base_x+145, Core.base_y+208);
   this.clearLogBtn.resize(120, 25);
   this.clearLogBtn.pressed.connect(this, this.clearLogBtnFunc);
   this.clearLogBtn.show();

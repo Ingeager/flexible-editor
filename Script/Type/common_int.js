@@ -2,6 +2,8 @@
 //FLEX_INCLUDE "common_stringrender.js"
 
 //Information for UI:
+//FLEX_DOC_BOOKMARK "Integer Types"
+
 //FLEX_FLAG "SIGNED" "Signed Integer"
 //FLEX_FLAG "BIGENDIAN" "Big-Endian Integer"
 //FLEX_FLAG "DECIMAL" "Decimal Value"
@@ -183,7 +185,7 @@ CommonInt.prototype.initRender = function(a_bitmapView, a_param) {
 		var datastring = this.getArrayString(0, false);
 		var chars = datastring.length;
 		this.renderScaling = 5;
-		var height = 6*this.renderScaling;
+	/*	var height = 6*this.renderScaling;
 		var width;
 		if (chars < (512/(this.renderScaling*4))) {
 			width = chars*(this.renderScaling*4);
@@ -192,7 +194,9 @@ CommonInt.prototype.initRender = function(a_bitmapView, a_param) {
 		}
 		a_bitmapView.init(width, height);
 		a_bitmapView.refresh();
-		a_bitmapView.show();
+		a_bitmapView.show();*/
+		CommonStringRender.initBMV(a_bitmapView, chars, 4*this.renderScaling, 6*this.renderScaling);
+		
 	}
 	
 }

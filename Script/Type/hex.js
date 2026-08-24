@@ -198,7 +198,9 @@ Hex.resetControls = function() {
             ctrl.show();
         }
     } else {
-        Hex.addrCtrl[rowCount].hide();
+	if (placeAddrLabels == true) {
+		Hex.addrCtrl[rowCount].hide();
+	}
         Hex.editCtrl[rowCount].hide();
         Hex.charCtrl[rowCount].hide();
     }

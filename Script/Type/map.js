@@ -9,6 +9,8 @@ Map.mapBMview = 0;
 Map.mapGrid = 0;
 Map.selBMview = 0;
 Map.selGrid = 0;
+Map.modeCheck = 0;
+
 Map.pixelw = 8;
 Map.pixelh = 8;
 Map.width = 16;
@@ -23,6 +25,7 @@ Map.paramSetup = [];
 Map.multiParam = true;
 Map.paramDispatchList = [];
 Map.simpleMode = false;
+Map.redrawLock = false;
 
 Map.totalwidth = {};
 Map.totalwidth.v = 16;
@@ -235,10 +238,11 @@ function initCommon(a_mode, a_bmv) {
 	Map.mapGrid.drawItemFunc = Map.mapGridDrawFunc;
     
    var base_relative_x = 0;
+   var base_relative_y = Map.mapBMview.height;
 
     if (a_mode == Map.modeNormal) {
 
-        if (Map.totalwidth.has || Map.screenwidth.has) {
+       if (Map.totalwidth.has || Map.screenwidth.has) {
 		var maxwidth = 0;
 		var pagestep = 1;
 		
@@ -266,6 +270,7 @@ function initCommon(a_mode, a_bmv) {
 
 		Map.xslider.valueChanged.connect(Map.xsliderFunc);
 		Map.xslider.show();
+		base_relative_y += 20;
 	    
         }
 
@@ -318,6 +323,15 @@ function initCommon(a_mode, a_bmv) {
 
 	Map.selGrid.drawItemFunc = Map.selGridDrawFunc;
 
+	Core.base_y +=  (base_relative_y + 10);
+	var ctrl = new QCheckBox(Core.window);
+	Map.modeCheck = ctrl;
+	ctrl.text = "Brush Mode";
+	ctrl.move(Core.base_x, Core.base_y);
+	ctrl.resize(80, 25);
+	ctrl.stateChanged.connect(Map.modeCheckFunc);
+	ctrl.show();
+
     }
 
 
@@ -355,22 +369,22 @@ function initCommon(a_mode, a_bmv) {
 		var data = Core.fetchElementData(param_ei);
 		var dest_param = "index";
 		var index_src = "index";
-     var has_index_src = false;
+		var has_index_src = false;
 		var val_mul = 1;
 
-      // Read attributes specifically related to parameters.
-      // map.dest: Name of parameter to set.
-      // If not provided it will override "index".
+	      // Read attributes specifically related to parameters.
+	      // map.dest: Name of parameter to set.
+	      // If not provided it will override "index".
 		if (Core.hasAttr("map.dest", param_ei)) {
 		dest_param = Core.getAttr("map.dest", param_ei);
 		}
 		if (Core.hasAttr("map.index_src", param_ei)) {
-      // Input parameter to use as Array index
+		// Input parameter to use as Array index
 		index_src = Core.getAttr("map.index_src", param_ei);
 		has_index_src = true;
 		}
 		if (Core.hasAttr("map.val_mul", param_ei)) {
-      // map.val_mul: Multiply source value
+		// map.val_mul: Multiply source value
 		val_mul = Number(Core.getAttr("map.val_mul", param_ei));
 		}
 
@@ -405,6 +419,9 @@ function initCommon(a_mode, a_bmv) {
 	var index = Map.getValue(0);
 	Map.selGrid.setIndex(index);
 	Map.mapBMview.mousePress.connect(Map.mapClickFunc);
+	if (Core.versionDate >= 260109) {
+		Map.mapBMview.mouseMove.connect(Map.mapClickFunc);
+	}
 	Map.selBMview.mousePress.connect(Map.selClickFunc);
 
 	// Refresh everything if we're in normal data type mode.
@@ -415,14 +432,14 @@ function initCommon(a_mode, a_bmv) {
 	Map.mapBMview.show();
 
 	Map.selGrid.redraw();
-   if (Map.simpleMode == false) {
-	if (Map.multiParam == true) {
-		for (var r_index = 0; r_index < Map.renderArr.length; r_index++) {
-			Core.updateRender(Map.renderHndArr[r_index], Map.selBMview, Map.paramDispatchList[r_index]);
-			Map.paramDispatchList[r_index].length = 0;
+	if (Map.simpleMode == false) {
+		if (Map.multiParam == true) {
+			for (var r_index = 0; r_index < Map.renderArr.length; r_index++) {
+				Core.updateRender(Map.renderHndArr[r_index], Map.selBMview, Map.paramDispatchList[r_index]);
+				Map.paramDispatchList[r_index].length = 0;
+			}
 		}
 	}
-   }
 	Map.selBMview.refresh();
 	Map.selBMview.show();
     }
@@ -463,9 +480,16 @@ Map.xsliderFunc = function(a_value) {
      } else {
          Map.current_x = a_value;
      }
+/*	if (Map.redrawLock == true) {
+		return;
+	}
+	Map.redrawLock = true;*/
      Map.redrawMapGrid(false, true);
      Map.mapBMview.refresh();
-     Map.refreshSelGrid();
+	if (Map.modeCheck.checked == false) {
+		Map.refreshSelGrid();
+	}
+	//Map.redrawLock = false;
 }
 
 Map.ysliderFunc = function(a_value) {
@@ -477,7 +501,9 @@ Map.ysliderFunc = function(a_value) {
      }
      Map.redrawMapGrid(false, true);
      Map.mapBMview.refresh();
-     Map.refreshSelGrid();
+	if (Map.modeCheck.checked == false) {
+		Map.refreshSelGrid();
+	}
 }
 
 
@@ -499,8 +525,39 @@ Map.redrawMapGrid = function(a_drawGrid, a_dispatch) {
 }
 
 Map.mapClickFunc = function(a_buttons, a_y, a_x) {
-	Map.mapGrid.eventMousePress(a_buttons, a_y, a_x);
-	Map.refreshSelGrid();
+   if (!a_buttons) {return;}
+   if (Map.modeCheck.checked == false) {
+	    Map.mapGrid.eventMousePress(a_buttons, a_y, a_x);
+	    Map.refreshSelGrid();
+   } else {
+      //Brush mode
+       //Map.mapGrid.selectable = true;
+       Map.mapGrid.eventMousePress(a_buttons, a_y, a_x);
+       //Map.mapGrid.selectable = false;
+       var index = Map.getIndex();
+       if (a_buttons & 1) {
+	       var value = Map.selGrid.getIndex();
+	       Map.setValue(index, value);
+	    Map.mapGrid.redrawCurrentCell();
+		Map.dispatchUpdateRender();
+		Map.mapBMview.refresh();
+	} else if (a_buttons & 2) {
+		Map.refreshSelGrid();
+	}
+   }
+}
+
+Map.modeCheckFunc = function(a_state) {
+   if (a_state == 0) {
+        //Map.mapGrid.selectable = true;
+        Map.refreshSelGrid();
+   } else {
+        //Map.mapGrid.selectable = false;
+   }
+   //todo: only need to draw grid
+   Map.redrawMapGrid(true, true);
+   Map.mapBMview.refresh();
+
 }
 
 Map.refreshSelGrid = function() {
@@ -513,6 +570,8 @@ Map.refreshSelGrid = function() {
 
 Map.selClickFunc = function(a_buttons, a_y, a_x) {
 	Map.selGrid.eventMousePress(a_buttons, a_y, a_x);
+
+  if (Map.modeCheck.checked == false) {
 	var value = Map.selGrid.getIndex();
 	var index = Map.getIndex();
 
@@ -520,6 +579,7 @@ Map.selClickFunc = function(a_buttons, a_y, a_x) {
 	Map.mapGrid.redrawCurrentCell();
 	Map.dispatchUpdateRender();
 	Map.mapBMview.refresh();
+   }
 }
 
 Map.dispatchUpdateRender = function() {
@@ -546,32 +606,42 @@ Map.getScreenBase = function() {
 }
 
 Map.getIndex = function() {
-  var sbase = Map.getScreenBase();
-  
-  var rowsize;
-  if (Map.totalwidth.has == false) {
+	var sbase = Map.getScreenBase();
+
+	var rowsize;
+	if (Map.totalwidth.has == false) {
 		rowsize = Map.width;
 	} else {
 		rowsize = Map.totalwidth.v;
 	}
-   return(sbase+((Map.mapGrid.current_y+Map.current_y) * rowsize) + Map.mapGrid.current_x+Map.current_x);
+	var index = sbase+((Map.mapGrid.current_y+Map.current_y) * rowsize) + Map.mapGrid.current_x+Map.current_x;
+
+	var bitsize = Map.index_bitsize;
+	if (Map.index_ror.has == true) {
+		var ror = Map.index_ror.v;
+		var back = index & ((1<<ror)-1);
+		index = (index >> ror) | (back<<(bitsize-ror));
+	}
+	index *= Map.index_mul;
+	
+	return index;
 }
 
 Map.getValue = function(a_index) {
-  if (Map.dataCacheEnable == true) {
-       Map.checkCacheOk(a_index);
-       return( Map.dataCache[a_index] );
-   } else {
-       return( Core.getByte(a_index) );
-   }
+	if (Map.dataCacheEnable == true) {
+		Map.checkCacheOk(a_index);
+		return( Map.dataCache[a_index] );
+	} else {
+		return( Core.getByte(a_index) );
+	}
 }
 
 Map.setValue = function(a_index, a_val) {
-  if (Map.dataCacheEnable == true) {
-    Map.checkCacheOk(a_index);
-    Map.dataCache[a_index] = a_val;
-  }
-  Core.setByte(a_index, a_val);
+	if (Map.dataCacheEnable == true) {
+		Map.checkCacheOk(a_index);
+		Map.dataCache[a_index] = a_val;
+	}
+	Core.setByte(a_index, a_val);
 }
 
 Map.checkCacheOk = function(a_index) {
@@ -655,7 +725,7 @@ Map.renderCellCommon = function(a_bmv, a_index, a_parentindex, a_page, a_cell_y,
 
    // if there's already an y property, add.
 	if (param.hasOwnProperty("y")) {
-		param.y += a_y1;
+		param.y = Number(param.y) + a_y1;
 	} else {
 		param.y = a_y1;
 	}

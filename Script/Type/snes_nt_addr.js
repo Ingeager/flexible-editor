@@ -56,5 +56,13 @@ function initCommon() {
 		Core.setByte(1, (word >> 8) & 0xFF);
 	}
 
+	TPObj.getAddrFunc = function() {
+		return (Core.getByte(0) | (Core.getByte(1) << 8));
+	}
+	TPObj.setAddrFunc = function(a_addr) {
+		Core.setByte(0, a_addr & 0xFF);
+		Core.setByte(1, (a_addr >> 8) & 0xFF);
+	}
+
 }
 

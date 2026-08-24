@@ -1,0 +1,87 @@
+XML Format - Advanced Features - Render mechanism
+(WORK IN PROGRESS / SUBJECT TO CHANGE)
+======================================
+
+Render Child Elements
+=====================
+
+Introduction
+------------
+Some data types support adding special "Render Child Elements" related to drawing additional graphics.
+They have different tags depending on use, for example IMAGE or FGIMAGE.
+If present, they describe data that is to be drawn when parent Items are opened and redrawn
+when the user changes data. Some times the scripts draw in their own bitmap control (BitmapView),
+or inside ones that are usually present.
+
+Basically, a Render Child Element functions like a regular Item element but
+loads the script in a different mode, if supported, which is focused on drawing graphics.
+You can utilize a child element in any case that the parent data type supports placing them and
+the TYPE attribute of the child element is a data type that supports the render mechanism.
+(most data types supports being drawn at this point).
+
+The render mechanism passes parameters from the parent element data type script to the child element data type script each time
+graphics needs to be updated. Following a standard list of parameters, the parent element script passes whatever might be
+useful to the child element script, without needing to know what the destination data type is.
+The child element script checks the parameters passed from the parent script, and picks whatever is relevant to it
+when drawing.
+
+Data types
+----------
+"XML Format.txt" has the complete documentation for possibilities for render elements, for each data type:
+
+"Render child Elements" will describe if you can add child elements to an Item element, and what the tags are.
+It will also list what parameters is sent from the data type script.
+
+"Advanced - Supported as Render type" will describe if a data type can be used in a child element for rendering,
+and also what parameters it will respond to.
+
+At this point, most data types supports being used in a child element to draw something.
+
+Standard parameter list
+-----------------------
+These are parameters passed from the parent Item script to the child Item script's
+initRender and updateRender routines.
+Generally, this is done "under the hood" and the
+user don't need to worry about them. However it's the basis of what parameters is passed
+and used, and might be useful if you should want to write your own data type scripts.
+
+Key		Description
+
+x		X coordinate to draw inside the BitmapView.
+y		Y coordinate to draw inside the BitmapView.
+index		If parent type renders a map or an array made of cells and calls the child script to render for each cell,
+		this will hold the value associated to the cell index.
+		This should be used as a relative index into data for the child script (for example array index or tile index).
+parentindex	If parent type renders a map or an array made of cells and calls the child script to render for each cell,
+		this will hold the index of the cell. Usually not relevant.  
+palette		Palette data, array of RGB24 values. The entire palette is provided.
+paletteentries	Number of palette data entries if "palette" is present.
+paletteindex	Current color index in palette data. Used to tell the render script which part of the palette to
+		draw if relevant. Note that this value is not a "sub palette index", but color index.
+		If a sub palette index is needed by the script, it must calculate it itself.
+x2		Rightmost X coordinate to draw inside the BitmapView. (note that "x" can be present without this being.)
+y2		Bottom Y coordinate to draw inside the BitmapView. (note that "y" can be present without this being.)
+cellx		If parent type renders a grid, this will hold the X cell coordinate.
+celly		If parent type renders a grid, this will hold the Y cell coordinate.
+page		If parent type renders a multi-page grid, this will hold the page index.
+
+Parameter setting with XML
+--------------------------
+
+You can set parameters for the child element by adding attributes in it, where the attribute name is "param.[Parameter Name]".
+This could be for example, useful if you want something to be drawn at specific coordinates, for example by setting "param.x" or "param.y".
+Or if you want the same index to be drawn no matter what was passed as index, you can set "param.index=[value]".
+Using this function will override whatever's passed from the parent element script, or add new parameters.
+[Parameter Name] doesn't have to be anything from the Standard parameter list.
+
+<item type="coordinate" ptr="0" y="0">
+	<fgimage param.x="16" type="chr_gb" len="1" ptr="1800"/>
+</item>
+
+^ In this example, the parent type is a "coordinate" type with an Y coordinate only.
+The child element "fgimage" describes that something should be drawn using the "chr_gb" (GameBoy CHR) type, specifically 1 tile
+found at 0x1800 in the binary.
+The Y coordinate value is passed from the parent element script to the child element script, and so the tile's Y coordiante will
+become that. However no X coordinate is set, and will become 0 by default.
+param.x="16" makes it so the tile is always drawn at X coordinate 16.
+

@@ -123,6 +123,7 @@ GridHandler.prototype.timerFunc = function() {
 		this.bmvObject.refresh();
 		if (this.fadestate >= 1000) {
 			this.fadestate = -1;
+			this.animateTimer.stop();
 		} else {
 			this.fadestate += this.fadestateAdd;
 		}
@@ -237,7 +238,10 @@ GridHandler.prototype.eventMousePress = function(a_buttons, a_y, a_x) {
 			}
 
 			this.bmvObject.refresh();
-			this.fadestate = 0;
+			if (Core.versionDate >= 260131) {
+				this.fadestate = 0;
+				this.animateTimer.start(33);
+			}
 			
 			//event.dispatch(event.bit.changeindex);
 
@@ -338,11 +342,9 @@ GridHandler.prototype.redrawGrid = function() {
 			currentcolor = Math.floor(b) + (Math.floor(g) << 8) + (Math.floor(r) << 16);
 		}
 	}
-
 	var x, x2, y, y2;
 
 	var colortable = [0, this.gridcolor, this.rangecolor, currentcolor];
-	
 	var singleGridLineW = (this.gridline_w == 1);
 	var singleGridLineH = (this.gridline_h == 1);
 	var previousType = 0;

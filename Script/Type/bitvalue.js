@@ -124,10 +124,12 @@ BitValue.initCtrl = function() {
 
 	var parentWnd = Core.window;
 
-       if (BitValue.dataLen> 1) {
+       if (BitValue.dataLen > 1) {
             DefaultControls.addArrayTuner();
-            Core.setArrayByteSize(0);  // handle arrays internally
-	    BitValue.index = Core.getArrayIndex();	//Set to cached value from the editor
+	    if (Core.versionDate >= 250823) {
+		Core.setArrayByteSize(0);  // handle arrays internally
+		BitValue.index = Core.getArrayIndex();	//Set to cached value from the editor
+	    }
         }
 
 	if (Core.hasAttr("list") == true) {
@@ -238,9 +240,13 @@ BitValue.initCtrl = function() {
            BitValue.bitSpacingCtrl = BitValue.addLabel("Value bit spacing: " + BitValue.entryBitSpacing);
        }
 
-       if (BitValue.dataLen> 1) {
-            BitValue.bitOffsetCtrl = BitValue.addLabel("Bit offset: 0");
-            BitValue.byteOffsetCtrl = BitValue.addLabel("Byte offset: 0");
+       if (BitValue.dataLen > 1) {
+		//if (Core.versionDate >= 250823) {
+		    BitValue.bitOffsetCtrl = BitValue.addLabel("Bit offset: 0");
+		    BitValue.byteOffsetCtrl = BitValue.addLabel("Byte offset: 0");
+		//} else {
+		//	var ctrl = BitValue.addLabel("(Arrays not supported, needs newer version)");
+		//}
         }
 	
 
@@ -333,7 +339,11 @@ BitValue.listChangeFunc = function(a_value) {
 
 
 BitValue.eventFunc = function(a_eventBits) {
-    BitValue.index = Core.getArrayIndex();
+	if (Core.versionDate >= 250823) {
+		BitValue.index = Core.getArrayIndex();
+	} else {
+		BitValue.index = Core.arrayIndex;
+	}
     if (BitValue.usingList == false) {
         BitValue.editSpin.value = BitValue.getValue(BitValue.index);
     }

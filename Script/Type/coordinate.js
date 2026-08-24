@@ -50,6 +50,12 @@ Coord.initCommon = function(a_mode, a_bmv) {
 
     Coord.clearBG = true;
 
+    if (a_mode == Coord.modeNormal) {
+	    if (Core.hasAttr("len") && (Core.versionDate >= 250823)) {
+		DefaultControls.addArrayTuner();
+	    }
+    }
+    
    var parentWnd;
    if (a_mode != Coord.modeFetch) {
 
@@ -86,13 +92,16 @@ Coord.initCommon = function(a_mode, a_bmv) {
         Coord.hasY = true;
     }
 
+     var pointer = 0;
+
     if ((Coord.hasY == false) && (Coord.hasX == false)) {
         Coord.hasY = true;
         Coord.hasX = true;
         Coord.pointerY = 0;
         Coord.pointerX = 1;
+        pointer = 2;
     } else {
-        var pointer = 0;
+   
         if (Coord.hasY == true) {
            var ytxt = Core.getAttr("y");
            if (ytxt.length < 1) {
@@ -101,6 +110,9 @@ Coord.initCommon = function(a_mode, a_bmv) {
            } else {
                var yp = Core.getHexValueAttr("y");
                Coord.pointerY = yp;
+	       if ((yp+1) > pointer) {
+			pointer = yp+1;
+	       }
            }
         }
         if (Coord.hasX == true) {
@@ -111,11 +123,23 @@ Coord.initCommon = function(a_mode, a_bmv) {
            } else {
                var xp = Core.getHexValueAttr("x");
                Coord.pointerX = xp;
+	       if ((xp+1) > pointer) {
+			pointer = xp+1;
+	       }
            }
         }
     }
 
     if (a_mode == Coord.modeNormal) {
+	    if (Core.hasAttr("len") && (Core.versionDate >= 250823)) {
+		Core.setArrayByteSize(pointer);
+		Event.signal.connect(Coord.eventFunc);
+	    }
+    }
+
+    if (a_mode == Coord.modeNormal) {
+    
+
     if (Coord.hasY == true) {
         Coord.editY = new QLineEdit(parentWnd);
         Coord.editY.move(Core.base_x+Coord.bmW+10, Core.base_y);
@@ -239,6 +263,12 @@ initFetch = function() {
     }
 
     return(returndata);
+}
+
+Coord.eventFunc = function(a_flags) {
+//	print(Core.getArrayIndex());
+    Coord.redraw();
+    Coord.bmView.refresh();
 }
 
 Coord.mouseFunc = function(a_btn, a_y, a_x) {

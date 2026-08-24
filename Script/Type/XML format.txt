@@ -2,9 +2,15 @@
 Update Notes
 ============
 
-Next binary:
+Release 2026-08-24:
  - Added BITVALUE data type
- - Added Render support for all Palette types, String types
+ - Added GB_NT_ADDR (GameBoy TileMap Address) data type
+ - NameTable address types: Added PIXELW and PIXELH attributes.
+ - Added Array (LEN attribute) support for Coordinate types
+ - Added Array (LEN attribute) support for NameTable address types
+ - Added Render Child Elements for Palette types, NameTable address types, and Coordinate types.
+ - Added support for most data types to be used in Render Child Elements.
+ - Added fetch support for most data types.
 
 Script Update Pack 2026-05-06:
  - Added CHR_GB (GameBoy CHR) data type
@@ -16,41 +22,37 @@ Script Update Pack 2026-05-06:
  - Bugfix: HEX data type: Fixed bug where it was possible to write past the end of data (or end of row).
  - Bugfix: linewidth and lineheight in GRID customization class can now be "0". (would previously cause crash)
  - Added fetch support for all Integer Data types that isn't deprecated.
- - Added COLLAPSE flag for all Items. (To be supported in next binary)
+ - Added COLLAPSE flag for all Items.
 
-DRDXML format - Introduction
-============================
+XML format - Introduction
+=========================
 
-Flexible Editor makes use of "data-reference databases" (DRD) written in XML format.
-These databases basically describe the location and types of datas in a file.
+Flexible Editor makes use of XML format documents to describe locations and types of data in a file.
 
-XML files can be written outside the editor and then loaded, it also has some
+XML files can be written outside the editor and then loaded, the editor also has some
 simple features for creating and editing them.
 As required by the XML standard, the XML must have a root element that contains all
 elements in the document.
 
 Here's a basic example of a XML file that Flexible Editor can load:
 
-<drd>
+<xml>
     <item name="Data" ptr="FA0" type="byte"/>
-</drd>
+</xml>
 
-"drd" is just a dummy element in order to have a root element. You can name this
-whatever you like.
-An "item" element describes one item in the database, or the database tree, or
-a parent for other items.
-The "ptr" attribute in the item element is the location of the data, in hexadecimal.
-"type" describes the type of data.
-Most attributes that have a numerical value is written in hexadecimal without a prefix.
-But there are exceptions, where a decimal value is expected instead.
-
-You can build a tree structure using the ITEM element, where some ITEM elements
-function as containers, or parents of other items.
+XML is just a dummy element in order to have a root element. You can name this whatever you like.
+An ITEM element describes one item in the database with attributes describing data location, type and so on.
+The document can be be a tree, so that Item elements are parents to other Item elements.
+This tree structure will be shown on the left side in the editor.
+The PTR attribute in the item element is the location of the data, in hexadecimal without prefix.
+TYPE describes the type of data.
+NAME describes the text that shows in the tree for the Item.
+Most other attributes that is meant to have a numerical value is expected to be decimal, with some exceptions.
 The ITEM element is not required to have any attributes.
 
-Example:
+Tree Example:
 
-<drd>
+<xml>
 	<item name="Byte datas">
 		<item name="Byte Data 1" ptr="FA0" type="byte"/>
 		<item name="Byte Data 2" ptr="FA4" type="byte"/>
@@ -59,12 +61,12 @@ Example:
 		<item name="Word Data 1" ptr="1B4C" type="int16"/>
 		<item name="Word Data 2" ptr="1B50" type="int16" flag="SIGNED.DECIMAL"/>
 	</item>
-</drd>
+</xml>
 
 If you want to make the parent elements more distinct from the others,
 you can use BRA instead. It's interpreted exactly the same way as ITEM.
 
-If you want to write an XML and want more examples, check out demo.xml.
+If you want to write an XML and want more examples, check out demo.xml inside and outside the editor.
 It demonstrates an example for all data types.
 Also, the "XML" subfolder will contain demos and examples.
 
@@ -73,18 +75,15 @@ Flexible Editor doesn't support everything that editor did yet, but the plan
 is to make it fully compatible with .XML documents written for that.
 That format will be referenced to as "2006 standard" some places in this document.
 
-Supported Elements
-==================
+ITEM Element
+============
 
-ITEM
-----
-
-ITEM is used to describe one item of data, or function as a
+An ITEM Element is used to describe one item of data, or function as a
 parent element for other Item elements.
-It can describe various data types, or none (blank).
+It can describe one of various data types, or none (blank).
 All attributes are optional, including the NAME attribute.
 
-In an alternative case, an ITEM element describes a List Item element, this will be
+As an alternate use, an ITEM element describes a List Item element, this will be
 described further down in the document.
 
 Supported attributes for ITEM:
@@ -99,10 +98,10 @@ Supported attributes for ITEM:
 		the parent Item's current index.
 	LEN	Hexadecimal without prefix. This can be:
 		1. Size of data for variable length data, such as Strings or Palettes.
-		2. Size of array for fixed-length data that supports arrays. (Integers)
+		2. Size of array for fixed-length data that supports arrays.
 		3. Size of array for a parent Item without Type.
 		(For 2 and 3, see "Arrays" section for more details.)
-	FLAG	Define flags for the Item or flags relevant to the data type. All flags you want to
+	FLAG	Define flags for the Item, general or relevant to the data type. All flags you want to
 		set is placed in this attribute, separated using a dot (.)
 		Example: .. flag="DECIMAL.SIGNED" ..
 	COMMON	Use a COMMON element as a template. (See "Common Element" section)
@@ -124,11 +123,503 @@ See the section on Pointers further on for more details.
 Text: ITEM elements can contain a text part. This works exactly the same as the LAB attribute.
 If it's present, it will be displayed in an edit control at the top of the editing window.
 
+Data Types (TYPE attribute)
+===========================
+
+These are the data types that have moderate support by Flexible Editor.
+
+blank		No data type. This is the default if the TYPE attribute isn't specified.
+
+Integer Types
+-------------
+
+byte		8 bit Integer.
+int8		Same as byte, provided for completion.
+int16		16 bit Integer.
+int24		24 bit Integer.
+int32		32 bit Integer.
+int64		64 bit Integer.
+int		General Integer, the bitsize is 16 by default and
+		can be changed with the INTSIZE attribute.
+		If there's an INTSIZE attribute in the INFO element it sets it as a global default.
+
+All integers are by default edited in Unsigned Hexadecimal and in Little-Endian byte order.
+This can be changed using the FLAG attribute and BASE attribute.
+
+Supported attributes for Integer Types:
+	INTSIZE		Decimal value. Change the Integer bitsize for any Integer type. This can be any
+			number divisible by 8. The actual upper limit hasn't been tested,
+			but 512 appears to be fine.
+	LIST		Edit the integer using a List so each value is described with a string.
+			This attribute refers to the KEY attribute of a List Item.
+			(See LIST in "Other Elements" section) 
+			Note that only 8 and 16 bit values
+			are supported in this case. Bits higher than Bit 15 will be ignored both
+			on Read and Write.
+	BIT		Adds controls for editing/toggling the bits of the value.
+			This attribute contains the label texts to describe each bit for
+			each editing control.
+			In order from MSB to LSB, text to describe each bit is placed
+			separated using a dot/period. If a field is empty, the control
+			won't appear.
+			Example for "byte" or "int8" type:
+			.. bit="Highest Bit.Bit 6.Bit 5.....Lowest Bit" ..
+			^ This will allow editing for Bits 7, 6, 5 and 0, but not bit 1 to 4.
+	BASE		Edit Integer in a specific Base / Radix.
+			Decimal value. This can be anything from 2 to 51.
+			(DECIMAL flag will be ignored if this is set).
+	LEN		Define an Array of integers where LEN is the Array length.
+			Value is Hexadecimal without prefix.
+			The total byte size of the array will be LEN * Integer byte size.
+
+Supported flags for all Integer Types:
+	SIGNED		Edit the integer as a Two's complement Signed value.
+	DECIMAL		Edit the integer as a decimal (Base 10) number.
+	BIGENDIAN	Edit the integer in Big-Endian mode.
+			This also works for Bit toggling with BIT attribute and editing
+			using a List.
+
+Examples:
+
+ <item name="Potentially negative hex value" ptr="7F0" type="int24" flag="SIGNED"/>
+ <item name="Potentially negative decimal value" ptr="7F3" type="int24" flag="SIGNED.DECIMAL"/>
+
+Advanced - Fetch support:
+	Yes, with some limitations. Fetch is available for 48 bit integers and below.
+	Since values in the environment is limited to Double Float (53 bit integer precision),
+	Integers with 56 bits and up can't be represented accuratedly, so they will be returned as 0.
+	Signed values and Big Endian is supported. BASE and DECIMAL is ignored (all values are returned in base 10).
+
+Advanced - Supported as Render type:
+	Yes, with very basic, low resolution text.
+
+	Input parameter support: x, y, index (array index), palette, paletteentries
+
+		If "palette" is set, the first color will be text color. It's assumed "palette" contains at least one color,
+		so in this case, "paletteentries" don't need to be set.
+		However, if "paletteentries" is at least 2, the *second* color will become the background color.
+
+
+Raw data types
+--------------
+
+hex	Edit data in hexadecimal, with 16 bytes on each row.
+
+Supported attributes:
+	LEN	Number of bytes in hex. No limit. If it's more than 256 (0x100),
+		the page selector will be shown.
+
+Advanced - Fetch support:
+	Yes. Simply returns all bytes as an array.
+
+Bit data Types
+--------------
+
+bitvalue	Edit values stored in any desired bit length. (What the max is hasn't been tested but should at least be 32)
+		Order of bits within the byte is from Least Significant Bit to Most Significant then as long as more bits
+		are needed, it wraps around to the LSB of the next byte.
+		Arrays can be defined. Each value in an array starts at the bit offset for each index
+		and doesn't take into account where bytes start and end.
+
+Supported attributes:
+	SIZE		Set the bit size of values. Default is 8.
+	SPACING		Optional. Set the bit spacing between each value in an array.
+			When this attribute isn't set, spacing is the same as SIZE.
+	STARTPOS	Optional. Set the bit offset of the value (or bit offset of the first value in an Array)
+			0 is LSB of the first byte.
+	LEN		Define an Array. Value is Hexadecimal without prefix.
+			Like with Integers, you can use ARRINDEX_LABLIST or ARRINDEX_LABDEF to provide
+			strings for each array index.
+	LIST		Edit the bit values using a List so each value is described with a string.
+			This attribute refers to the KEY attribute of a list Item.
+	BIT		Adds controls for editing/toggling the bits of the value.
+			Works the same way as for Integer types.
+			This attribute contains the label texts to describe each bit for
+			each editing control.
+			In order from MSB to LSB, text to describe each bit is placed
+			separated using a dot/period. If a field is empty, the control
+			won't appear.
+
+	You can for example define an array of 5 bit values, with 6 elemenets,
+	divided like this:
+
+	MSB b0: 22211111 LSB
+	    b1: 43333322
+	    b2: 55554444
+	    b3: ..666665
+ 
+	If for example you want to edit a string of bits within each byte in an array of bytes,
+	define LEN as the number of bytes,
+	define SIZE as the number of relevant bits in each byte,
+	STARTPOS to where in the byte the bits start, where LSB is 0 and MSB is 7. (if they start at 0/LSB, then it's not needed),
+	then SPACING to 8.
+	If you have the same case, but for an array of 32 bit integers, set SPACING to 32, and so on.
+
+Advanced - Fetch support:
+	Yes. Returns the value, or the array of values if LEN is set.
+
+Advanced - Supported as Render type:
+	Yes. With basic, low resolution text.
+
+	Input parameter support: x, y, index (array index), palette, paletteentries
+
+String Types
+------------
+
+string		ANSI/Windows-1252 or ASCII string. Can be fixed-size or character code-terminated.
+string_utf8	UTF-8 encoded string. Can have a fixed byte size or, the string can end at a
+		specific character code.
+
+Supported attributes:
+
+	LEN		Sets byte size of data in Hexadecimal. For "string" type this is the
+			same as the number of characters.
+			For character code-terminated strings, this defines the maximum byte size
+			of the input string + end character bytes.
+			If the resulting data doesn't fit, characters from the input string are cut.
+
+	ENDCODE		Defines the character code that ends/terminates the string.
+			Decimal value.
+			(Example: endcode="0")
+
+Known bugs: There is a bug I've been unable to fix for now where the editor will crash, at least for
+"string" in certain cases, though it seems related to unusual character codes.
+
+Advanced - Supported as Render type:
+		Supported for "string". Not pretty, but it draws something.
+		It works for "string_utf8" too, but non-ASCII characters will be blank.
+
+		Input parameter support: x, y, index (character index), palette, paletteentries
+
+Types: Graphics - Palette
+-------------------------
+
+pal_nes		NES Palette
+pal_15		15 bit palette, 5 bits each for R, G and B. (RGB555)
+		Use for SNES, GameBoy Color, GameBoy Advance.
+pal_15a		Same as pal_15, but adds a 1-bit transparency toggle for the upper bit,
+		making it suitable for PlayStation1 CLUT data.
+pal_smd		Sega Mega Drive and Game Gear palette data. (RGB333)
+pal_6		Sega Master System palette (RGB222)
+pal_24		24 bit palette (RGB888), Red is first byte and Blue is the 3rd.
+pal_24bgr	24 bit palette (BGR888), Blue is first byte and Red is the 3rd.
+pal_32		32 bit palette (RGBA8888), with channels in order Red, Green, Blue, Alpha.
+pal_32abgr	32 bit palette (ABGR8888), reverse of the above (Alpha, Blue, Green, Red)
+pal_32argb	32 bit palette (ARGB8888), with channels in order Alpha, Red, Green, Blue.
+pal_32bgra	32 bit palette (BGRA8888), with channels in order Blue, Green, Red, Alpha.
+
+Supported attributes for all Palette Types:
+	LEN		Number of palette entries in hexadecimal.
+			If it's higher than 0x100 (256), a page selector is added.
+
+Supported Flags for all Palette Types:
+	BGR		Swaps the position of Blue and Red channels.
+
+Supported objects for customization attributes, all CHR types (See "GUI Cusomization"):
+	Type		Name
+
+	GRID		grid		(all grids)
+	GRID		entrygrid
+	GRID		indexedgrid	Grid displaying indexed palette, such as for PAL_NES.
+
+	(Example: entrygrid.selcolor="70C070" grid.color="007000")
+
+Advanced - Render Child Elements:
+	IMAGE		Shows graphics based on a data type below the standard controls.
+			Draws the graphics using the palette, if supported by the child element data type.
+			The graphics is refreshed when the user changes the current color or palette data.
+			You can currently only place one of these, but it will be possible to add multiple
+			in the future.
+
+			Output parameters: palette, paletteentries, paletteindex
+
+			Init behaviour: Palette type script never initializes the BitmapView,
+			so child element data type script type must always initialize with suitable Width/Height.
+
+Advanced - Fetch support: Supported for all types. Returns all colors as an array of RGB24.
+			Use for example in an IMAGE child element of an ITEM element with Palette type.
+
+Advanced - Supported as Render type:
+			Supported for all types. Draws the palette matrix as it typically looks like in
+			editing, with grid.
+
+			Input parameter support: x, y
+
+
+Types: Graphics - CHR (Tiles)
+-----------------------------
+
+chr_nes		NES CHR (4 color 2bpp)
+chr_snes	SNES CHR (limited to 16 color 4bpp for now)
+chr_gb		GameBoy / GameBoy Color CHR (4 color 2bpp)
+
+Supported Attributes for all CHR Types:
+	LEN		Hexadecimal. Number of tiles. Can be virtually any length,
+			a page selecter is added if this exceeds LEN="100" (256).
+	PALETTE		Palette provided as 24-bit RGB values for each color.
+			Each color value is written in hexadecimal and seperated by a dot,
+			with channels in Red->Green->Blue order. Example:
+			(palette="000000.FF0000.00FF00.0000FF")
+			^ Provides a 4 color palette fit for NES CHR, with colors
+			Black, Red, Green, Blue, in that order.
+	SCALE		Set scaling of tile selector. Default is 3.
+			The bigger, the larger. "1" will draw 1 screen pixel for each tile pixel,
+			"2" will draw 2x2 pixels for each tile pixel, and so on.
+			This must be an integer value.
+	ROWLENGTH	Number of tiles in a row for the tile selector. Default is 16.
+			(Decimal value)
+
+Supported Child Elements for all CHR types:
+	PALETTE		Use data from the binary file as a palette source.
+			Uses Fetch function on a data type script if supported.
+			Basically, these elements work the same way as an Item element,
+			palette info is described using PTR, TYPE and LEN attributes.
+			TYPE can be any Palette type or any data type that has Fetch support.
+
+Sub-Palette selection:
+
+Palettes set with PALETTE attribute or PALETTE Child Element can be larger than the number of
+colors per pixel, to provide alternative sub-palettes.
+In this case, all colors are shown in the color selector, then when the user picks a color from a
+different sub-palette than the current one, the tile selector and editor will be redrawn showing
+the tiles with that sub-palette.
+
+Supported objects for customization attributes, all CHR types (See "GUI Cusomization"):
+	Type		Name
+
+	GRID		grid		(all grids)
+	GRID		tilegrid
+	GRID		editgrid
+	GRID		colorgrid
+
+	(Example: tilegrid.selcolor="70C070" grid.color="007000")
+
+Advanced - Fetch support: N/A
+
+Advanced - Supported as Render type: All types can be used in Render Child Element of other data types.
+		CHR will be drawn into destination, the number of tiles specified by LEN. SCALE and ROWLENGTH
+		can be specified just as when it's a regular type.
+		In Render mode, grid is not drawn unless "grid.linewidth" or "grid.lineheight" attributes
+		is set as non-zero values.
+		Supports palette parameters passed from the parent data type script.
+		If the "index" parameter is set, it's used as the relative tile index to start drawing at.
+
+		Input parameter support: x, y, index, palette, paletteentries, paletteindex
+
+Types: Graphics - NameTable/Tilemap address
+-------------------------------------------
+
+nes_nt_addr	NES NameTable Address. 16-bit, Big-endian address. (Upper byte first, then lower.)
+snes_nt_addr	SNES NameTable Address. 16-bit, Little-endian address into a Nametable
+		where each tile occupies 16 bits/2 bytes of data.
+gb_nt_addr	GameBoy / GameBoy Color TileMap (NameTable) Address. Little-endian address into
+		Tile Map at $9800 or $9C00.
+
+Supported attributes:
+	PIXELW		Optional. Set the width of each cell in pixels (excluding grid lines)
+	PIXELH		Optional. Set the height of each cell in pixels (excluding grid lines)
+	LEN		Optional. If set, enable editing of multiple consecutive datas.
+			Value is number of datas in hexadecimal without prefix.
+
+Supported attributes for SNES_NT_ADDR:
+	BASE	Set the base VRAM address that the Nametable is supposed to start, in hex.
+		The data value will then be read and written relative to this value.
+		If this is not set, data is edited as the lower 11 bits
+		(representing the 11 bits required to describe a typical address)
+		and the upper bits are left alone.
+
+Advanced - Render Child Elements:
+	BGIMAGE		Draw graphics behind the grid starting from the top-left corner.
+			You can set attributes "param.x" or "param.y" in the BGIMAGE element to set draw coordinates
+			to non-zero values.
+	FGIMAGE		Draw graphics at the current tile coordinate.
+	BGCELLIMAGE	A little more advanced, this will draw graphics for every cell in the grid.
+			The same render will be done for every cell but "index" is set to the cell index.
+			You will generally set attribute LEN="1" for the child render element in this case.
+			For example, you can use a "chr_nes" type and set LEN to "1", and this will fill as many
+			tiles in the grid from that pointer as there is space for (Generally 960).
+			Keep in mind to set PIXELH and PIXELW in the parent Element to suitable values.
+	FGCELLIMAGE	This will draw graphics for a certain number of cells at the current tile coordinate.
+			This is even more advanced. You will probably set LEN="1" attribute here too, but you
+			need to set an additional attribute in the child element to the actual number of cells to draw:
+			render.len="[length]", where [length] is the Hexadecimal value for number of cells.
+			It will draw cells from the current coordinate, going right and then if it goes past the
+			horizontal boundary it continues on the next line, and so on.
+
+	You place multiple elements of the same tag as child elements. 
+
+Advanced - Fetch support: N/A
+
+Types: Graphics - Coordinate
+----------------------------
+
+coordinate	Y and/or X coordinate data, 8-bit.
+
+Supported attributes:
+	Y	Enable Y editing. Value is relative byte pointer for the Y coordinate.
+	X	Enable X editing. Value is relative byte pointer for the X coordinate.
+	LEN	Set up an array of coordinate datas of the same type.
+		Attribute value is number of entries in Hexadecimal without prefix.
+		The byte size of each entry will be the highest relative byte pointer +1.
+		(Usually 2 if there's both X+Y and 1 if there's either of them)
+	
+	(You can define "y" to edit only Y coordinate,
+	"x" to edit only X coordinate, or you can define both.)
+
+	SNAPY	Decimal value. If set, Y coordinate will be rounded to values divisible by this value.
+	SNAPX	Decimal value. If set, X coordinate will be rounded to values divisible by this value.
+	GRIDY	Decimal value. If set, horizontal lines will be shown for every GRIDY pixel.
+	GRIDX	Decimal value. If set, vertical lines will be shown for every GRIDX pixel.
+
+Advanced - Render Child Elements:
+	BGIMAGE		Draw image in the background, based on a data type that supports Render.
+			You can set attributes "param.x" or "param.y" in the BGIMAGE element to set draw coordinates
+			to constant values.
+	FGIMAGE		Draw image at the current coordinate, based on a data type which supports Render.
+			It will be drawn on top of the coordinate lines.
+			If the coordinate is X or Y only, or any other reason,
+			you can set attributes "param.x" or "param.y" in the FGIMAGE element to set draw coordinates
+			to constant values.
+
+			(updateRender in the target script will be called each time the coordiante
+			or array index is changed.)
+
+			Output parameters: x, y (depending on setup, either of them may always be 0.)
+
+
+Types: Map
+----------
+
+map	General map editor where each byte is represented as a rectangular unit.
+	Currently shows byte datas as hexadecimal values.
+	In the future, it will be able to draw graphics described by child elements
+	so that it can be used as a tilemap editor / nametable editor and more.
+
+Supported attributes for MAP:
+	WIDTH			Decimal value. Number of units on each row. Optional if LEN is set.
+	HEIGHT			Decimal value. Number of units on each collumn. Optional if LEN is set.
+	LEN			Hex value. Total number of units/number of bytes. Optional if both WIDTH and HEIGHT is set.
+	PIXELW			Pixel width of each unit.
+	PIXELH			Pixel height of each unit.
+	TOTALWIDTH		Total width of map in units. If this is present, a horizontal slider/
+				scroll bar appears.
+	TOTALHEIGHT		Total height of map in units. If this is present, a vertical slider/
+				scroll bar appears.
+
+	INDEX_MUL		Decimal value. optional. Sets byte spacing for each index if present.
+				In other words, values will be read from (index * INDEX_MUL).
+	PARENTINDEX_MUL		Decimal value, optional. If this is a Render Child Element of another Element,
+				and it passes an index parameter, it will be multiplied with this value before
+				it's added to the data offset.
+
+Known bugs: Graphical glitches (graphics not updating in some cases, etc.)
+
+Advanced - Experimental attributes for MAP:
+	(These are in development and are subject to change.)
+
+	INDEX_ROR		Decimal value. If set, it will bitwise rotate right the index to data, by [INDEX_ROR] bits.
+				Use together with INDEX_BITSIZE to get desired effect.
+				This can be used if a meta tile's sub data is arranged as multiple, consecutive byte arrays.
+				For example if a meta tile has 4 sub tiles, and its sub-tile data is arranged in the
+				following fashion:
+				$6400, $6500, $6600, $6700.
+				Then you can set INDEX_ROR="2" and INDEX_BITSIZE="10".
+	INDEX_BITSIZE		Decimal value. Set bit size of index into data. Used together with INDEX_ROR.
+
+Supported objects for customization attributes (See "GUI Customization"):
+	Type		Name
+
+	GRID		grid		(all grids)
+	GRID		mapgrid		Left matrix grid showing the actual datas.
+	GRID		selgrid		Right matrix grid showing what values can be selected.
+
+	(Example: mapgrid.selcolor="70C070" grid.color="007000")
+
+Advanced - Experimental child elements for MAP:
+
+	PARAMETER		Set or modify a parameter passed to child elements using data from a data type that supports Fetch.
+				This element functions like an ITEM element except that its function is to return
+				data for MAP. The TYPE attribute set has to refer to a type that supports Fetch.
+				It also has additional attributes:
+
+				MAP.INDEX_SRC	Name of parameter to use as byte index into data. (usually "index")
+				MAP.DEST	Name of parameter to set. This can for example be "paletteindex",
+						"x", "y".
+				MAP.VAL_MUL	If set, value will be multiplied with this before written to the
+						destination parameter.	
+
+Advanced - Fetch Support: Yes. (Untested) Returns an array of bytes representing the entire map.
+
+Advanced - Render Child Elements:
+	SUBITEM		Draws a data type into each cell of the grid (each unit to be drawn).
+			The value associated to each cell is passed as "index" parameter to the SUBITEM data type script.
+			Use for example a CHR data type like CHR_NES in this element with LEN="1" for simple nametable data.
+
+	Output parameters: x, y, index
+
+Advanced - Supported as Render type: Yes. Interprets "index" parameter, which is added to the data offset.
+
+	Input parameters support: x, y, index
+
+Advanced - Specific data type notes for SUBITEM:
+	string		You can use this data type so that each cell's value is represented by a character from a table of characters.
+			(The cell's value will be the index into the table).
+			LEN should be set to "100" (256) for the LEN attribute in this case, only 1 character will still be drawn.
+	map		This can be used in the SUBITEM element to represent the next (deeper) level of a meta tile.
+			These can be stacked as deeply as needed.
+
+
+
+Deprecated but Supported Data Types 
+-----------------------------------
+
+These are data types that are supported for compatibility with the 2006 standard,
+but that I don't recommended using in newer documents.
+
+listbyte	8 bit Integer editing using a list. You can simply use "byte" data type
+		and provide a "list" attribute to reproduce it.
+listint		Genereal Integer editing using a list. You can simply use "int" data type
+		and provide a "list" attribute to reproduce it.
+arr_byte	Array of Byte. Works the same as BYTE with LEN attribute set.
+arr_listbyte	Array of Byte using list. Works the same way as BYTE with LEN and LIST attributes set.
+arr_int		Array of Int. Works the same as INT type with LEN attribute set.
+arr_listint	Array of Int using list. Works the same way as INT type with LEN and LIST attributes set.
+
+Incomplete Support
+------------------
+
+These are data types that has a script but is incomplete and definitely has bugs.
+You can still use it at your own risk.
+
+tbl_string	String editing using a .tbl file.
+		A work in progress script for this type is present, but it's early in development.
+
+Supported attributes:
+	TBL		Required. Define the Table .tbl filename.
+	LEN		Size of text in number of bytes. Hexadecimal.
+	LINEWIDTH	Optional. Decimal value.
+			If set, it will divide the read/dumped text into lines of 'LINEWIDTH'
+			characters each. It's done for each proccessed block of data, so there's no
+			guarantee each line will have exactly that number of characters.
+			Line breaks are ignored on insertion.
+
+Supported objects for customization attributes (See "GUI Customization"):
+	Type		Name
+
+	EDIT		edit		(all edits/text editors)
+	EDIT		text		Top field containing text string. You can set text.stylesheet for this.
+	EDIT		log		Bottom field containing status log. You can set log.stylesheet for this.
+
+	(Example: text.stylesheet="font: 14px &quot;Lucida Console&quot;; color: #EE9944")
+
+Other XML Elements
+==================
+
 BRA
 ---
 
 Describes a Branch.
-Works exactly the same as ITEM, but was used in the 2006 standard
+Works exactly the same way as ITEM. It was used in the 2006 standard
 to exclusively describe a parent element (branch).
 You can still use it if you want.
 
@@ -172,18 +663,18 @@ LIST
 ----
 
 Container parent element for all list items.
-Each list is set up using an ITEM element. (See below :)
+Each list is set up using an ITEM element. (See below)
 
 ITEM (List Item)
 ----------------
 
-Each list has a Key attribute used as reference to it from data items where you wish to use the list.
+Each list has a KEY attribute used as reference to it from data items where you wish to use the list.
 The actual list contents is placed in the text part of this element.
 Each list entry is placed within double quotes. (Line breaks are ignored)
 Like this: "Entry 1" "Entry 2" "Entry 3" ...
 When lists are used, values are automatically added to the start of the strings.
 
-Supported attributes:
+Attributes:
 
 	KEY	Key (Name) used to refer to the list. Required.
 
@@ -224,7 +715,14 @@ Examples 2 - SNES - This will display the tiles using the palette data at 0x66A0
 
 In both cases, palette data is fetched as an array of 24-bit RGB color values.
 
-(Note: This particular feature was added just before release and may have bugs)
+Render Child Elements
+---------------------
+
+IMAGE, FGIMAGE, BGIMAGE, FGCELLIMAGE, BGCELLIMAGE, SUBITEM
+
+^ These are all Render Child Elements that can be used as child
+elements of an ITEM element specifically to draw graphics.
+(Which ones that can be used depends on the data type)
 
 Pointers (PTR/RELPTR/Arrays)
 ============================
@@ -255,416 +753,11 @@ The index byte size depends on the data type, or if it's blank/no type,
 it is the contents of the ARR_INDEXWIDTH attribute.
 See "Arrays" section for more details.
 
-Data Types (TYPE attribute)
-===========================
-
-These are the data types that have basic or moderate support by Flexible Editor.
-
-blank		No data type. This is the default if the TYPE attribute isn't specified.
-
-Integer Types
--------------
-
-byte		8 bit Integer.
-int8		Same as byte, provided for completion.
-int16		16 bit Integer.
-int24		24 bit Integer.
-int32		32 bit Integer.
-int64		64 bit Integer.
-int		General Integer, the bitsize is 16 by default and
-		can be changed with the INTSIZE attribute:
-		If it's in the same element it changes the intsize for that Item.
-		If there's an INTSIZE attribute in the INFO element it sets it as a global default.
-
-All integers are by default edited in Unsigned Hexadecimal in Little-Endian byte order.
-This can be changed using the FLAG attribute and BASE attribute.
-
-Supported attributes for Integer Types:
-	INTSIZE		Decimal value. Change the Integer bitsize for any Integer type. This can be any
-			number divisible by 8. The actual upper limit hasn't been tested,
-			but 512 appears to be fine.
-	LIST		Edit the integer using a List so each value is described with a string.
-			This attribute refers to the KEY attribute of a list Item.
-			Note that only 8 and 16 bit values
-			are supported in this case. Bits higher than Bit 15 will be ignored both
-			on Read and Write.
-	BIT		Adds controls for editing/toggling the bits of the value.
-			This attribute contains the label texts to describe each bit for
-			each editing control.
-			In order from MSB to LSB, text to describe each bit is placed
-			separated using a dot/period. If a field is empty, the control
-			won't appear.
-			Example for "byte" or "int8" type:
-			.. bit="Highest Bit.Bit 6.Bit 5.....Lowest Bit" ..
-			^This will allow editing for Bits 7, 6, 5 and 0, but not bit 1 to 4.
-	BASE		Edit Integer in a specific Base / Radix.
-			Decimal value. This can be anything from 2 to 51.
-			(DECIMAL flag will be ignored if this is set).
-	LEN		Define an Array of integers where LEN is the Array length.
-			Value is Hexadecimal without prefix.
-			The total byte size of the array will be LEN * Integer byte size.
-
-Supported flags for all Integer Types:
-	SIGNED		Edit the integer as a Two's complement Signed value.
-	DECIMAL		Edit the integer as a decimal (Base 10) number.
-	BIGENDIAN	Edit the integer in Big-Endian mode.
-			This also works for Bit toggling with BIT attribute and editing
-			using a List.
-
-	Examples:
-
- <item name="Potentially negative hex value" ptr="7F0" type="int24" flag="SIGNED"/>
- <item name="Potentially negative decimal value" ptr="7F3" type="int24" flag="SIGNED.DECIMAL"/>
-
-Advanced - Fetch support:
-	Yes, with some limitations. Fetch is available for 48 bit integers and below.
-	Since values in the environment is limited to Double Float (53 bit integer precision),
-	Integers with 56 bits and up can't be represented accuratedly. They will be returned as 0.
-	Signed values and Big Endian is supported. BASE and DECIMAL is ignored (all values are returned in base 10).
-
-Advanced - Supported as Render type:
-	Yes, with very basic, low resolution text.
-
-	Input parameter support: x, y, index (array index), palette, paletteentries
-
-		If "palette" is set, the first color will be text color. It's assumed "palette" contains at least one color,
-		so in this case, "paletteentries" don't need to be set.
-		However, if "paletteentries" is at least 2, the *second* color will become the background color.
-
-
-Raw data types
---------------
-
-hex	Edit bytes in hexadecimal, with 16 bytes on each row.
-
-Supported attributes:
-	LEN	Number of bytes in hex. No limit. If it's more than 256 (0x100),
-		the page selector will be shown.
-
-Advanced - Fetch support:
-	Yes. Simply returns all bytes as an array.
-
-Bit data Types
---------------
-
-bitvalue	Edit values stored in any desired bit length. (What the max is hasn't been tested but should at least be 32)
-		Order of bits within the byte is from Least Significant Bit to Most Significant then as long as more bits are needed,
-		it wraps around to the LSB of the next byte.
-		Arrays can be defined. Each value in an array starts at the bit offset for each index
-		and doesn't take into account where bytes start and end.
-		You can for example define an array of 5 bit values, with 6 elemenets,
-		divided like this:
-
-		MSB b0: 22211111 LSB
-		    b1: 43333322
-		    b2: 55554444
-		    b3: ..666665
- 
-Supported attributes:
-	SIZE		Set the bit size of values. Default is 8.
-	SPACING		Optional. Set the bit spacing between each value in an array.
-			When this attribute isn't set, spacing is the same as SIZE.
-	STARTPOS	Optional. Set the bit offset of the value (or bit offset of the first value in an Array)
-			0 is LSB of the first byte.
-	LEN		Define an Array. Value is Hexadecimal without prefix.
-			Like with Integers, you can use ARRINDEX_LABLIST or ARRINDEX_LABDEF to provide
-			strings for each array index.
-	LIST		Edit the bit values using a List so each value is described with a string.
-			This attribute refers to the KEY attribute of a list Item.
-	BIT		Adds controls for editing/toggling the bits of the value.
-			Works the same way as for Integer types.
-			This attribute contains the label texts to describe each bit for
-			each editing control.
-			In order from MSB to LSB, text to describe each bit is placed
-			separated using a dot/period. If a field is empty, the control
-			won't appear.
-
-	If for example you want to edit a string of bits within each byte in an array of bytes,
-	define LEN as the number of bytes,
-	define SIZE as the number of relevant bits in each byte,
-	STARTPOS to where in the byte the bits start, where LSB is 0 and MSB is 7. (if they start at 0/LSB, then it's not needed),
-	then SPACING to 8.
-	If you have the same case, but for an array of 32 bit integers, set SPACING to 32, and so on.
-
-Advanced - Fetch support:
-	Yes. Returns the value, or the array of values if LEN is set.
-
-Advanced - Supported as Render type:
-	Yes. With basic, low resolution text.
-
-	Input parameter support: x, y, index (array index), palette, paletteentries
-
-String Types
-------------
-
-string		ANSI/Windows-1252 or ASCII string. Can be fixed-size or character code-terminated.
-string_utf8	UTF-8 encoded string. Can have a fixed byte size or, the string can end at a
-		specific character code.
-
-Supported attributes:
-
-	LEN		Sets byte size of data in Hexadecimal. For "string" type this is the
-			same as the number of characters.
-			For character code-terminated strings, this defines the maximum byte size
-			of the input string + end character bytes.
-			If the resulting data doesn't fit, characters from the input string are cut.
-
-	ENDCODE		Defines the character code that ends/terminates the string.
-			Decimal value.
-			(Example: endcode="0")
-
-Known bugs: There is a bug I've been unable to fix for now where the editor will crash, at least for
-"string" in certain cases, though it seems related to unusual character codes.
-
-Advanced - Render support: Supported for "string". Not pretty, but it draws something.
-		It works for "string_utf8" too, but non-ASCII characters will be blank.
-
-		Input parameter support: x, y, index (character index), palette, paletteentries
-			If "palette" is set, the first color will be text color. It's assumed "palette" contains at least one color,
-			so in this case, "paletteentries" don't need to be set.
-			However, if "paletteentries" is at least 2, the *second* color will become the background color.
-
-Types: Graphics - Palette
--------------------------
-
-pal_nes		NES Palette
-pal_15		15 bit palette, 5 bits each for R, G and B. (RGB555)
-		Use for SNES, GameBoy Color, GameBoy Advance.
-pal_15a		Same as pal_15, but adds a 1-bit transparency toggle for the upper bit,
-		making it suitable for PlayStation1 CLUT data.
-pal_smd		Sega Mega Drive and Game Gear palette data. (RGB333)
-pal_6		Sega Master System palette (RGB222)
-pal_24		24 bit palette (RGB888), Red is first byte and Blue is the 3rd.
-pal_24bgr	24 bit palette (BGR888), Blue is first byte and Red is the 3rd.
-pal_32		32 bit palette (RGBA8888), with channels in order Red, Green, Blue, Alpha.
-pal_32abgr	32 bit palette (ABGR8888), reverse of the above (Alpha, Blue, Green, Red)
-pal_32argb	32 bit palette (ARGB8888), with channels in order Alpha, Red, Green, Blue.
-pal_32bgra	32 bit palette (BGRA8888), with channels in order Blue, Green, Red, Alpha.
-
-Supported attributes for all Palette Types:
-	LEN		Number of palette entries in hexadecimal.
-			If it's higher than 0x100 (256), a page selector is added.
-
-Supported Flags for all Palette Types:
-	BGR	Swaps the position of Blue and Red channels.
-
-Supported objects for customization attributes, all CHR types (See "GUI Cusomization"):
-	Type		Name
-
-	GRID		grid		(all grids)
-	GRID		entrygrid
-	GRID		indexedgrid	Grid displaying indexed palette, such as for PAL_NES.
-
-	(Example: entrygrid.selcolor="70C070" grid.color="007000")
-
-Advanced - Fetch support: Supported for all types. Returns all colors as an array of RGB24.
-
-Advanced - Render support: Supported for all types. Draws the palette as it typically looks like in editing.
-
-		Input parameter support: x, y
-
-- TO BE IMPLEMENTED -:
-
-Supported Render child elements:
-	IMAGE		Shows graphics based on a data type below the standard controls.
-			Draws using the palette, if supported by the data type.
-			The graphics is refreshed when the user changes the current color or palette data.
-
-			Parameters passed to Render script: palette, paletteentries, paletteindex
-
-			Init behaviour: Data type must always initialize the BitmapView object with desired Width/Height.
-
-
-Types: Graphics - CHR (Tiles)
------------------------------
-
-chr_nes		NES CHR (4 color 2bpp)
-chr_snes	SNES CHR (limited to 16 color 4bpp for now)
-chr_gb		GameBoy / GameBoy Color CHR (4 color 2bpp)
-
-Supported Attributes for all CHR Types:
-	LEN		Number of tiles. For now, limited to the number of tiles
-			that can be displayed in the window.
-	PALETTE		Palette provided as 24-bit RGB values for each color.
-			Each color value is written in hexadecimal and seperated by a dot,
-			with channels in Red->Green->Blue order. Example:
-			(palette="000000.FF0000.00FF00.0000FF")
-			^ Provides a 4 color palette fit for NES CHR, with colors
-			Black, Red, Green, Blue, in that order.
-	SCALE		Set scaling of tile selector. Default is 3.
-			The bigger, the larger. "1" will draw 1 screen pixel for each tile pixel,
-			"2" will draw 2x2 pixels for each tile pixel, and so on.
-			This must be an integer value.
-	ROWLENGTH	Number of tiles in a row for the tile selector. Default is 16.
-			(Decimal value)
-
-Supported Child Elements for all CHR types:
-	PALETTE		Use data from the file as a palette source.
-			Uses Fetch function on a data type script if supported.
-			Basically, these elements work the same way as an Item element,
-			palette info is described using PTR, TYPE and LEN attributes.
-			TYPE can be PAL_NES, PAL_15, PAL_6, PAL_15A, PAL_24,
-			or any type that has Fetch support.
-
-Sub-Palette selection:
-
-Palettes can be larger than the number of colors per pixel, to provide alternative sub-palettes.
-In this case, all colors are shown in the color selector, then when the user picks a color from a
-different sub-palette than the current one, the tile selector and editor will be redrawn showing
-the tiles with that sub-palette.
-
-Supported objects for customization attributes, all CHR types (See "GUI Cusomization"):
-	Type		Name
-
-	GRID		grid		(all grids)
-	GRID		tilegrid
-	GRID		editgrid
-	GRID		colorgrid
-
-	(Example: tilegrid.selcolor="70C070" grid.color="007000")
-
-- TO BE IMPLEMENTED -:
-
-Advanced - Fetch support: N/A
-
-Advanced - Supported as Render type: All types can be used as render type within other data types. CHR will be drawn into destination,
-		the number of tiles specified by LEN. SCALE and ROWLENGTH can be specified just as when it's a regular type.
-		In Render mode, grid is not drawn unless "grid.linewidth" or "grid.lineheight" attributes is set as non-zero values.
-		Supports palette parameters passed as input. If the "index" parameter is set, it's used as the relative tile index.
-
-		Input parameter support: x, y, index, palette, paletteentries, paletteindex
-
-Supported Render child elements: N/A
-
-Types: Graphics - NameTable/Tilemap address
--------------------------------------------
-
-nes_nt_addr	NES NameTable Address. 16-bit, Big-endian address. (Upper byte first, then lower.)
-snes_nt_addr	SNES NameTable Address. 16-bit, Little-endian address into a Nametable
-		where each tile occupies 16 bits/2 bytes of data.
-
-Supported attributes for SNES_NT_ADDR:
-	BASE	Set the base VRAM address that the Nametable is supposed to start, in hex.
-		The data value will then be read and written relative to this value.
-		If this is not set, data is edited as the lower 11 bits
-		(representing the 11 bits required to describe a typical address)
-		and the upper bits are left alone.
-
-Types: Graphics - Coordinate
-----------------------------
-
-coordinate	Y and/or X coordinate data, 8-bit.
-
-Supported attributes:
-	Y	Enable Y editing. Value is relative byte pointer for the Y coordinate.
-	X	Enable X editing. Value is relative byte pointer for the X coordinate.
-	
-	(You can define "y" to edit only Y coordinate,
-	"x" to edit only X coordinate, or you can define both.)
-
-	SNAPY	Decimal value. If set, Y coordinate will be rounded to values divisible by this value.
-	SNAPX	Decimal value. If set, X coordinate will be rounded to values divisible by this value.
-	GRIDY	Decimal value. If set, horizontal lines will be shown for every GRIDY pixel.
-	GRIDX	Decimal value. If set, vertical lines will be shown for every GRIDX pixel.
-
-Advanced - Render child elements:
-	FGIMAGE		Draw image at the current coordinate, based on a data type which supports Render.
-			It will be drawn on top of the coordinate lines.
-			If the coordinate is X or Y only, or any other reason,
-			you can set attributes "render.x" or "render.y" in the FGIMAGE element to set draw coordinates
-			to constant values.
-
-			(updateRender in the target script will be called each time the coordiante is changed.)
-
-			Output parameters: x, y (depending on setup, either of them may always be 0.)
-
-
-Types: Map
-----------
-
-map	General map editor where each byte is represented as a rectangular unit.
-	Currently shows byte datas as hexadecimal values.
-	In the future, it will be able to draw graphics described by child elements
-	so that it can be used as a tilemap editor / nametable editor and more.
-
-Supported attributes for MAP:
-	WIDTH		Decimal value. Number of units on each row. Optional if LEN is set.
-	HEIGHT		Decimal value. Number of units on each collumn. Optional if LEN is set.
-	LEN		Hex value. Total number of units/number of bytes. Optional if both WIDTH and HEIGHT is set.
-	PIXELW		Pixel width of each unit.
-	PIXELH		Pixel height of each unit.
-	TOTALWIDTH	Total width of map in units. If this is present, a horizontal slider/
-			scroll bar appears.
-	TOTALHEIGHT	Total height of map in units. If this is present, a vertical slider/
-			scroll bar appears.
-
-	INDEX_MUL	Decimal value. Sets byte spacing for each index if present.
-			In other words, values will be read from (index * INDEX_MUL).
-
-Supported objects for customization attributes (See "GUI Customization"):
-	Type		Name
-
-	GRID		grid		(all grids)
-	GRID		mapgrid		Left matrix grid showing the actual datas.
-	GRID		selgrid		Right matrix grid showing what values can be selected.
-
-	(Example: mapgrid.selcolor="70C070" grid.color="007000")
-
--- TO BE IMPLEMENTED --:
-
-Advanced - Fetch Support: Yes. (Untested) Returns an array of bytes representing the entire map.
-
-Advanced - Supported Render child elements:
-	SUBITEM		Draws a data type into each cell of the grid, or for each unit to be drawn.
-			The value associated to each unit is passed as INDEX to the data type script.
-			Use for example a CHR data type like CHR_NES in this element for simple nametable data,
-			or MAP type to describe the next sub level in a meta-tile system.
-
-	Output parameters: x, y, index
-
-Advanced - Supported as Render type: Yes. Interprets "index" parameter, which is added to the data offset.
-
-	Input parameters support: x, y, index
-
-Advanced - Specific data type notes for SUBITEM:
-	string		You can use this data type so that each cell's value is represented by a character from a table of characters.
-			(The cell's value will be the index into the table).
-			LEN should be set to "100" (256) for the LEN attribute in this case, only 1 character will still be drawn.
-	map		This can be used in the SUBITEM Element to create a map made of multiple levels.
-	
-
-
-Deprecated but Supported Data Types 
------------------------------------
-
-These are data types that are supported for compatibility with the 2006 standard,
-but that I don't recommended using in newer documents.
-
-listbyte	8 bit Integer editing using a list. You can simply use "byte" data type
-		and provide a "list" attribute to reproduce it.
-listint		Genereal Integer editing using a list. You can simply use "int" data type
-		and provide a "list" attribute to reproduce it.
-arr_byte	Array of Byte. Works the same as BYTE with LEN attribute set.
-arr_listbyte	Array of Byte using list. Works the same way as BYTE with LEN and LIST attributes set.
-arr_int		Array of Int. Works the same as INT type with LEN attribute set.
-arr_listint	Array of Int using list. Works the same way as INT type with LEN and LIST attributes set.
-
-Not yet supported
------------------
-
-These are data types that was specified in the DRD standard from 2006,
-but has not yet been implemented in Flexible Editor.
-
-tbl_string	String editing using a .tbl file.
-		A work in progress script for this type is present, but it's early in development.
-
-
 Arrays
 ======
 
-If supported, setting the LEN attribute for a fixed-length data type will turn it into an Array.
-(Supported for Integers and BITVALUE data types).
-A slider control will be added for changing the index.
+If supported for a fixed-length data type, setting the LEN attribute will turn it into an Array
+of that data. A slider control will be added for changing the index.
 Attributes ARRINDEX_LABLIST or ARRINDEX_LABDEF can be defined to give the
 Array indexes string labels. In this case the index is changed using a dropdown list.
 (See demo.xml for some examples.)
@@ -705,9 +798,11 @@ character there are 3 bytes: a 2-byte HP value and 1-byte "Class", and there are
 	<item name="Character Class" relptr="2" type="byte" list="class"/>
 </item>
 
-^ Index 0 will start at offset $8000, Index 1 at $8003, and so on.
+^ The Parent Item has no type. The current character index is changed in the window for that Item.
+Data for Index 0 will start at offset $8000, Index 1 at $8003, and so on.
 "Character HP" and "Character Type" uses RELPTR, which makes them relative to the current pointer
-of the Parent Item. This way you can edit the HP and Class stats for all 32 characters without
+of the Parent Item, with the current array index taken into account.
+This way you can edit the HP and Class stats for all 32 characters without
 creating XML Items for each one.
 
 You can also create multi-dimensional arrays by turning multiple levels of parent Items into arrays.
@@ -730,11 +825,11 @@ The \Icons subfolder has some icons that could be used.
 
 Document Example:
 
-<drd>
+<xml>
 	<item name="My data" ptr="0" type="int32" icon="myicon"/>
 	<info headicon="myicon"/>
 	<icon key="myicon" filename="C:\icons\myicon.bmp"/>
-</drd>
+</xml>
 
 ^ This loads an icon and uses it both as the program icon and the icon for the single Item element.
 
@@ -745,15 +840,15 @@ A "common" element can be used as a template for attributes in Item elements.
 (All attributes other than "key" is treated as if they're part of the Item)
 These elements can be placed anywhere in the XML but it may look best if they're placed after all "item" ones.
 They are referenced to by it's Key, set with attribute "key", which can be pretty much be anything you like.
-To use it in a item element, add the attribute "common", that references the key.
+To use it in a Item element, add the attribute "common", that references the key.
 
 Document Example:
 
-<drd>
+<xml>
 	<item name="Similar Data 1" ptr="140" common="data"/>
 	<item name="Similar Data 2" ptr="180" common="data"/>
 	<common key="data" type="int24"/>
-</drd>
+</xml>
 
 Both Items will have the data type "int24".
 
@@ -763,6 +858,71 @@ An Item element's attributes will have first priority. So if an attribute is fou
 itself, and a COMMON element, the one from the Item will be used.
 
 COMMON elements currently can't be nested (A COMMON element can't have a COMMON attribute.)
+
+Render system / Render Child Element basics
+===========================================
+
+Some data types supports adding child elements to the Item element specifically for drawing graphics,
+making it possible to enhance the editing experience, make it easier to see how
+the result will look, or just make editing more intuitive. The graphics is drawn and updated based on
+the data from the parent element, because relevant information is passed from the parent
+element script to the child element script.
+This "information" is refered to as parameters. Parameters is an "under the hood" mechanism that doesn't need
+XML data, but they can be set manually using attributes (param.[parameter_name]="value").
+These child elements have similar specification as the ITEM element, with TYPE, PTR attributes and so on.
+Basically, the attributes usually describing editing is used to describe graphics only.
+The Data Types are also the same as Items and will look similar when used.
+The tag names are specific depending on the data type of the parent element, for example IMAGE or FGIMAGE.
+You can use a type as long as that type is supported in a Render Child Element.
+Attributes like NAME, ICON and other may be ignored, but setting attributes related to the graphical look
+for the data type usually has an effect.
+
+Which data types has Child elements you can set up, and which types are supported in child elements
+is described in the TYPE section in this file.
+
+Here is an example:
+
+<item type="pal_nes" ptr="800" len="10">
+	<image type="chr_nes" ptr="1000" len="100" scale="2">
+</item>
+
+All palette data types supports an IMAGE child element. The IMAGE element works like
+a regular ITEM Element that can be various data types, except its datas will be drawn into an
+image below the other controls, and can't be edited.
+All CHR types is supported for Render Child Elements, which means we can use that type.
+IMAGE is redrawn whenever palette data changes, and in that moment
+the palette data is passed to the child element script.
+The script for CHR_NES interprets the palette information passed and draws the CHR using it.
+
+Example 2:
+
+<item name="Text" type="map" ptr="5CA0" len="10" pixelh="16" pixelw="16">
+	<subitem type="chr_nes" ptr="5530" len="1" scale="2"/>
+</item>
+
+The MAP data type is designed with the Render features in mind, so it can be used as a general handler for
+tile-based strings and tile maps.
+The above XML describes editing a simple text string on 16 characters, or 16 tiles.
+In other words the ITEM element with "map" data type points to nametable / tilemap data for a string of text.
+So each byte of that data represents a tile index into a NES CHR/Pattern table.
+This setup allows NES CHR to be drawn showing more or less exactly how graphics will look.
+NES graphics is drawn by using the CHR_NES type for SUBITEM, which is a Render Child Element supported by the Map type.
+For every byte in the Map data, or every cell in the visual grid, it requests the CHR_NES script to draw itself.
+Each byte's value is passed to the CHR_NES script as a data index, and the CHR_NES script interprets this as a tile index.
+As you can see, LEN is 1 for CHR_NES, meaning only 1 tile is drawn for each byte/cell in the parent element's data,
+which is what we want.
+
+Regarding parameters, scripts don't know what parameters needs to be passed from parent to child.
+It follows a system of standard parameter names. Data type scripts sends any information it can fill to its children,
+and the script in the child element uses what comes from the parent, depending on what's relevant for that data type.
+For example, the Palette data type always passes palette information to a child element regardless if it can use it.
+And CHR data types, when used with the render function, looks for palette data sent, without knowing anything about
+the data type the parameters came from.
+The most common parameters are "index" (array/data index), "y" (y pixel coordinate), and "x". (x pixel coordinate)
+If there's multiple levels of Render elements, the parameters keeps getting passed to the next level unless they're
+overwritten. So palette information can still be received even if there's an unrelated element "between".
+
+See "XML - Render.txt" for additional and technical information.
 
 
 GUI Customization
@@ -803,7 +963,7 @@ List of general classes:
 stylesheet	Set Style Sheet for all text editor controls.
 		Setting the "edit.stylesheet" attribute will generally set a stylesheet for all
 		controls in the window related to editing or displaying text.
-		Currently, you can't set this for any specific instances anywhere.
+		The only type you can set this for individual instances is TBL_STRING currently.
 
 	GRID
 
@@ -821,7 +981,8 @@ Style Sheets follow the convention in Qt 4.8 when the styleSheet property is set
 General properties you can usually set is "background" for setting the background color or
 background graphics, "color" for text color, and "font".
 
-Example: edit.stylesheet="background: #203040; color: #6080A0; font: 18px"
+Example: edit.stylesheet="background: #203040; color: #6080A0; font: 18px &quot;Comic Sans&quot;"
+(&quot; is used to add quotation marks inside the attribute)
 
 Complete documentation for Qt Style Sheets can be found here:
 https://doc.qt.io/archives/qt-4.8/stylesheet.html
