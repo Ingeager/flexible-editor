@@ -33,5 +33,6 @@ Flexible Editor is developed in C++ using Qt 4.8.0.
 
 The project is based on an old project/idea of mine from 2005/2006 named DRDHack.
 
-![sample image](./sample3a.png)
-![sample image](./sample3b.png)
+![sample image](./sample4a.png)
+![sample image](./sample4b.png)
+![sample image](./sample4c.png)
